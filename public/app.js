@@ -737,7 +737,7 @@ async function startReplay() {
   if (es) { es.close(); es = null; }
   floorAuto = true;
   onHello({ mode: 'replay', root: '', sessions: [{ sid: d.sid, session: d.session, history: [], plan: null, stats: emptyStats(), wait: null, agents: [] }] });
-  replay = { sid: d.sid, events: d.events, i: 0, speed: 10, timer: 0 };
+  replay = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0 };
   renderReplayBtns();
   toast(`⏪ ${clip(d.session.title || d.session.project, 24)} 처음부터 다시 보기`);
   replayStep();
@@ -760,9 +760,48 @@ function replayStep() {
   // 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
   applyUpdate({ sid: r.sid, events: [{ ...ev, at: ev.ts, ts: Date.now() }] });
   setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${hhmmss(ev.ts)}`);
+  renderReplayBar();
   const next = r.events[r.i];
   const gap = next ? Math.min(Math.max(next.ts - ev.ts, 0), 15000) / r.speed : 0;
   r.timer = setTimeout(replayStep, gap);
+}
+// 진행 막대를 누른 지점으로 건너뛴다: 그때까지의 기록으로 사무실을 다시 세우고 거기서부터 이어 간다
+function seekReplay(frac) {
+  const r = replay;
+  if (!r || !Number.isFinite(frac)) return;
+  const idx = Math.max(0, Math.min(r.events.length - 1, Math.round(frac * r.events.length)));
+  clearTimeout(r.timer);
+  const done = r.events.slice(0, idx);
+  // 원래 시간 간격은 그대로 두고, 마지막 일이 '지금' 일어난 것처럼 시각을 옮긴다 (오래된 일로 보고 정리해 버리지 않게)
+  const shift = done.length ? Date.now() - done[done.length - 1].ts : 0;
+  const moved = done.map(e => ({ ...e, at: e.ts, ts: e.ts + shift }));
+  const byAgent = new Map();
+  for (const e of moved) if (e.agent) (byAgent.get(e.agent) || byAgent.set(e.agent, []).get(e.agent)).push(e);
+  const agents = [];
+  for (const [id, list] of byAgent) {
+    const last = list[list.length - 1];
+    if (last.k === 'say' && last.final) continue; // 그 시점엔 이미 퇴근한 인턴
+    const intro = list.find(e => e.k === 'agent') || {};
+    agents.push({ id, type: intro.type || '', desc: intro.desc || '', history: list });
+  }
+  const main = moved.filter(e => !e.agent);
+  const stats = emptyStats();
+  for (const e of moved) countLocal({ stats }, e);
+  const planEv = [...main].reverse().find(e => e.k === 'tool' && e.plan);
+  onHello({ mode: 'replay', root: '', sessions: [{ sid: r.sid, session: r.session, history: main, plan: planEv ? planEv.plan : null, stats, wait: null, agents }] });
+  r.i = idx;
+  toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${hhmmss(r.events[idx].ts)}`);
+  renderReplayBar();
+  replayStep();
+}
+function renderReplayBar() {
+  const bar = $('replayBar');
+  bar.hidden = !replay;
+  if (!replay) return;
+  const r = replay;
+  const at = r.events[Math.min(r.i, r.events.length - 1)];
+  bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
+  bar.querySelector('span').textContent = `${hhmmss(r.events[0].ts)} — ${hhmmss(at.ts)} — ${hhmmss(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
 }
 function stopReplay(reconnect) {
   if (!replay) return;
@@ -777,6 +816,7 @@ function renderReplayBtns() {
   $('replayBtn').classList.toggle('on', !!replay);
   $('speedBtn').hidden = !replay;
   if (replay) $('speedBtn').textContent = replay.speed + '×';
+  renderReplayBar();
 }
 
 // ───────────────────────── 시작 ─────────────────────────
@@ -820,6 +860,10 @@ sel.addEventListener('change', () => {
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
 $('notifyBtn').addEventListener('click', toggleNotify);
 $('replayBtn').addEventListener('click', () => (replay ? stopReplay(true) : startReplay()));
+$('replayBar').addEventListener('click', e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  seekReplay((e.clientX - r.left) / r.width);
+});
 $('speedBtn').addEventListener('click', () => {
   if (!replay) return;
   replay.speed = REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(replay.speed) + 1) % REPLAY_SPEEDS.length];

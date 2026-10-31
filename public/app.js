@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, hhmmss, ago } from './js/util.js';
+import { $, esc, clip, hhmmss, stamp, ago } from './js/util.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -695,7 +695,10 @@ async function startReplay(fileArg) {
   if (es) { es.close(); es = null; }
   floorAuto = true;
   onHello({ mode: 'replay', root: '', sessions: [{ sid: d.sid, session: d.session, history: [], plan: null, stats: emptyStats(), wait: null, agents: [] }] });
-  replay = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0 };
+  const day = ts => new Date(ts).toDateString();
+  // 하루를 넘기는 세션이면 시각마다 날짜를 붙인다
+  const multiDay = day(d.events[0].ts) !== day(d.events[d.events.length - 1].ts);
+  replay = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0, multiDay };
   renderReplayBtns();
   toast(`⏪ ${clip(d.session.title || d.session.project, 24)} 처음부터 다시 보기`);
   replayStep();
@@ -716,8 +719,8 @@ function replayStep() {
   }
   const ev = r.events[r.i++];
   // 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
-  applyUpdate({ sid: r.sid, events: [{ ...ev, at: ev.ts, ts: Date.now() }] });
-  setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${hhmmss(ev.ts)}`);
+  applyUpdate({ sid: r.sid, events: [{ ...ev, at: ev.ts, atDate: r.multiDay, ts: Date.now() }] });
+  setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${stamp(ev.ts, r.multiDay)}`);
   renderReplayBar();
   const next = r.events[r.i];
   const gap = next ? Math.min(Math.max(next.ts - ev.ts, 0), 15000) / r.speed : 0;
@@ -732,7 +735,7 @@ function seekReplay(frac) {
   const done = r.events.slice(0, idx);
   // 원래 시간 간격은 그대로 두고, 마지막 일이 '지금' 일어난 것처럼 시각을 옮긴다 (오래된 일로 보고 정리해 버리지 않게)
   const shift = done.length ? Date.now() - done[done.length - 1].ts : 0;
-  const moved = done.map(e => ({ ...e, at: e.ts, ts: e.ts + shift }));
+  const moved = done.map(e => ({ ...e, at: e.ts, atDate: r.multiDay, ts: e.ts + shift }));
   const byAgent = new Map();
   for (const e of moved) if (e.agent) (byAgent.get(e.agent) || byAgent.set(e.agent, []).get(e.agent)).push(e);
   const agents = [];
@@ -748,7 +751,7 @@ function seekReplay(frac) {
   const planEv = [...main].reverse().find(e => e.k === 'tool' && e.plan);
   onHello({ mode: 'replay', root: '', sessions: [{ sid: r.sid, session: r.session, history: main, plan: planEv ? planEv.plan : null, stats, wait: null, agents }] });
   r.i = idx;
-  toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${hhmmss(r.events[idx].ts)}`);
+  toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${stamp(r.events[idx].ts, r.multiDay)}`);
   renderReplayBar();
   replayStep();
 }
@@ -759,7 +762,8 @@ function renderReplayBar() {
   const r = replay;
   const at = r.events[Math.min(r.i, r.events.length - 1)];
   bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
-  bar.querySelector('span').textContent = `${hhmmss(r.events[0].ts)} — ${hhmmss(at.ts)} — ${hhmmss(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
+  const t = ts => stamp(ts, r.multiDay);
+  bar.querySelector('span').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
 }
 // 멈췄다가 이어 보기 (Space)
 function togglePause() {

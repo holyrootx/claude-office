@@ -1,5 +1,5 @@
 // 오른쪽 활동 기록: 이벤트 하나를 한 줄로 쌓는다. 도구 줄에는 나중에 성공(✓)·실패(✗)를 붙인다.
-import { esc, clip, hhmmss } from './util.js';
+import { esc, clip, stamp } from './util.js';
 import { ROOMS } from './scene.js';
 
 const MAX_LINES = 200;
@@ -53,7 +53,7 @@ export function createFeed(list, { manyPeople }) {
     if (cls) li.className = cls;
     if (room) li.dataset.room = room;
     li.dataset.floor = s.floor;
-    li.innerHTML = `<time>${hhmmss(ev.at || ev.ts || Date.now())}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
+    li.innerHTML = `<time>${stamp(ev.at || ev.ts || Date.now(), ev.atDate)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
     if (ev.k === 'tool') items.set(ev.id, li);
     list.prepend(li);
     while (list.children.length > MAX_LINES) {

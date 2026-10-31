@@ -257,12 +257,12 @@ button, select { font: inherit; color: inherit; }
 
 .feed { list-style: none; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; }
 .feed li {
-  display: grid; grid-template-columns: 58px 22px 1fr; gap: 6px; align-items: start;
+  display: grid; grid-template-columns: minmax(58px, max-content) 22px 1fr; gap: 6px; align-items: start;
   padding: 7px 4px 7px 8px; border-left: 3px solid var(--c, var(--line)); margin-bottom: 4px;
   border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--c, #000) 7%, transparent);
   animation: feedIn .3s ease-out;
 }
-.feed li time { font: 11px var(--mono); color: var(--faint); padding-top: 2px; }
+.feed li time { font: 11px var(--mono); color: var(--faint); padding-top: 2px; white-space: nowrap; }
 .feed li .ic { font-size: 14px; line-height: 1.3; }
 .feed li .tx { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
 .feed li .tx b { font-weight: 600; }

@@ -8,6 +8,12 @@ export const hhmmss = ts => {
   const d = new Date(ts), p = n => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 };
+// 날짜가 바뀌는 기록(다시 보기)에서는 '11/2 14:16'처럼 날짜를 붙인다
+export const stamp = (ts, withDate) => {
+  if (!withDate) return hhmmss(ts);
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()} ${hhmmss(ts).slice(0, 5)}`;
+};
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
 export function ago(ms) {
   const s = Math.round((Date.now() - ms) / 1000);

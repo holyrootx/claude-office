@@ -268,7 +268,10 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 
 | 파일 | 하는 일 |
 |---|---|
-| `server.js` | 기록 파일을 따라 읽고 브라우저로 이벤트를 보내는 서버 (의존성 없음) |
+| `server.js` | 서버 시작, HTTP, `--background`·`--stop` 같은 실행 방법 (의존성 없음) |
+| `lib/normalize.js` | 세션 기록 한 줄을 화면용 이벤트로 바꾸기, 도구 → 방 규칙 |
+| `lib/sessions.js` | 세션 파일 찾기·따라 읽기, 화면마다 보내기, 권한 대기, 다시 보기 |
+| `lib/config.js` | 실행 옵션과 설정값 |
 | `lib/runtime.js` | 켜져 있는 서버의 포트·토큰을 임시 파일로 주고받기 (`--stop`·hooks가 사용) |
 | `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨면 서버에 알리는 Claude Code hook |
 | `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop` 명령 |

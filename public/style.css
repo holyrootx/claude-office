@@ -74,6 +74,12 @@ button, select { font: inherit; color: inherit; }
 }
 .btn:hover { filter: brightness(1.08); }
 .btn.stop { background: #475069; }
+.btn-icon {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  width: 34px; height: 32px; font-size: 15px; cursor: pointer; opacity: .75;
+}
+.btn-icon:hover { opacity: 1; }
+.btn-icon.on { opacity: 1; border-color: #a16207; background: color-mix(in srgb, #a16207 22%, var(--panel-2)); }
 
 /* ───────── 지금 하는 일 ───────── */
 .now {

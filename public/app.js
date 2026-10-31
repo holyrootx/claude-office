@@ -220,6 +220,8 @@ function applyUpdate(u) {
     }
     if (!u.stats) countLocal(s, ev);
     feedAdd(s, a, ev);
+    if (ev.k === 'tool' && ev.ask) notify(s, '❓ 물어볼 게 있어요', ev.ask);
+    if (ev.k === 'say' && ev.final && !ev.agent) notify(s, '✅ 응답 완료', ev.text);
     if (!batches.has(a)) batches.set(a, []);
     batches.get(a).push(ev);
   }
@@ -239,6 +241,7 @@ function setWait(s, w) {
   if (w && !seenWaits.has(waitId(s.sid, w))) {
     seenWaits.add(waitId(s.sid, w));
     feedAdd(s, target, { ...w, k: 'wait' });
+    notifyWait(s, w);
     if (floorAuto && s.floor !== current) goFloor(s.floor);
   }
 }
@@ -348,6 +351,7 @@ function renderNow(a, many) {
   const waiting = [...actors].filter(x => x.waitState || x.status === 'ask').length;
   const title = waiting ? `🔐 ${waiting}명이 기다려요 · Claude 사무실` : `${st.icon} ${st.title} · Claude 사무실`;
   if (title !== titleKey) document.title = titleKey = title;
+  setFavicon(waiting);
 }
 
 let floorbarHtml = '';
@@ -507,6 +511,64 @@ function feedAdd(s, a, ev) {
   }
 }
 
+// ───────────────────────── 알림 ─────────────────────────
+// 다른 창을 보고 있을 때 누가 나를 기다리면 브라우저 알림으로 알려 준다. 🔔 버튼으로 켜고, 기본은 꺼져 있다.
+const NOTIFY_KEY = 'claude-office-notify';
+let notifyOn = false;
+try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장소 없음 */ }
+const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
+
+function notify(s, title, body) {
+  if (!notifyOn || !canNotify() || viewMode === 'demo') return;
+  if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
+  const floor = s.floor;
+  // 같은 세션 알림은 tag로 하나만 남긴다
+  const n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
+  n.onclick = () => {
+    window.focus();
+    goFloor(floor);
+    n.close();
+  };
+}
+function notifyWait(s, w) {
+  const what = w.tool ? `${w.tool} ${w.label || ''}` : w.text || '';
+  notify(s, w.kind === 'input' ? '🔐 입력을 기다려요' : '🔐 실행 허락을 기다려요', what);
+}
+
+async function toggleNotify() {
+  if (!('Notification' in window)) return renderNotifyBtn('이 브라우저는 알림을 지원하지 않아요');
+  if (Notification.permission === 'default') await Notification.requestPermission();
+  if (Notification.permission === 'denied') {
+    notifyOn = false;
+    return renderNotifyBtn('브라우저 설정에서 이 페이지의 알림이 막혀 있어요');
+  }
+  notifyOn = !notifyOn && canNotify();
+  try { localStorage.setItem(NOTIFY_KEY, notifyOn ? '1' : '0'); } catch { /* 저장소 없음 */ }
+  renderNotifyBtn();
+  if (notifyOn) toast('🔔 다른 창을 볼 때 기다리는 일이 생기면 알려 드려요');
+}
+function renderNotifyBtn(why) {
+  const b = $('notifyBtn');
+  const on = notifyOn && canNotify();
+  b.textContent = on ? '🔔' : '🔕';
+  b.classList.toggle('on', on);
+  b.title = why || (on ? '알림 켜짐: 다른 창을 볼 때 권한 대기·질문·응답 완료를 알려요 (누르면 끔)' : '알림 꺼짐: 누르면 켜요');
+  if (why) toast(why);
+}
+
+// 탭 아이콘: Claude 얼굴, 기다리는 사람이 있으면 빨간 숫자
+let faviconKey = -1;
+function faviconUrl(n) {
+  const badge = n ? `<circle cx="48" cy="16" r="15" fill="#ef4444"/><text x="48" y="22" font-size="19" font-weight="700" text-anchor="middle" fill="#fff" font-family="sans-serif">${n > 9 ? '9+' : n}</text>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="8" y="12" width="46" height="44" rx="19" fill="#D97757"/><ellipse cx="24" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><ellipse cx="38" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><path d="M27 41 q4 4 8 0" stroke="#2b1d16" stroke-width="2.6" fill="none" stroke-linecap="round"/>${badge}</svg>`;
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+function setFavicon(n) {
+  if (n === faviconKey) return;
+  faviconKey = n;
+  $('favicon').href = faviconUrl(n);
+}
+
 // ───────────────────────── 서버 연결 ─────────────────────────
 function resetAll() {
   for (const sid of [...sessions.keys()]) removeSession(sid);
@@ -547,7 +609,11 @@ function onJoin(snap) {
   const s = addSession(snap);
   for (const ev of (snap.history || []).slice(-20)) feedAdd(s, s.main, ev);
   if (!current) current = s.floor;
-  if (s.wait && floorAuto && s.floor !== current) goFloor(s.floor);
+  if (s.wait) {
+    // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우
+    if (Date.now() - s.wait.ts < 60000) notifyWait(s, s.wait);
+    if (floorAuto && s.floor !== current) goFloor(s.floor);
+  }
   refreshBoard();
   render();
 }
@@ -657,6 +723,8 @@ sel.addEventListener('change', () => {
   connect();
 });
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
+$('notifyBtn').addEventListener('click', toggleNotify);
+renderNotifyBtn();
 loadSessions().then(() => {
   let saved = 'all';
   try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }

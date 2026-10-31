@@ -769,7 +769,7 @@ async function startReplay() {
 }
 function replayStep() {
   const r = replay;
-  if (!r) return;
+  if (!r || r.paused) return;
   if (r.i >= r.events.length) {
     setConn('demo', '다시 보기 끝 · 잠시 뒤 실시간으로');
     r.timer = setTimeout(() => stopReplay(true), 9000);
@@ -828,6 +828,16 @@ function renderReplayBar() {
   bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
   bar.querySelector('span').textContent = `${hhmmss(r.events[0].ts)} — ${hhmmss(at.ts)} — ${hhmmss(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
 }
+// 멈췄다가 이어 보기 (Space)
+function togglePause() {
+  const r = replay;
+  if (!r) return;
+  r.paused = !r.paused;
+  clearTimeout(r.timer);
+  if (r.paused) setConn('demo', `다시 보기 멈춤 · ${Math.round((r.i / r.events.length) * 100)}%`);
+  else replayStep();
+  renderReplayBtns();
+}
 function stopReplay(reconnect) {
   if (!replay) return;
   clearTimeout(replay.timer);
@@ -839,8 +849,12 @@ function renderReplayBtns() {
   $('replayBtn').textContent = replay ? '⏹' : '⏪';
   $('replayBtn').title = replay ? '다시 보기 끝내고 실시간으로 돌아가기' : '고른 세션(없으면 지금 보는 직원)을 처음부터 빠르게 다시 보기';
   $('replayBtn').classList.toggle('on', !!replay);
-  $('speedBtn').hidden = !replay;
-  if (replay) $('speedBtn').textContent = replay.speed + '×';
+  $('speedBtn').hidden = $('pauseBtn').hidden = !replay;
+  if (replay) {
+    $('speedBtn').textContent = replay.speed + '×';
+    $('pauseBtn').textContent = replay.paused ? '▶' : '⏸';
+    $('pauseBtn').title = replay.paused ? '이어 보기 (Space)' : '멈추기 (Space)';
+  }
   renderReplayBar();
 }
 
@@ -888,6 +902,25 @@ $('replayBtn').addEventListener('click', () => (replay ? stopReplay(true) : star
 $('replayBar').addEventListener('click', e => {
   const r = e.currentTarget.getBoundingClientRect();
   seekReplay((e.clientX - r.left) / r.width);
+});
+$('pauseBtn').addEventListener('click', togglePause);
+// 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
+  if (replay && e.key === ' ') {
+    e.preventDefault();
+    togglePause();
+  } else if (replay && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault();
+    seekReplay(replay.i / replay.events.length + (e.key === 'ArrowRight' ? 0.05 : -0.05));
+  } else if (/^[1-9]$/.test(e.key)) {
+    const key = [...floors.keys()][Number(e.key) - 1];
+    if (key) goFloor(key, true);
+  } else if (e.key === '0') {
+    floorAuto = true;
+    autoFloor();
+    render();
+  }
 });
 $('speedBtn').addEventListener('click', () => {
   if (!replay) return;

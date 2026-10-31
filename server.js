@@ -67,19 +67,38 @@ const ROOM_BY_TOOL = {
   TodoWrite: 'meeting', TodoRead: 'meeting', TaskCreate: 'meeting', TaskUpdate: 'meeting', TaskList: 'meeting',
   TaskGet: 'meeting', EnterPlanMode: 'meeting', ExitPlanMode: 'meeting', Agent: 'meeting', Task: 'meeting',
   SendMessage: 'meeting', CronCreate: 'meeting', CronDelete: 'meeting', CronList: 'meeting', ScheduleWakeup: 'meeting',
-  AskUserQuestion: 'desk', SendUserFile: 'desk', PushNotification: 'desk',
+  ListAgents: 'meeting', RemoteTrigger: 'meeting',
+  AskUserQuestion: 'desk', SendUserFile: 'desk', PushNotification: 'desk', ReportFindings: 'desk',
+  Artifact: 'desk', ArtifactComments: 'desk', ArtifactData: 'desk',
 };
+
+// MCP 도구는 대부분 바깥 서비스라 정보 검색실로 가지만, 성격이 분명한 서버는 따로 보낸다
+const ROOM_BY_MCP = [
+  [/^mcp__ccd_turn__update_plan$/, 'meeting'],
+  [/^mcp__ccd_turn__wrap_up$/, 'desk'],
+  [/^mcp__ccd_(session|session_mgmt|sidebar|window)__/, 'meeting'], // 세션·작업 관리
+  [/^mcp__ccd_(view|settings)__/, 'desk'], // 사용자에게 화면을 보여 주거나 설정을 묻는 일
+  [/^mcp__(terminal|ccd_host|ccd_pr)__/, 'server'], // 터미널, PR·브랜치 상태
+  [/^mcp__Claude_Code_iOS_Simulator__/, 'server'], // 앱을 빌드하고 띄우는 일
+];
+
+// 처음 보는 도구는 이름을 보고 어울리는 방을 고른다 (위에서부터 먼저 맞는 것)
+const ROOM_BY_WORD = [
+  [/bash|shell|exec|run|kill|terminal|process|build|deploy/i, 'server'],
+  [/web|http|url|browser|fetch/i, 'search'],
+  [/plan|task|todo|agent|schedule|cron|message|team|trigger/i, 'meeting'],
+  [/ask|notify|notification|send|report|share|publish/i, 'desk'],
+  [/read|get|list|search|find|glob|grep|view|query|lookup/i, 'library'],
+];
 
 function roomOf(name) {
   if (ROOM_BY_TOOL[name]) return ROOM_BY_TOOL[name];
   if (name.startsWith('mcp__')) {
-    if (/^mcp__ccd_turn__(update_plan)$/.test(name)) return 'meeting';
-    if (/^mcp__ccd_turn__wrap_up$/.test(name)) return 'desk';
-    if (/^mcp__ccd_session__(mark_chapter|start_session|hand_off_to_session|dismiss_task)$/.test(name)) return 'meeting';
-    if (/^mcp__(terminal|ccd_host)__/.test(name)) return 'server';
-    return 'search';
+    const hit = ROOM_BY_MCP.find(([re]) => re.test(name));
+    return hit ? hit[1] : 'search';
   }
-  return 'dev';
+  const hit = ROOM_BY_WORD.find(([re]) => re.test(name));
+  return hit ? hit[1] : 'dev';
 }
 
 // 이미 '질문하러 오기'로 보여 주는 도구라 권한 대기로 따로 연출하지 않는다

@@ -29,6 +29,26 @@ test('도구 이름에 맞는 방으로 보낸다', () => {
   assert.equal(roomOf('SomethingNew'), 'dev');
 });
 
+test('실제 기록에서 엉뚱한 방으로 가던 도구들을 바로잡는다', () => {
+  assert.equal(roomOf('ListAgents'), 'meeting');
+  assert.equal(roomOf('Artifact'), 'desk');
+  assert.equal(roomOf('mcp__ccd_session_mgmt__list_sessions'), 'meeting');
+  assert.equal(roomOf('mcp__ccd_view__show_pane'), 'desk');
+  assert.equal(roomOf('mcp__ccd_pr__get_status'), 'server');
+  assert.equal(roomOf('mcp__Claude_Code_iOS_Simulator__control'), 'server');
+  assert.equal(roomOf('mcp__Claude_Browser__navigate'), 'search'); // 브라우저·바깥 서비스는 그대로
+  assert.equal(roomOf('mcp__github__create_pull_request'), 'search');
+});
+
+test('처음 보는 도구는 이름을 보고 방을 고른다', () => {
+  assert.equal(roomOf('RunTests'), 'server');
+  assert.equal(roomOf('BrowserOpen'), 'search');
+  assert.equal(roomOf('TeamCreate'), 'meeting');
+  assert.equal(roomOf('NotifyUser'), 'desk');
+  assert.equal(roomOf('ListFiles'), 'library');
+  assert.equal(roomOf('DesignSync'), 'dev');
+});
+
 test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(labelOf('Read', { file_path: '/a/b/server.js', offset: 120 }), 'server.js (120줄~)');
   assert.equal(labelOf('Bash', { command: 'npm test -- auth', description: '테스트 실행' }), '테스트 실행');

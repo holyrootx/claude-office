@@ -749,10 +749,10 @@ function stopDemo(reconnect) {
 const REPLAY_SPEEDS = [5, 10, 30];
 // 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
 const REPLAY_QUEUE = { 5: 1, 10: 3, 30: 12 };
-async function startReplay() {
-  // 목록에서 고른 세션, 아니면 지금 보고 있는 직원의 세션
+async function startReplay(fileArg) {
+  // 직접 준 세션(업무 일지에서 고른 것), 목록에서 고른 세션, 아니면 지금 보고 있는 직원의 세션
   const focus = focusActor([...actors].filter(a => a.floor === current));
-  const file = isFile(sel.value) ? sel.value : focus && sessions.get(focus.sid) && sessions.get(focus.sid).info.file;
+  const file = fileArg || (isFile(sel.value) ? sel.value : focus && sessions.get(focus.sid) && sessions.get(focus.sid).info.file);
   if (!file) return toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
   let d;
   try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
@@ -858,6 +858,36 @@ function renderReplayBtns() {
   renderReplayBar();
 }
 
+// ───────────────────────── 업무 일지 ─────────────────────────
+// 오늘(자정 이후) Claude가 한 일을 프로젝트별로 모아 보여 준다. 세션을 누르면 처음부터 다시 본다.
+const fmtWorked = ms => {
+  const m = Math.round(ms / 60000);
+  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+};
+async function openJournal() {
+  let j;
+  try { j = await (await fetch('/api/journal')).json(); } catch { return toast('업무 일지를 읽지 못했어요'); }
+  const d = new Date(j.since);
+  $('journalTitle').textContent = `📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`;
+  const t = j.totals;
+  $('journalTotals').innerHTML = [
+    ['일한 시간', fmtWorked(t.workedMs)], ['프로젝트', t.projects], ['세션', t.sessions],
+    ['내 메시지', t.prompts], ['도구', t.tools], ['실패', t.errors], ['인턴', t.interns],
+  ].map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join('');
+  $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
+    const max = Math.max(1, ...ROOM_IDS.map(r => p.rooms[r]));
+    const rooms = ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round((p.rooms[r] / max) * 100)}%" title="${ROOMS[r].name} ${p.rooms[r]}번">${ROOMS[r].icon}<i></i><b>${p.rooms[r]}</b></span>`).join('');
+    const list = p.sessions.map(s => `<li data-file="${esc(s.file)}" title="누르면 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`).join('');
+    return `<section class="jp"><h3>${esc(p.project)} <small>${hhmmss(p.first).slice(0, 5)} ~ ${hhmmss(p.last).slice(0, 5)} · ${fmtWorked(p.workedMs)}</small></h3>`
+      + `<div class="jp-nums">메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}</div>`
+      + `<div class="jp-rooms">${rooms}</div><ul>${list}</ul></section>`;
+  }).join('') : '<p class="jp-empty">오늘은 아직 일한 기록이 없어요</p>';
+  $('journal').hidden = false;
+}
+function closeJournal() {
+  $('journal').hidden = true;
+}
+
 // ───────────────────────── 시작 ─────────────────────────
 buildFloor($('floor'));
 buildChrome();
@@ -904,9 +934,23 @@ $('replayBar').addEventListener('click', e => {
   seekReplay((e.clientX - r.left) / r.width);
 });
 $('pauseBtn').addEventListener('click', togglePause);
+$('journalBtn').addEventListener('click', openJournal);
+$('journalClose').addEventListener('click', closeJournal);
+$('journal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기
+  const li = e.target.closest('li[data-file]');
+  if (li) {
+    closeJournal();
+    startReplay(li.dataset.file);
+  }
+});
 // 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
+  if (!$('journal').hidden) {
+    if (e.key === 'Escape') closeJournal();
+    return;
+  }
   if (replay && e.key === ' ') {
     e.preventDefault();
     togglePause();

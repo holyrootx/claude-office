@@ -117,6 +117,33 @@ button, select { font: inherit; color: inherit; }
 .now-ctx.high i::after, .lb .ctx.high::after { background: var(--bad); }
 .now-ctx.high b { color: #ffc4c6; }
 
+/* ───────── 업무 일지 ───────── */
+.journal { position: fixed; inset: 0; z-index: 500; background: rgba(5, 8, 14, .66); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.journal[hidden] { display: none; }
+.journal-box { width: min(680px, 100%); max-height: 90vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+.journal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.journal-head b { font-size: 18px; }
+.journal-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.journal-totals div { background: var(--panel-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; }
+.journal-totals b { font: 600 17px var(--mono); }
+.journal-totals span { font-size: 11px; color: var(--muted); }
+.jp { border-top: 1px solid var(--line); padding: 12px 0 6px; }
+.jp h3 { margin: 0 0 4px; font-size: 15px; }
+.jp h3 small { color: var(--faint); font: 12px var(--mono); margin-left: 6px; }
+.jp-nums { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+.jp-rooms { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 8px; }
+.jp-rooms span { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px; font-size: 12px; }
+.jp-rooms i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--c) var(--w), var(--panel-2) var(--w)); }
+.jp-rooms b { font: 600 11px var(--mono); color: var(--muted); }
+.jp ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.jp li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 8px; background: var(--panel-2); font-size: 13px; cursor: pointer; }
+.jp li:hover { filter: brightness(1.2); }
+.jp li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jp li time { font: 12px var(--mono); color: var(--faint); flex-shrink: 0; }
+.jp-empty { color: var(--muted); text-align: center; padding: 20px 0; }
+.journal-note { color: var(--faint); font-size: 11.5px; margin: 10px 0 0; }
+@media (max-width: 640px) { .jp-rooms { grid-template-columns: repeat(3, 1fr); } }
+
 /* ───────── 다시 보기 진행 막대 ───────── */
 .replay-bar {
   position: relative; flex-shrink: 0; height: 24px; cursor: pointer;

@@ -185,6 +185,26 @@ test('다시 보기: 세션 전체를 시간 순으로, 인턴은 출근 소개�
   assert.equal((await get('/api/replay?file=' + encodeURIComponent('/etc/passwd'))).status, 400);
 });
 
+test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', async () => {
+  const j = JSON.parse((await get('/api/journal')).body);
+  const shop = j.projects.find(p => p.project === 'shop');
+  assert.ok(shop, 'shop 프로젝트');
+  assert.ok(shop.sessions.some(s => s.id === SHOP));
+  assert.ok(shop.prompts >= 1);
+  assert.ok(shop.tools >= 2); // 메인의 Read + 인턴의 Grep
+  assert.ok(shop.interns >= 1);
+  assert.ok(shop.rooms.library >= 2);
+  assert.ok(!j.projects.some(p => p.sessions.some(s => s.id === OLD)) || fs.statSync(old).mtimeMs >= j.since); // 오늘 안 움직인 세션은 빠진다
+  assert.equal(j.totals.projects, j.projects.length);
+});
+
+test('일한 시간은 5분보다 짧은 간격만 더한다', () => {
+  const { workedMs } = require('../lib/sessions');
+  const m = 60000;
+  assert.equal(workedMs([0, 1 * m, 3 * m, 20 * m, 21 * m]), 4 * m); // 3분→20분은 쉰 시간
+  assert.equal(workedMs([]), 0);
+});
+
 test('빌딩에 새 세션이 들어오면 join으로 알린다', async () => {
   const s = stream('all');
   await until(() => s.log.find(x => x.ev === 'hello'));

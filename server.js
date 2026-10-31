@@ -20,7 +20,7 @@ const {
 } = require('./lib/config');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
-const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf } = require('./lib/sessions');
+const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줍니다.
@@ -104,6 +104,8 @@ const server = http.createServer((req, res) => {
     const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
     return json(res, { root: PROJECTS, sessions: list });
   }
+
+  if (url.pathname === '/api/journal') return json(res, journal());
 
   if (url.pathname === '/api/replay') {
     const file = url.searchParams.get('file') || '';

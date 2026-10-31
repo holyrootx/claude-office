@@ -32,6 +32,7 @@
   <button class="btn-icon" id="replayBtn" type="button" aria-label="다시 보기">⏪</button>
   <button class="btn-icon" id="pauseBtn" type="button" title="멈추기 (Space)" hidden>⏸</button>
   <button class="btn-icon speed" id="speedBtn" type="button" title="빠르기 바꾸기" hidden>10×</button>
+  <button class="btn-icon" id="journalBtn" type="button" title="오늘의 업무 일지">📓</button>
   <button class="btn-icon" id="notifyBtn" type="button" aria-label="알림 켜고 끄기">🔕</button>
   <button class="btn" id="demoBtn" type="button">데모 보기</button>
 </header>
@@ -97,6 +98,15 @@
     </section>
   </aside>
 </main>
+
+<div class="journal" id="journal" hidden>
+  <div class="journal-box" role="dialog" aria-label="오늘의 업무 일지">
+    <div class="journal-head"><b id="journalTitle">📓 업무 일지</b><button class="btn-icon" id="journalClose" type="button" aria-label="닫기">✕</button></div>
+    <div class="journal-totals" id="journalTotals"></div>
+    <div class="journal-list" id="journalList"></div>
+    <p class="journal-note">일한 시간은 기록 사이 간격이 5분보다 짧은 것만 더해요. 그보다 길면 쉬었다고 봐요.</p>
+  </div>
+</div>
 
 <!-- 캐릭터 한 명의 모양. 직원·인턴마다 복사해서 쓴다 -->
 <template id="charTpl">

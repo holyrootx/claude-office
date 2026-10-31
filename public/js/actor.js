@@ -279,8 +279,15 @@ export class Actor {
     for (const v of this.pending.values()) p = v;
     return p;
   }
+  // 기록이 한참 조용하면 끝난 일로 보고 정리한다. 다만 기다리는 일의 종류에 따라 참는 시간이 다르다:
+  // 나에게 한 질문은 12시간, 실행 중인 도구는 30분, 그냥 생각 중은 10분.
+  // 같은 세션의 인턴이 아직 일하고 있으면 그 시각까지 친다 (서브에이전트를 기다리는 동안 메인 기록은 조용하다).
   stale() {
-    return this.lastEventTs && Date.now() - this.lastEventTs > 10 * 60 * 1000;
+    const last = Math.max(this.lastEventTs, this.office.activityOf ? this.office.activityOf(this) : 0);
+    if (!last) return false;
+    const p = this.lastPending();
+    const limit = p && p.ask ? 12 * 60 : p ? 30 : 10;
+    return Date.now() - last > limit * 60 * 1000;
   }
   toolTitle(ev) {
     const t = this.known.get(ev.id);

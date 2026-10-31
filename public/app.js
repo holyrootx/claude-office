@@ -55,6 +55,12 @@ const office = {
   userSay(actor, text) {
     if (actor.floor === current) userSay(text);
   },
+  // 같은 세션(메인과 인턴들)에서 가장 최근에 기록이 남은 시각
+  activityOf(actor) {
+    const s = sessions.get(actor.sid);
+    if (!s) return 0;
+    return Math.max(s.main.lastEventTs, ...[...s.interns.values()].map(a => a.lastEventTs));
+  },
   remove(actor) {
     actors.delete(actor);
     const s = sessions.get(actor.sid);

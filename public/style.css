@@ -329,7 +329,7 @@ button, select { font: inherit; color: inherit; }
 .actor.intern .bubble.think { font-size: 16px; }
 .claude svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .claude .shadow { fill: rgba(0, 0, 0, .22); }
-.claude .flip { transform-box: view-box; transform-origin: 30px 40px; transition: transform .15s; }
+.claude .flip { transform-box: view-box; transform-origin: 30px 40px; } /* 방향은 바로 바꾼다: 천천히 돌면 중간에 막대처럼 얇아 보인다 */
 .claude.left .flip { transform: scaleX(-1); }
 .claude .bob { transform-box: view-box; transform-origin: 30px 70px; }
 .claude .body { fill: var(--claude); }

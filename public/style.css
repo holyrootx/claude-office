@@ -79,6 +79,8 @@ button, select { font: inherit; color: inherit; }
   width: 34px; height: 32px; font-size: 15px; cursor: pointer; opacity: .75;
 }
 .btn-icon:hover { opacity: 1; }
+.btn-icon[hidden] { display: none; }
+.btn-icon.speed { width: auto; padding: 0 9px; font: 700 12px var(--mono); color: #fde68a; opacity: 1; }
 .btn-icon.on { opacity: 1; border-color: #a16207; background: color-mix(in srgb, #a16207 22%, var(--panel-2)); }
 
 /* ───────── 지금 하는 일 ───────── */

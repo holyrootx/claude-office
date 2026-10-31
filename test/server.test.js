@@ -170,6 +170,21 @@ test('새 인턴이 생기면 소개 이벤트 뒤에 그 인턴이 한 일을 �
   assert.ok(fin, '인턴의 마지막 보고');
 });
 
+test('다시 보기: 세션 전체를 시간 순으로, 인턴은 출근 소개부터 준다', async () => {
+  const r = JSON.parse((await get('/api/replay?file=' + encodeURIComponent(shop))).body);
+  assert.equal(r.sid, SHOP);
+  assert.equal(r.session.project, 'shop');
+  assert.equal(r.session.ctx, undefined);
+  const ts = r.events.map(e => e.ts);
+  assert.deepEqual(ts, ts.slice().sort((a, b) => a - b));
+  for (const id of ['done1', 'busy1', 'new2']) {
+    const first = r.events.findIndex(e => e.agent === id);
+    assert.equal(r.events[first].k, 'agent', id + ' 소개가 먼저');
+  }
+  assert.ok(r.events.some(e => e.k === 'user' && !e.agent && e.text === '401 고쳐 줘'));
+  assert.equal((await get('/api/replay?file=' + encodeURIComponent('/etc/passwd'))).status, 400);
+});
+
 test('빌딩에 새 세션이 들어오면 join으로 알린다', async () => {
   const s = stream('all');
   await until(() => s.log.find(x => x.ev === 'hello'));

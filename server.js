@@ -840,6 +840,26 @@ class Follower {
   }
 }
 
+// ───────────────────────── 다시 보기 ─────────────────────────
+// 세션 하나의 처음부터 끝까지를 시간 순으로 (서브에이전트가 한 일과 출근 소개까지 섞어서)
+const REPLAY_MAX_EVENTS = 5000;
+function replayOf(file) {
+  const s = new Session(file, MAX_INITIAL_BYTES);
+  const events = s.main.load(MAX_INITIAL_BYTES);
+  if (!events) return null;
+  const all = events.slice();
+  for (const { a, evs } of s.findAgents()) {
+    if (!evs.length) continue;
+    all.push({ k: 'agent', ts: evs[0].ts - 1, agent: a.info.id, type: a.info.type, desc: a.info.desc, parent: a.info.parent });
+    for (const e of evs) all.push({ ...e, agent: a.info.id });
+  }
+  all.sort((x, y) => x.ts - y.ts); // 같은 시각이면 원래 순서를 지킨다
+  const meta = s.metaOut();
+  delete meta.ctx; // 끝났을 때의 컨텍스트라 다시 보기 중에는 맞지 않는다
+  const st = { file, mtime: s.main.mtime, size: s.main.size, dir: baseName(path.dirname(file)) };
+  return { sid: s.sid, session: { ...describe(st), ...meta }, events: all.slice(-REPLAY_MAX_EVENTS) };
+}
+
 // ───────────────────────── HTTP ─────────────────────────
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
@@ -901,6 +921,14 @@ const server = http.createServer((req, res) => {
     }
     const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
     return json(res, { root: PROJECTS, sessions: list });
+  }
+
+  if (url.pathname === '/api/replay') {
+    const file = url.searchParams.get('file') || '';
+    if (!insideProjects(file)) { res.writeHead(400); return res.end('bad file'); }
+    const r = replayOf(path.resolve(file));
+    if (!r) { res.writeHead(404); return res.end('not found'); }
+    return json(res, r);
   }
 
   if (url.pathname === '/api/stream') {

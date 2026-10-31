@@ -27,7 +27,7 @@ const seenWaits = new Set();
 let current = null; // 보고 있는 층
 let floorAuto = true;
 let viewMode = 'all'; // all 빌딩 · auto 가장 최근 세션 · file 고른 세션 · demo
-let es = null, demo = null;
+let es = null, demo = null, replay = null;
 let boardSid = null, boardPlan = null;
 
 // 캐릭터들이 같이 쓰는 것: 자리 배정, 화이트보드, '나'의 말풍선, 퇴근 처리
@@ -448,7 +448,7 @@ function renderHeader(focus) {
     } else {
       project = info.project || '—';
       title = info.title || '(제목 없음)';
-      meta = [...where, viewMode === 'auto' ? '자동 추적' : ''].filter(Boolean).join(' · ');
+      meta = [...where, viewMode === 'auto' ? '자동 추적' : viewMode === 'replay' ? '⏪ 다시 보기' : ''].filter(Boolean).join(' · ');
     }
   }
   const key = project + '|' + title + '|' + meta;
@@ -522,7 +522,7 @@ function feedAdd(s, a, ev) {
   if (cls) li.className = cls;
   if (room) li.dataset.room = room;
   li.dataset.floor = s.floor;
-  li.innerHTML = `<time>${hhmmss(ev.ts || Date.now())}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
+  li.innerHTML = `<time>${hhmmss(ev.at || ev.ts || Date.now())}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
   if (ev.k === 'tool') feedItems.set(ev.id, li);
   el.feed.prepend(li);
   while (el.feed.children.length > 200) {
@@ -540,7 +540,7 @@ try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장�
 const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
 
 function notify(s, title, body) {
-  if (!notifyOn || !canNotify() || viewMode === 'demo') return;
+  if (!notifyOn || !canNotify() || viewMode === 'demo' || viewMode === 'replay') return;
   if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
   const floor = s.floor;
   // 같은 세션 알림은 tag로 하나만 남긴다
@@ -689,6 +689,7 @@ async function loadSessions(keepFile) {
 // ───────────────────────── 데모 ─────────────────────────
 function startDemo() {
   stopDemo(false);
+  stopReplay(false);
   if (es) { es.close(); es = null; }
   floorAuto = true;
   onHello({ mode: 'demo', root: '', sessions: DEMO_SESSIONS.map(s => ({ ...s, session: { ...s.session, mtime: Date.now() }, stats: emptyStats() })) });
@@ -716,6 +717,66 @@ function stopDemo(reconnect) {
   $('demoBtn').textContent = '데모 보기';
   $('demoBtn').classList.remove('stop');
   if (reconnect) connect();
+}
+
+// ───────────────────────── 다시 보기 ─────────────────────────
+// 지난 세션을 처음부터 빠르게 다시 틀어 준다. 오래 쉬던 시간은 15초까지로 줄이고, 캐릭터 연출이 밀리면 기다려 준다.
+const REPLAY_SPEEDS = [5, 10, 30];
+// 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
+const REPLAY_QUEUE = { 5: 1, 10: 3, 30: 12 };
+async function startReplay() {
+  // 목록에서 고른 세션, 아니면 지금 보고 있는 직원의 세션
+  const focus = focusActor([...actors].filter(a => a.floor === current));
+  const file = isFile(sel.value) ? sel.value : focus && sessions.get(focus.sid) && sessions.get(focus.sid).info.file;
+  if (!file) return toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
+  let d;
+  try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
+  if (!d || !d.events || !d.events.length) return toast('다시 볼 기록이 없어요');
+  stopDemo(false);
+  stopReplay(false);
+  if (es) { es.close(); es = null; }
+  floorAuto = true;
+  onHello({ mode: 'replay', root: '', sessions: [{ sid: d.sid, session: d.session, history: [], plan: null, stats: emptyStats(), wait: null, agents: [] }] });
+  replay = { sid: d.sid, events: d.events, i: 0, speed: 10, timer: 0 };
+  renderReplayBtns();
+  toast(`⏪ ${clip(d.session.title || d.session.project, 24)} 처음부터 다시 보기`);
+  replayStep();
+}
+function replayStep() {
+  const r = replay;
+  if (!r) return;
+  if (r.i >= r.events.length) {
+    setConn('demo', '다시 보기 끝 · 잠시 뒤 실시간으로');
+    r.timer = setTimeout(() => stopReplay(true), 9000);
+    return;
+  }
+  // 캐릭터가 앞 장면을 아직 연출하는 중이면 조금 기다린다
+  const busy = Math.max(0, ...[...actors].filter(a => a.sid === r.sid).map(a => a.queue.length + (a.running ? 1 : 0)));
+  if (busy > REPLAY_QUEUE[r.speed]) {
+    r.timer = setTimeout(replayStep, 120);
+    return;
+  }
+  const ev = r.events[r.i++];
+  // 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
+  applyUpdate({ sid: r.sid, events: [{ ...ev, at: ev.ts, ts: Date.now() }] });
+  setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${hhmmss(ev.ts)}`);
+  const next = r.events[r.i];
+  const gap = next ? Math.min(Math.max(next.ts - ev.ts, 0), 15000) / r.speed : 0;
+  r.timer = setTimeout(replayStep, gap);
+}
+function stopReplay(reconnect) {
+  if (!replay) return;
+  clearTimeout(replay.timer);
+  replay = null;
+  renderReplayBtns();
+  if (reconnect) connect();
+}
+function renderReplayBtns() {
+  $('replayBtn').textContent = replay ? '⏹' : '⏪';
+  $('replayBtn').title = replay ? '다시 보기 끝내고 실시간으로 돌아가기' : '고른 세션(없으면 지금 보는 직원)을 처음부터 빠르게 다시 보기';
+  $('replayBtn').classList.toggle('on', !!replay);
+  $('speedBtn').hidden = !replay;
+  if (replay) $('speedBtn').textContent = replay.speed + '×';
 }
 
 // ───────────────────────── 시작 ─────────────────────────
@@ -752,11 +813,18 @@ const VIEW_KEY = 'claude-office-view';
 sel.addEventListener('change', () => {
   try { localStorage.setItem(VIEW_KEY, sel.value); } catch { /* 저장소 없음 */ }
   stopDemo(false);
+  stopReplay(false);
   floorAuto = true;
   connect();
 });
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
 $('notifyBtn').addEventListener('click', toggleNotify);
+$('replayBtn').addEventListener('click', () => (replay ? stopReplay(true) : startReplay()));
+$('speedBtn').addEventListener('click', () => {
+  if (!replay) return;
+  replay.speed = REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(replay.speed) + 1) % REPLAY_SPEEDS.length];
+  renderReplayBtns();
+});
 renderNotifyBtn();
 let saved = 'all';
 try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }

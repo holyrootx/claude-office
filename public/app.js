@@ -64,7 +64,11 @@ const office = {
     if (!s) return 0;
     return Math.max(s.main.lastEventTs, ...[...s.interns.values()].map(a => a.lastEventTs));
   },
+  select(actor) {
+    openCard(actor);
+  },
   remove(actor) {
+    if (cardActor === actor) closeCard();
     actors.delete(actor);
     const s = sessions.get(actor.sid);
     if (s && s.interns.get(actor.agent) === actor) s.interns.delete(actor.agent);
@@ -502,7 +506,48 @@ function render() {
   renderLobby();
   renderStats();
   renderHeader(focus);
+  renderCard();
   $('empty').hidden = sessions.size > 0 || viewMode === 'demo';
+}
+
+// ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
+// 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
+let cardActor = null, cardHtml = '';
+function openCard(a) {
+  cardActor = cardActor === a ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
+  cardHtml = '';
+  renderCard();
+}
+function closeCard() {
+  cardActor = null;
+  $('card').hidden = true;
+}
+function renderCard() {
+  const a = cardActor;
+  const s = a && sessions.get(a.sid);
+  if (!a || !s || a.leaving || a.floor !== current) return closeCard();
+  const info = s.info;
+  const ctx = !a.intern && ctxOf(s);
+  const where = [info.project, (info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : ''].filter(Boolean).map(esc).join(' · ');
+  const head = a.intern
+    ? `<b><em>인턴</em> ${esc(a.name)}</b><small>${esc(a.desc || '')}${a.desc ? ' · ' : ''}${esc(s.main.name)}의 인턴</small>`
+    : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;
+  const nums = a.intern ? '' : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
+  const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
+  const live = viewMode !== 'demo' && viewMode !== 'replay' && info.file;
+  const acts = !a.intern && live
+    ? `<div class="card-acts"><button type="button" data-act="replay">⏪ 처음부터 다시 보기</button>${viewMode === 'file' ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}</div>`
+    : '';
+  const html = `<button class="card-x" type="button" data-act="close" aria-label="닫기">✕</button><div class="card-head" style="--wc:${s.color}">${head}</div>`
+    + `<div class="card-now">${esc(a.now.icon)} ${esc(a.now.title)}${a.now.time ? ` <time>${esc(a.now.time)}</time>` : ''}${a.now.sub ? `<small>${esc(clip(a.now.sub, 120))}</small>` : ''}</div>`
+    + ctxRow + nums + acts;
+  const card = $('card');
+  if (html !== cardHtml) card.innerHTML = cardHtml = html;
+  card.hidden = false;
+  // 캐릭터 오른쪽 위에 붙이되 무대 밖으로 나가지 않게
+  const w = card.offsetWidth, h = card.offsetHeight;
+  card.style.left = Math.max(8, Math.min(a.x + 34, W - w - 8)) + 'px';
+  card.style.top = Math.max(8, Math.min(a.y - h - 20, H - h - 8)) + 'px';
 }
 
 // ───────────────────────── 서버 연결 ─────────────────────────
@@ -791,9 +836,24 @@ $('replayBar').addEventListener('click', e => {
   seekReplay((e.clientX - r.left) / r.width);
 });
 $('pauseBtn').addEventListener('click', togglePause);
+$('card').addEventListener('click', e => {
+  e.stopPropagation();
+  const act = e.target.closest('[data-act]');
+  const s = cardActor && sessions.get(cardActor.sid);
+  if (!act || !s) return;
+  if (act.dataset.act === 'close') return closeCard();
+  closeCard();
+  if (act.dataset.act === 'replay') startReplay(s.info.file);
+  if (act.dataset.act === 'pin') {
+    sel.value = s.info.file;
+    sel.dispatchEvent(new Event('change'));
+  }
+});
+el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 닫기
 // 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
+  if (cardActor && e.key === 'Escape') return closeCard();
   if (journal.isOpen()) {
     if (e.key === 'Escape') journal.close();
     return;

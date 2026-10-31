@@ -17,7 +17,7 @@ function fakeEl() {
     style: { setProperty() {} },
     hidden: false, innerHTML: '', textContent: '', className: '', offsetWidth: 120, offsetHeight: 40,
     querySelector: () => fakeEl(),
-    append() {}, appendChild() {}, remove() {},
+    append() {}, appendChild() {}, remove() {}, addEventListener() {},
   };
 }
 globalThis.document = {

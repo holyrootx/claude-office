@@ -22,6 +22,11 @@ export class Actor {
     this.sign = Object.assign(document.createElement('div'), { className: 'tool-sign' });
     this.pop = Object.assign(document.createElement('div'), { className: 'check-pop', textContent: '✓' });
     this.wrap.append(this.el, this.sign, this.pop, this.bubble);
+    // 캐릭터를 누르면 자세한 정보 카드를 연다
+    this.el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (office.select) office.select(this);
+    });
     office.actorsEl.appendChild(this.wrap);
 
     this.x = 0;

@@ -117,6 +117,29 @@ button, select { font: inherit; color: inherit; }
 .now-ctx.high i::after, .lb .ctx.high::after { background: var(--bad); }
 .now-ctx.high b { color: #ffc4c6; }
 
+/* ───────── 캐릭터 정보 카드 ───────── */
+.claude { cursor: pointer; }
+.card {
+  position: absolute; z-index: 220; width: 300px; padding: 12px 14px 12px; border-radius: 14px;
+  background: rgba(21, 27, 40, .97); color: var(--text); border: 1px solid var(--line); box-shadow: 0 14px 34px rgba(0, 0, 0, .45);
+  font: 13px/1.45 var(--ui);
+}
+.card[hidden] { display: none; }
+.card-x { position: absolute; right: 8px; top: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; }
+.card-head { border-left: 4px solid var(--wc); padding-left: 9px; margin-bottom: 8px; padding-right: 18px; }
+.card-head b { display: block; font-size: 15px; }
+.card-head em { font-style: normal; font-size: 11px; color: #c4b5fd; }
+.card-head small { display: block; color: var(--muted); font-size: 11.5px; }
+.card-now { background: var(--panel-2); border-radius: 9px; padding: 7px 9px; margin-bottom: 8px; }
+.card-now time { float: right; font: 11px var(--mono); color: var(--faint); }
+.card-now small { display: block; color: var(--muted); font: 11.5px/1.35 var(--mono); overflow-wrap: anywhere; margin-top: 2px; }
+.card-ctx { display: flex; margin-bottom: 6px; flex-wrap: wrap; row-gap: 2px; }
+.card-ctx small { flex-basis: 100%; color: var(--faint); font: 11px var(--mono); }
+.card-nums { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.card-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.card-acts button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12.5px; cursor: pointer; }
+.card-acts button:hover { border-color: var(--claude); }
+
 /* ───────── 업무 일지 ───────── */
 .journal { position: fixed; inset: 0; z-index: 500; background: rgba(5, 8, 14, .66); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .journal[hidden] { display: none; }

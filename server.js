@@ -104,6 +104,12 @@ function roomOf(name) {
 // 이미 '질문하러 오기'로 보여 주는 도구라 권한 대기로 따로 연출하지 않는다
 const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 
+// 컨텍스트 창 크기 추정: Claude 5 이후 모델이나 [1m] 모델, 또는 이미 20만 토큰을 넘었으면 100만
+function contextWindow(model, tokens) {
+  const m = String(model || '').match(/claude-(?:opus|sonnet|haiku|fable)-(\d+)/);
+  return tokens > 200000 || /\[1m\]/i.test(model || '') || (m && Number(m[1]) >= 5) ? 1000000 : 200000;
+}
+
 // ───────────────────────── 텍스트 다듬기 ─────────────────────────
 const clip = (s, n) => {
   s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -250,6 +256,7 @@ class Normalizer {
     this.seen = new Set();
     this.stats = { library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0, tools: 0, errors: 0, prompts: 0 };
     this.meta = { title: '', cwd: '', model: '', branch: '' };
+    this.ctx = 0; // 마지막 답을 만들 때 읽은 컨텍스트 크기(토큰)
   }
 
   line(l) {
@@ -281,6 +288,8 @@ class Normalizer {
   assistant(j, ts) {
     const m = j.message || {};
     if (m.model && m.model !== '<synthetic>') this.meta.model = m.model;
+    const u = m.usage;
+    if (u && m.model !== '<synthetic>') this.ctx = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
     const blocks = Array.isArray(m.content) ? m.content : [];
     const out = [];
     for (const b of blocks) {
@@ -729,6 +738,8 @@ class Session {
     const out = { model: m.model, branch: m.branch };
     if (m.title) out.title = clip(m.title, 70);
     if (m.cwd) { out.cwd = m.cwd; out.project = baseName(m.cwd); }
+    const ctx = this.main.norm.ctx;
+    if (ctx) out.ctx = { tokens: ctx, window: contextWindow(m.model, ctx) };
     return out;
   }
 }
@@ -1012,4 +1023,4 @@ if (require.main === module) {
   else serve();
 }
 
-module.exports = { Normalizer, scanSessions, describe, labelOf, roomOf, displayName, planFromMarkdown };
+module.exports = { Normalizer, scanSessions, describe, labelOf, roomOf, displayName, planFromMarkdown, contextWindow };

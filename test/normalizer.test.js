@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown } = require('../server.js');
+const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow } = require('../server.js');
 
 let n = 0;
 const ts = '2026-10-25T01:00:00.000Z';
@@ -166,6 +166,19 @@ test('계획 승인 요청(ExitPlanMode)의 마크다운을 목록으로 바꾼�
   const p = planFromMarkdown('# 로그인 고치기\n\n1. 원인 찾기\n2. **테스트** 추가\n- [링크](http://x) 정리');
   assert.equal(p.title, '로그인 고치기');
   assert.deepEqual(p.items.map(i => i.text), ['원인 찾기', '테스트 추가', '링크 정리']);
+});
+
+test('마지막 답의 usage로 컨텍스트 크기를 잰다', () => {
+  const norm = new Normalizer();
+  feed(norm,
+    assistant([{ type: 'text', text: 'a' }], { usage: { input_tokens: 5, cache_creation_input_tokens: 1000, cache_read_input_tokens: 50000, output_tokens: 99 } }),
+    assistant([{ type: 'text', text: 'b' }], { usage: { input_tokens: 2, cache_creation_input_tokens: 300, cache_read_input_tokens: 52000, output_tokens: 10 } }),
+  );
+  assert.equal(norm.ctx, 52302); // 가장 최근 값, 출력 토큰은 빼고
+  assert.equal(contextWindow('claude-opus-5-5', 1000), 1000000);
+  assert.equal(contextWindow('claude-sonnet-4-5', 1000), 200000);
+  assert.equal(contextWindow('claude-sonnet-4-5[1m]', 1000), 1000000);
+  assert.equal(contextWindow('claude-sonnet-4-5', 250000), 1000000); // 이미 20만을 넘었다면 큰 창
 });
 
 test('질문과 답을 읽는다', () => {

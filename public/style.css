@@ -104,6 +104,15 @@ button, select { font: inherit; color: inherit; }
 .now-text b { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .now-text span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 .now-time { font: 600 13px var(--mono); color: var(--muted); }
+/* 컨텍스트가 얼마나 찼는지 (초록 → 노랑 60% → 빨강 85%) */
+.now-ctx { display: inline-flex; align-items: center; gap: 7px; font: 600 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.now-ctx[hidden] { display: none; }
+.now-ctx i, .lb .ctx { position: relative; overflow: hidden; border-radius: 3px; background: var(--panel-2); }
+.now-ctx i { width: 64px; height: 6px; }
+.now-ctx i::after, .lb .ctx::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--p); background: var(--ok); border-radius: 3px; }
+.now-ctx.mid i::after, .lb .ctx.mid::after { background: #f59e0b; }
+.now-ctx.high i::after, .lb .ctx.high::after { background: var(--bad); }
+.now-ctx.high b { color: #ffc4c6; }
 
 /* ───────── 층 ───────── */
 .floorbar {
@@ -135,13 +144,14 @@ button, select { font: inherit; color: inherit; }
 .lobby-panel { max-height: 34vh; display: flex; flex-direction: column; }
 .lobby { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 4px; }
 .lb {
-  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: 'f nm t' 'f st st';
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: 'f nm t' 'f st st' 'f ctx ctx';
   column-gap: 8px; padding: 5px 8px; border-radius: 8px; cursor: pointer;
   background: var(--panel-2); border-left: 3px solid var(--wc, var(--line)); font-size: 12.5px;
 }
 .lb:hover { filter: brightness(1.15); }
 .lb b { grid-area: f; font: 700 11px var(--mono); color: var(--muted); align-self: center; }
 .lb .nm { grid-area: nm; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb .ctx { grid-area: ctx; height: 3px; margin-top: 4px; background: var(--panel); }
 .lb .nm em { font-style: normal; font-size: 10.5px; color: #c4b5fd; margin-right: 4px; }
 .lb .st { grid-area: st; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb time { grid-area: t; font: 11px var(--mono); color: var(--faint); }

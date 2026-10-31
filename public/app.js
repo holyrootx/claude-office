@@ -8,6 +8,15 @@ const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F'
 const STATUS_ORDER = { wait: 0, ask: 1 };
 const emptyStats = () => ({ library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0, tools: 0, errors: 0, prompts: 0 });
 const shortName = info => clip(info.title || info.project || '세션', 18);
+// 548123 → '54.8만'
+const fmtTokens = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : n.toLocaleString());
+// 컨텍스트가 얼마나 찼는지: 비율과 색 단계
+function ctxOf(s) {
+  const c = s && s.info.ctx;
+  if (!c || !c.tokens) return null;
+  const p = Math.min(100, Math.round((c.tokens / c.window) * 100));
+  return { p, level: p >= 85 ? 'high' : p >= 60 ? 'mid' : 'low', text: `${fmtTokens(c.tokens)} / ${fmtTokens(c.window)} 토큰` };
+}
 
 // ───────────────────────── 상태 ─────────────────────────
 const sessions = new Map(); // 세션 id → { sid, info, floor, color, main, interns, plan, planAt, stats, wait }
@@ -337,8 +346,18 @@ let nowKey = '', titleKey = '';
 function renderNow(a, many) {
   const st = a ? a.now : { icon: '⏳', title: sessions.size ? '이 층은 비어 있어요' : '따라갈 세션이 없어요', sub: '', room: 'desk', mode: '', time: '' };
   const sub = a && many ? `${a.intern ? '인턴 ' : ''}${a.name}${st.sub ? ' · ' + st.sub : ''}` : st.sub;
-  const key = [st.icon, st.title, sub, st.room, st.mode, st.time].join('|');
+  // 지금 보는 직원의 컨텍스트 (인턴은 따로 세지 않는다)
+  const ctx = a && !a.intern ? ctxOf(sessions.get(a.sid)) : null;
+  const key = [st.icon, st.title, sub, st.room, st.mode, st.time, ctx ? ctx.p : ''].join('|');
   if (key !== nowKey) {
+    const box = $('nowCtx');
+    box.hidden = !ctx;
+    if (ctx) {
+      box.className = 'now-ctx ' + ctx.level;
+      box.style.setProperty('--p', ctx.p + '%');
+      box.querySelector('b').textContent = `컨텍스트 ${ctx.p}%`;
+      box.title = `${ctx.text} 사용 중 · 꽉 차면 Claude Code가 앞부분을 요약해요`;
+    }
     nowKey = key;
     $('nowIcon').textContent = st.icon;
     $('nowTitle').textContent = st.title;
@@ -370,6 +389,7 @@ function renderFloorbar() {
   if (html !== floorbarHtml) $('floorTabs').innerHTML = floorbarHtml = html;
 }
 
+const ctxBar = c => (c ? `<i class="ctx ${c.level}" style="--p:${c.p}%" title="컨텍스트 ${c.p}% · ${esc(c.text)}"></i>` : '');
 let lobbyHtml = '';
 function renderLobby() {
   const rows = [];
@@ -384,7 +404,8 @@ function renderLobby() {
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" style="--wc:${s.color}">`
             + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}</span>`
-            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time></li>`,
+            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time>`
+            + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
         });
       }
     }

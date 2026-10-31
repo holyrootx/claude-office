@@ -94,6 +94,7 @@ test.before(async () => {
   userMsg(blog, '글 써 줘');
   toolUse(blog, 'b1', 'WebSearch', { query: 'SSE' });
   userMsg(shop, '401 고쳐 줘');
+  put(shop, { type: 'assistant', message: { model: 'claude-opus-5-5', usage: { input_tokens: 10, cache_creation_input_tokens: 5000, cache_read_input_tokens: 120000, output_tokens: 300 }, content: [{ type: 'text', text: '살펴볼게요' }] } });
   toolUse(shop, 's1', 'Read', { file_path: '/tmp/shop/auth.ts' });
   toolResult(shop, 's1');
   // 이미 끝난 인턴과 아직 일하는 인턴
@@ -140,6 +141,7 @@ test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함�
   assert.deepEqual(snap.agents.map(a => [a.id, a.type, a.desc]), [['busy1', 'Explore', '코드 조사']]); // 끝난 인턴은 빠진다
   assert.ok(snap.agents[0].history.every(e => e.agent === 'busy1'));
   assert.equal(snap.stats.tools, 2); // 인턴이 쓴 도구까지 합친다
+  assert.deepEqual(snap.session.ctx, { tokens: 125010, window: 1000000 }); // 컨텍스트 크기
 });
 
 test('자동 모드는 가장 최근 세션 하나만 따라간다', async () => {

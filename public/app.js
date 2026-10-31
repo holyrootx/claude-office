@@ -638,19 +638,31 @@ function connect() {
 }
 
 // ───────────────────────── 세션 목록 ─────────────────────────
-async function loadSessions() {
-  let d;
-  try { d = await (await fetch('/api/sessions')).json(); } catch { return; }
+const isFile = v => v && v !== 'all' && v !== 'auto';
+// keepFile: 처음 켤 때 저장해 둔 고정 세션 (그 뒤로는 지금 고른 값)
+async function loadSessions(keepFile) {
   const sel = $('sessionSelect');
-  const keep = sel.value;
+  const keep = keepFile || sel.value;
+  let d;
+  try { d = await (await fetch('/api/sessions' + (isFile(keep) ? '?keep=' + encodeURIComponent(keep) : ''))).json(); } catch { return; }
   sel.innerHTML = '<option value="all">🏢 빌딩 · 최근 30분 세션 모두</option><option value="auto">자동 · 가장 최근 세션 하나</option>';
   for (const s of d.sessions || []) {
     const o = document.createElement('option');
     o.value = s.file;
-    o.textContent = `${sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`;
+    o.textContent = `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`;
     sel.appendChild(o);
   }
-  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+  if ([...sel.options].some(o => o.value === keep)) {
+    sel.value = keep;
+  } else if (isFile(keep)) {
+    // 고정해 둔 세션 기록이 없어졌다: 빌딩으로 돌아간다
+    sel.value = 'all';
+    try { localStorage.setItem(VIEW_KEY, 'all'); } catch { /* 저장소 없음 */ }
+    if (viewMode === 'file' && !demo) {
+      toast('📌 고정한 세션 기록이 없어져서 빌딩으로 돌아왔어요');
+      connect();
+    }
+  }
 }
 
 // ───────────────────────── 데모 ─────────────────────────
@@ -725,9 +737,9 @@ sel.addEventListener('change', () => {
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
 $('notifyBtn').addEventListener('click', toggleNotify);
 renderNotifyBtn();
-loadSessions().then(() => {
-  let saved = 'all';
-  try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }
+let saved = 'all';
+try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }
+loadSessions(saved).then(() => {
   sel.value = [...sel.options].some(o => o.value === saved) ? saved : 'all';
   // ?demo 로 열면 실제 세션 대신 데모부터 재생하고, 끝나면 실시간 추적으로 넘어간다
   if (new URLSearchParams(location.search).has('demo')) startDemo();

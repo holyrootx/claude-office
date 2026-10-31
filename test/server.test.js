@@ -229,6 +229,28 @@ test('보고 있지 않던 세션이 권한을 기다리면 빌딩에 데려온�
   s.close();
 });
 
+test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었으면(keep) 함께 준다', async () => {
+  const P = path.join(CFG, 'projects', '-tmp-many');
+  fs.mkdirSync(P, { recursive: true });
+  const ago = h => new Date(Date.now() - h * 3600 * 1000);
+  for (let i = 0; i < 31; i++) {
+    const f = path.join(P, `many-${String(i).padStart(2, '0')}.jsonl`);
+    userMsg(f, '세션 ' + i);
+    fs.utimesSync(f, ago(2), ago(2));
+  }
+  const pinned = path.join(P, 'pinned-old.jsonl');
+  userMsg(pinned, '고정해 둔 옛 세션');
+  fs.utimesSync(pinned, ago(3), ago(3));
+  const list = async q => JSON.parse((await get('/api/sessions' + q)).body).sessions;
+  const plain = await list('');
+  assert.equal(plain.length, 30);
+  assert.ok(!plain.some(s => s.file === pinned));
+  const kept = await list('?keep=' + encodeURIComponent(pinned));
+  assert.equal(kept.length, 31);
+  assert.equal(kept[30].file, pinned);
+  assert.equal((await list('?keep=' + encodeURIComponent('/etc/passwd'))).length, 30); // 기록 폴더 밖은 무시
+});
+
 test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하고, --stop으로 끈다', async () => {
   assert.match(server('--port', String(PORT)), /이미 켜져/);
   assert.match(server('--stop'), /껐어요/);

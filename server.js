@@ -861,7 +861,15 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
 
   if (url.pathname === '/api/sessions') {
-    const list = scanSessions().slice(0, 30).map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
+    const all = scanSessions();
+    const top = all.slice(0, 30);
+    // 화면에서 고정해 둔 세션은 오래돼서 30개 밖으로 밀려도 목록에 남긴다
+    const keep = url.searchParams.get('keep');
+    if (keep && insideProjects(keep)) {
+      const k = all.find(x => x.file === path.resolve(keep));
+      if (k && !top.includes(k)) top.push(k);
+    }
+    const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
     return json(res, { root: PROJECTS, sessions: list });
   }
 

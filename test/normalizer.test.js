@@ -3,7 +3,12 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow } = require('../server.js');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+// 내 진짜 ~/.claude/claude-office.json 설정이 결과를 바꾸지 않게 빈 임시 폴더를 쓴다
+process.env.CLAUDE_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-norm-'));
+const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG } = require('../server.js');
 
 let n = 0;
 const ts = '2026-10-25T01:00:00.000Z';
@@ -38,6 +43,29 @@ test('실제 기록에서 엉뚱한 방으로 가던 도구들을 바로잡는�
   assert.equal(roomOf('mcp__Claude_Code_iOS_Simulator__control'), 'server');
   assert.equal(roomOf('mcp__Claude_Browser__navigate'), 'search'); // 브라우저·바깥 서비스는 그대로
   assert.equal(roomOf('mcp__github__create_pull_request'), 'search');
+});
+
+test('내 방 설정 파일이 있으면 그 규칙을 먼저 쓴다', () => {
+  assert.equal(roomOf('mcp__github__create_pull_request'), 'search');
+  fs.writeFileSync(ROOM_CONFIG, JSON.stringify({ rooms: {
+    'mcp__github__*': 'server',
+    'mcp__linear__*': '회의실', // 한국어 방 이름도 된다
+    'Bash': 'library', // 기본 규칙보다 먼저
+    'mcp__x__*': '없는 방', // 모르는 방은 건너뛴다
+  } }));
+  roomRules.get(true);
+  assert.equal(roomOf('mcp__github__create_pull_request'), 'server');
+  assert.equal(roomOf('mcp__linear__list_issues'), 'meeting');
+  assert.equal(roomOf('Bash'), 'library');
+  assert.equal(roomOf('mcp__x__y'), 'search');
+  assert.equal(roomOf('mcp__githubx__a'), 'search'); // 패턴은 이름 전체가 맞아야 한다
+  fs.writeFileSync(ROOM_CONFIG, '{ 망가진 json');
+  roomRules.mtime = -2;
+  roomRules.get(true);
+  assert.equal(roomOf('mcp__github__create_pull_request'), 'search'); // 읽지 못하면 기본 규칙
+  fs.unlinkSync(ROOM_CONFIG);
+  roomRules.get(true);
+  assert.equal(roomOf('Bash'), 'server');
 });
 
 test('처음 보는 도구는 이름을 보고 방을 고른다', () => {

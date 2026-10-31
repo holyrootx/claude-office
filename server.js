@@ -91,7 +91,41 @@ const ROOM_BY_WORD = [
   [/read|get|list|search|find|glob|grep|view|query|lookup/i, 'library'],
 ];
 
+// 내 방 설정: ~/.claude/claude-office.json 의 "rooms"에 { "도구 이름 패턴": "방" }을 적으면 그 규칙이 먼저 쓰인다.
+// 패턴의 *는 아무 글자나 (예: "mcp__github__*"), 방은 영어 이름(server)이나 한국어 이름(서버실) 둘 다 된다.
+// 파일을 고치면 서버를 다시 켜지 않아도 2초 안에 다시 읽는다.
+const ROOM_CONFIG = path.join(CLAUDE_DIR, 'claude-office.json');
+const ROOM_IDS = ['library', 'dev', 'server', 'search', 'meeting', 'desk'];
+const ROOM_NAMES = { 자료실: 'library', 개발실: 'dev', 서버실: 'server', '정보 검색실': 'search', 검색실: 'search', 회의실: 'meeting', '내 자리': 'desk' };
+const globRe = p => new RegExp('^' + String(p).split('*').map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+const roomRules = {
+  list: [],
+  mtime: -1,
+  checkedAt: 0,
+  get(force) {
+    if (!force && Date.now() - this.checkedAt < 2000) return this.list;
+    this.checkedAt = Date.now();
+    let st;
+    try { st = fs.statSync(ROOM_CONFIG); } catch { this.mtime = -1; return (this.list = []); }
+    if (st.mtimeMs === this.mtime) return this.list;
+    this.mtime = st.mtimeMs;
+    try {
+      const rooms = JSON.parse(fs.readFileSync(ROOM_CONFIG, 'utf8')).rooms || {};
+      this.list = Object.entries(rooms).map(([pat, room]) => [globRe(pat), ROOM_NAMES[room] || room, pat]);
+      const bad = this.list.filter(([, room]) => !ROOM_IDS.includes(room)).map(([, , pat]) => pat);
+      if (bad.length) console.error(`  ⚠ 방 설정: 모르는 방이라 건너뛰어요 → ${bad.join(', ')}`);
+      this.list = this.list.filter(([, room]) => ROOM_IDS.includes(room));
+    } catch (e) {
+      console.error(`  ⚠ 방 설정 파일(${ROOM_CONFIG})을 읽지 못했어요: ${e.message}`);
+      this.list = [];
+    }
+    return this.list;
+  },
+};
+
 function roomOf(name) {
+  const mine = roomRules.get().find(([re]) => re.test(name));
+  if (mine) return mine[1];
   if (ROOM_BY_TOOL[name]) return ROOM_BY_TOOL[name];
   if (name.startsWith('mcp__')) {
     const hit = ROOM_BY_MCP.find(([re]) => re.test(name));
@@ -994,6 +1028,8 @@ function serve() {
     for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
     console.log(`\n  🏢 Claude 사무실이 열렸어요 → ${url}`);
     console.log(`  📂 세션 기록 폴더: ${PROJECTS}${fs.existsSync(PROJECTS) ? '' : '  (아직 없음 — claude를 한 번 실행하면 생겨요)'}`);
+    const rules = roomRules.get(true);
+    if (rules.length) console.log(`  🗂  내 방 설정 ${rules.length}개를 읽었어요 (${ROOM_CONFIG})`);
     console.log(`  ⏱  ${POLL_MS}ms마다 최신 세션을 따라 읽는 중… (끄려면 Ctrl+C)\n`);
     if (OPEN_BROWSER) openBrowser(url);
   });
@@ -1051,4 +1087,4 @@ if (require.main === module) {
   else serve();
 }
 
-module.exports = { Normalizer, scanSessions, describe, labelOf, roomOf, displayName, planFromMarkdown, contextWindow };
+module.exports = { Normalizer, scanSessions, describe, labelOf, roomOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG };

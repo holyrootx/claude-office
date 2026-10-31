@@ -268,6 +268,33 @@ test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었
   assert.equal((await list('?keep=' + encodeURIComponent('/etc/passwd'))).length, 30); // 기록 폴더 밖은 무시
 });
 
+test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 연다 (직접 정한 포트는 그대로 실패)', async () => {
+  const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
+  await new Promise(r => busy.once('listening', r));
+  const D = busy.address().port;
+  const env = { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-fallback.json'), CLAUDE_OFFICE_DEFAULT_PORT: String(D) };
+  delete env.PORT;
+  const child = spawn(process.execPath, [path.join(ROOT, 'server.js')], { env, stdio: 'ignore' });
+  try {
+    assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000), '실행 정보 파일');
+    const rt = JSON.parse(fs.readFileSync(env.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+    assert.equal(rt.port, D + 1);
+    const h = await new Promise(resolve => http.get({ host: '127.0.0.1', port: D + 1, path: '/api/health' }, res => {
+      let d = '';
+      res.on('data', c => { d += c; });
+      res.on('end', () => resolve(JSON.parse(d)));
+    }));
+    assert.equal(h.app, 'claude-office');
+    // 직접 정한 포트는 다른 데로 옮기지 않는다
+    let out = '';
+    try { execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(D)], { env: { ...env, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-x.json') } }); } catch (e) { out = String(e.stdout); }
+    assert.match(out, /다른 프로그램이 쓰고 있어요/);
+  } finally {
+    child.kill();
+    busy.close();
+  }
+});
+
 test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하고, --stop으로 끈다', async () => {
   assert.match(server('--port', String(PORT)), /이미 켜져/);
   assert.match(server('--stop'), /껐어요/);

@@ -27,7 +27,8 @@ if (args.includes('--help') || args.includes('-h')) {
 
   사용법: claude-office [옵션]   (또는 node server.js [옵션])
 
-    --port <번호>   사용할 포트 (기본 4777, 환경 변수 PORT로도 지정 가능)
+    --port <번호>   사용할 포트 (기본 4777, 다른 프로그램이 쓰고 있으면 4778·4779… 차례로.
+                    직접 정하면 그 포트만 써요. 환경 변수 PORT로도 지정 가능)
     --no-open       브라우저를 자동으로 열지 않기
     --background    터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기)
     --stop          뒤에서 켜 둔 사무실 끄기
@@ -38,7 +39,11 @@ if (args.includes('--help') || args.includes('-h')) {
 }
 
 const VERSION = require('./package.json').version;
-const PORT = Number(argValue('--port')) || Number(process.env.PORT) || 4777;
+// --port나 PORT로 직접 정했으면 그 포트만 쓰고, 아니면 4777부터 비어 있는 포트를 찾아 쓴다
+// (CLAUDE_OFFICE_DEFAULT_PORT는 테스트가 실제 4777을 건드리지 않게 시작 번호를 바꿀 때 쓴다)
+const PORT_GIVEN = Number(argValue('--port')) || Number(process.env.PORT) || 0;
+const PORT = PORT_GIVEN || Number(process.env.CLAUDE_OFFICE_DEFAULT_PORT) || 4777;
+const PORT_TRIES = 10;
 const OPEN_BROWSER = !args.includes('--no-open') && !process.env.NO_OPEN;
 const POLL_MS = 250;
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
@@ -1003,24 +1008,30 @@ function openBrowser(url) {
 
 // ───────────────────────── 실행 방법 ─────────────────────────
 function serve() {
-  const url = `http://localhost:${PORT}`;
+  let port = PORT;
   server.on('error', async e => {
     if (e.code === 'EADDRINUSE') {
-      if (await runtime.health(PORT)) {
+      const url = `http://localhost:${port}`;
+      if (await runtime.health(port)) {
         console.log(`\n  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}\n`);
         if (OPEN_BROWSER) openBrowser(url);
         process.exit(0);
       }
-      console.log(`\n  ⚠ ${PORT}번 포트를 다른 프로그램이 쓰고 있어요.`);
-      console.log(`    다른 포트로 실행하려면: claude-office --port 4778\n`);
+      // 포트를 직접 정하지 않았으면 다음 번호로 다시 해 본다
+      if (!PORT_GIVEN && port < PORT + PORT_TRIES - 1) return server.listen(++port, '127.0.0.1');
+      console.log(PORT_GIVEN
+        ? `\n  ⚠ ${port}번 포트를 다른 프로그램이 쓰고 있어요.\n    다른 포트로 실행하려면: claude-office --port ${port + 1}\n`
+        : `\n  ⚠ ${PORT}~${port}번 포트를 모두 다른 프로그램이 쓰고 있어요.\n    비어 있는 포트를 직접 정해 주세요: claude-office --port 5000\n`);
     } else {
       console.error(e);
     }
     process.exit(1);
   });
-  server.listen(PORT, '127.0.0.1', () => {
+  server.listen(port, '127.0.0.1', () => {
+    const url = `http://localhost:${port}`;
+    if (port !== PORT) console.log(`\n  ℹ ${PORT}번 포트를 다른 프로그램이 쓰고 있어서 ${port}번으로 열었어요.`);
     try {
-      runtime.write({ pid: process.pid, port: PORT, token: TOKEN, version: VERSION });
+      runtime.write({ pid: process.pid, port, token: TOKEN, version: VERSION });
     } catch (e) {
       console.log(`  ⚠ 실행 정보 파일을 쓰지 못해서 hooks 연동은 꺼져 있어요 (${e.message})`);
     }

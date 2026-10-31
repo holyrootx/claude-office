@@ -284,10 +284,11 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨면 서버에 알리는 Claude Code hook |
 | `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop` 명령 |
 | `public/index.html` | 화면 뼈대 |
-| `public/app.js` | 층·로비 안내판·활동 기록·화이트보드, 서버 연결과 데모 |
+| `public/app.js` | 층·로비 안내판·화이트보드, 서버 연결, 데모와 다시 보기 |
 | `public/js/actor.js` | 캐릭터 한 명(직원·인턴)의 이동·말풍선·표지판 |
 | `public/js/scene.js` | 사무실 바닥 그림, 방 정의, 방마다 서는 자리 |
 | `public/js/demo.js` | 데모 장면 |
+| `public/js/feed.js` · `alerts.js` · `journal.js` | 활동 기록, 알림·탭 아이콘, 업무 일지 |
 | `public/style.css` | 디자인과 애니메이션 |
 | `test/` | 테스트 (`npm test`, 설치할 것 없음) |
 | `start.cmd` | Windows에서 더블클릭으로 실행 |

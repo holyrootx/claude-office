@@ -3,6 +3,9 @@ import { $, esc, clip, hhmmss, ago } from './js/util.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
+import { createFeed } from './js/feed.js';
+import { createAlerts } from './js/alerts.js';
+import { createJournal } from './js/journal.js';
 
 const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F', '#1FA3A3', '#7C8799'];
 const STATUS_ORDER = { wait: 0, ask: 1 };
@@ -72,6 +75,9 @@ const office = {
 // ───────────────────────── 화면 뼈대 ─────────────────────────
 const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: $('feed'), board: $('board') };
 const signs = {}, statRows = {};
+const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1 });
+const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
+const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => startReplay(file) });
 
 function buildChrome() {
   for (const id of ROOM_IDS) {
@@ -218,7 +224,7 @@ function removeSession(sid) {
 function retireSession(sid) {
   const s = sessions.get(sid);
   if (!s) return;
-  feedAdd(s, s.main, { k: 'leave', ts: Date.now() });
+  feed.add(s, s.main, { k: 'leave', ts: Date.now() });
   if (s.floor !== current) {
     removeSession(sid);
     render();
@@ -252,9 +258,9 @@ function applyUpdate(u) {
       }
     }
     if (!u.stats) countLocal(s, ev);
-    feedAdd(s, a, ev);
-    if (ev.k === 'tool' && ev.ask) notify(s, '❓ 물어볼 게 있어요', ev.ask);
-    if (ev.k === 'say' && ev.final && !ev.agent) notify(s, '✅ 응답 완료', ev.text);
+    feed.add(s, a, ev);
+    if (ev.k === 'tool' && ev.ask) alerts.notify(s, '❓ 물어볼 게 있어요', ev.ask);
+    if (ev.k === 'say' && ev.final && !ev.agent) alerts.notify(s, '✅ 응답 완료', ev.text);
     if (!batches.has(a)) batches.set(a, []);
     batches.get(a).push(ev);
   }
@@ -273,8 +279,8 @@ function setWait(s, w) {
   }
   if (w && !seenWaits.has(waitId(s.sid, w))) {
     seenWaits.add(waitId(s.sid, w));
-    feedAdd(s, target, { ...w, k: 'wait' });
-    notifyWait(s, w);
+    feed.add(s, target, { ...w, k: 'wait' });
+    alerts.notifyWait(s, w);
     if (floorAuto && s.floor !== current) goFloor(s.floor);
   }
 }
@@ -394,7 +400,7 @@ function renderNow(a, many) {
   const waiting = [...actors].filter(x => x.waitState || x.status === 'ask').length;
   const title = waiting ? `🔐 ${waiting}명이 기다려요 · Claude 사무실` : `${st.icon} ${st.title} · Claude 사무실`;
   if (title !== titleKey) document.title = titleKey = title;
-  setFavicon(waiting);
+  alerts.setFavicon(waiting);
 }
 
 let floorbarHtml = '';
@@ -499,130 +505,12 @@ function render() {
   $('empty').hidden = sessions.size > 0 || viewMode === 'demo';
 }
 
-// ───────────────────────── 활동 기록 ─────────────────────────
-const feedItems = new Map();
-const feedKnown = new Map();
-function feedAdd(s, a, ev) {
-  let ic = '', cls = '', tx = '', room = '';
-  switch (ev.k) {
-    case 'agent': ic = '👋'; cls = 'agent'; tx = `<b>${esc(ev.type || '서브에이전트')} 인턴 출근</b> ${esc(ev.desc || '')}`; break;
-    case 'user':
-      if (ev.agent) { ic = '📋'; cls = 'think'; tx = `<b>맡은 일</b> ${esc(clip(ev.text, 140))}`; break; }
-      ic = '🙋'; cls = 'user'; tx = `<b>나</b> ${esc(ev.text)}`;
-      break;
-    case 'think': if (!ev.text) return; ic = '💭'; cls = 'think'; tx = esc(ev.text); break;
-    case 'say': ic = ev.final ? '✅' : '💬'; cls = 'say'; tx = esc(clip(ev.text, 160)); if (ev.final) room = 'desk'; break;
-    case 'tool': {
-      const r = ROOMS[ev.room] || ROOMS.dev;
-      ic = r.icon; room = ev.room;
-      feedKnown.set(ev.id, ev);
-      if (feedKnown.size > 1500) feedKnown.delete(feedKnown.keys().next().value);
-      tx = `${ev.git ? '<b style="color:#f05033">git</b> ' : ''}<b>${esc(ev.tool)}</b> ${esc(ev.label || '')}<span class="st"></span><small>${esc(r.name)}${ev.detail && ev.detail !== ev.label ? ' · ' + esc(ev.detail) : ''}</small>`;
-      break;
-    }
-    case 'result': {
-      const li = feedItems.get(ev.id);
-      if (li) li.classList.add(ev.ok ? 'ok' : 'fail');
-      if (ev.ok && ev.answer) { ic = '🙋'; cls = 'user'; tx = `<b>나</b> 답변: ${esc(ev.answer)}`; break; }
-      if (ev.ok) return;
-      const t = feedKnown.get(ev.id);
-      ic = '😰'; cls = 'err'; tx = `<b>${esc((t && t.tool) || ev.name || '도구')} 실패</b> ${esc(ev.error)}`;
-      break;
-    }
-    case 'wait':
-      ic = '🔐'; cls = 'wait';
-      tx = `<b>${ev.kind === 'input' ? '입력 대기' : '권한 확인 대기'}</b> ${ev.tool ? `${esc(ev.tool)} ${esc(ev.label || '')}` : esc(ev.text || '')}`;
-      break;
-    case 'interrupt': ic = '✋'; cls = 'err'; tx = '사용자가 작업을 중단했어요'; break;
-    case 'compact': ic = '🗜'; tx = '대화 압축(요약)'; break;
-    case 'leave': ic = '👋'; tx = '<b>퇴근</b> 한동안 조용해서 빌딩을 나갔어요. 다시 일하면 출근해요'; break;
-    case 'apierr': ic = '⚠'; cls = 'err'; tx = `<b>API 오류</b> ${esc(ev.text)}`; break;
-    default: return;
-  }
-  // 여러 세션이나 인턴이 있으면 누가 한 일인지 이름표를 붙인다
-  const who = a && (a.intern || sessions.size > 1)
-    ? `<span class="who" style="--wc:${s.color}">${a.intern ? '인턴 · ' : ''}${esc(a.name)}</span>`
-    : '';
-  const li = document.createElement('li');
-  if (cls) li.className = cls;
-  if (room) li.dataset.room = room;
-  li.dataset.floor = s.floor;
-  li.innerHTML = `<time>${hhmmss(ev.at || ev.ts || Date.now())}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
-  if (ev.k === 'tool') feedItems.set(ev.id, li);
-  el.feed.prepend(li);
-  while (el.feed.children.length > 200) {
-    const last = el.feed.lastElementChild;
-    for (const [k, v] of feedItems) if (v === last) feedItems.delete(k);
-    last.remove();
-  }
-}
-
-// ───────────────────────── 알림 ─────────────────────────
-// 다른 창을 보고 있을 때 누가 나를 기다리면 브라우저 알림으로 알려 준다. 🔔 버튼으로 켜고, 기본은 꺼져 있다.
-const NOTIFY_KEY = 'claude-office-notify';
-let notifyOn = false;
-try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장소 없음 */ }
-const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
-
-function notify(s, title, body) {
-  if (!notifyOn || !canNotify() || viewMode === 'demo' || viewMode === 'replay') return;
-  if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
-  const floor = s.floor;
-  // 같은 세션 알림은 tag로 하나만 남긴다
-  const n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
-  n.onclick = () => {
-    window.focus();
-    goFloor(floor);
-    n.close();
-  };
-}
-function notifyWait(s, w) {
-  const what = w.tool ? `${w.tool} ${w.label || ''}` : w.text || '';
-  notify(s, w.kind === 'input' ? '🔐 입력을 기다려요' : '🔐 실행 허락을 기다려요', what);
-}
-
-async function toggleNotify() {
-  if (!('Notification' in window)) return renderNotifyBtn('이 브라우저는 알림을 지원하지 않아요');
-  if (Notification.permission === 'default') await Notification.requestPermission();
-  if (Notification.permission === 'denied') {
-    notifyOn = false;
-    return renderNotifyBtn('브라우저 설정에서 이 페이지의 알림이 막혀 있어요');
-  }
-  notifyOn = !notifyOn && canNotify();
-  try { localStorage.setItem(NOTIFY_KEY, notifyOn ? '1' : '0'); } catch { /* 저장소 없음 */ }
-  renderNotifyBtn();
-  if (notifyOn) toast('🔔 다른 창을 볼 때 기다리는 일이 생기면 알려 드려요');
-}
-function renderNotifyBtn(why) {
-  const b = $('notifyBtn');
-  const on = notifyOn && canNotify();
-  b.textContent = on ? '🔔' : '🔕';
-  b.classList.toggle('on', on);
-  b.title = why || (on ? '알림 켜짐: 다른 창을 볼 때 권한 대기·질문·응답 완료를 알려요 (누르면 끔)' : '알림 꺼짐: 누르면 켜요');
-  if (why) toast(why);
-}
-
-// 탭 아이콘: Claude 얼굴, 기다리는 사람이 있으면 빨간 숫자
-let faviconKey = -1;
-function faviconUrl(n) {
-  const badge = n ? `<circle cx="48" cy="16" r="15" fill="#ef4444"/><text x="48" y="22" font-size="19" font-weight="700" text-anchor="middle" fill="#fff" font-family="sans-serif">${n > 9 ? '9+' : n}</text>` : '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="8" y="12" width="46" height="44" rx="19" fill="#D97757"/><ellipse cx="24" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><ellipse cx="38" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><path d="M27 41 q4 4 8 0" stroke="#2b1d16" stroke-width="2.6" fill="none" stroke-linecap="round"/>${badge}</svg>`;
-  return 'data:image/svg+xml,' + encodeURIComponent(svg);
-}
-function setFavicon(n) {
-  if (n === faviconKey) return;
-  faviconKey = n;
-  $('favicon').href = faviconUrl(n);
-}
-
 // ───────────────────────── 서버 연결 ─────────────────────────
 function resetAll() {
   for (const sid of [...sessions.keys()]) removeSession(sid);
   floors.clear();
-  feedItems.clear();
-  feedKnown.clear();
+  feed.clear();
   seenWaits.clear();
-  el.feed.innerHTML = '';
   current = null;
   boardSid = null;
   setBoard(null, false);
@@ -644,7 +532,7 @@ function onHello(d) {
     if (s.wait) items.push([s, s.main, { ...s.wait, k: 'wait' }]);
   }
   items.sort((x, y) => (x[2].ts || 0) - (y[2].ts || 0));
-  for (const [s, a, ev] of items.slice(-150)) feedAdd(s, a, ev);
+  for (const [s, a, ev] of items.slice(-150)) feed.add(s, a, ev);
   current = busiestFloor();
   refreshBoard();
   render();
@@ -653,11 +541,11 @@ function onHello(d) {
 
 function onJoin(snap) {
   const s = addSession(snap);
-  for (const ev of (snap.history || []).slice(-20)) feedAdd(s, s.main, ev);
+  for (const ev of (snap.history || []).slice(-20)) feed.add(s, s.main, ev);
   if (!current) current = s.floor;
   if (s.wait) {
     // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우
-    if (Date.now() - s.wait.ts < 60000) notifyWait(s, s.wait);
+    if (Date.now() - s.wait.ts < 60000) alerts.notifyWait(s, s.wait);
     if (floorAuto && s.floor !== current) goFloor(s.floor);
   }
   refreshBoard();
@@ -858,36 +746,6 @@ function renderReplayBtns() {
   renderReplayBar();
 }
 
-// ───────────────────────── 업무 일지 ─────────────────────────
-// 오늘(자정 이후) Claude가 한 일을 프로젝트별로 모아 보여 준다. 세션을 누르면 처음부터 다시 본다.
-const fmtWorked = ms => {
-  const m = Math.round(ms / 60000);
-  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
-};
-async function openJournal() {
-  let j;
-  try { j = await (await fetch('/api/journal')).json(); } catch { return toast('업무 일지를 읽지 못했어요'); }
-  const d = new Date(j.since);
-  $('journalTitle').textContent = `📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`;
-  const t = j.totals;
-  $('journalTotals').innerHTML = [
-    ['일한 시간', fmtWorked(t.workedMs)], ['프로젝트', t.projects], ['세션', t.sessions],
-    ['내 메시지', t.prompts], ['도구', t.tools], ['실패', t.errors], ['인턴', t.interns],
-  ].map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join('');
-  $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
-    const max = Math.max(1, ...ROOM_IDS.map(r => p.rooms[r]));
-    const rooms = ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round((p.rooms[r] / max) * 100)}%" title="${ROOMS[r].name} ${p.rooms[r]}번">${ROOMS[r].icon}<i></i><b>${p.rooms[r]}</b></span>`).join('');
-    const list = p.sessions.map(s => `<li data-file="${esc(s.file)}" title="누르면 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`).join('');
-    return `<section class="jp"><h3>${esc(p.project)} <small>${hhmmss(p.first).slice(0, 5)} ~ ${hhmmss(p.last).slice(0, 5)} · ${fmtWorked(p.workedMs)}</small></h3>`
-      + `<div class="jp-nums">메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}</div>`
-      + `<div class="jp-rooms">${rooms}</div><ul>${list}</ul></section>`;
-  }).join('') : '<p class="jp-empty">오늘은 아직 일한 기록이 없어요</p>';
-  $('journal').hidden = false;
-}
-function closeJournal() {
-  $('journal').hidden = true;
-}
-
 // ───────────────────────── 시작 ─────────────────────────
 buildFloor($('floor'));
 buildChrome();
@@ -927,28 +785,17 @@ sel.addEventListener('change', () => {
   connect();
 });
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
-$('notifyBtn').addEventListener('click', toggleNotify);
 $('replayBtn').addEventListener('click', () => (replay ? stopReplay(true) : startReplay()));
 $('replayBar').addEventListener('click', e => {
   const r = e.currentTarget.getBoundingClientRect();
   seekReplay((e.clientX - r.left) / r.width);
 });
 $('pauseBtn').addEventListener('click', togglePause);
-$('journalBtn').addEventListener('click', openJournal);
-$('journalClose').addEventListener('click', closeJournal);
-$('journal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기
-  const li = e.target.closest('li[data-file]');
-  if (li) {
-    closeJournal();
-    startReplay(li.dataset.file);
-  }
-});
 // 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
-  if (!$('journal').hidden) {
-    if (e.key === 'Escape') closeJournal();
+  if (journal.isOpen()) {
+    if (e.key === 'Escape') journal.close();
     return;
   }
   if (replay && e.key === ' ') {
@@ -971,7 +818,6 @@ $('speedBtn').addEventListener('click', () => {
   replay.speed = REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(replay.speed) + 1) % REPLAY_SPEEDS.length];
   renderReplayBtns();
 });
-renderNotifyBtn();
 let saved = 'all';
 try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }
 loadSessions(saved).then(() => {

@@ -268,6 +268,51 @@ test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었
   assert.equal((await list('?keep=' + encodeURIComponent('/etc/passwd'))).length, 30); // 기록 폴더 밖은 무시
 });
 
+test('빌딩: 오래 조용한 직원은 퇴근하고(마지막 한 명은 남김), 다시 움직이면 출근한다', async () => {
+  const cfg = path.join(TMP, 'claude-leave');
+  const P = path.join(cfg, 'projects', '-tmp-leave');
+  fs.mkdirSync(P, { recursive: true });
+  const fa = path.join(P, 'leave-a.jsonl'), fb = path.join(P, 'leave-b.jsonl');
+  userMsg(fa, '첫 번째');
+  await sleep(50);
+  userMsg(fb, '두 번째');
+  const port = PORT + 7;
+  const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-leave.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+  const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+  const log = [];
+  let req;
+  try {
+    assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+    req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+      let buf = '';
+      res.setEncoding('utf8');
+      res.on('data', c => {
+        buf += c;
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const blk = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          const ev = (blk.match(/^event: (.*)$/m) || [])[1];
+          const d = (blk.match(/^data: (.*)$/m) || [])[1];
+          if (ev) log.push({ ev, ...JSON.parse(d) });
+        }
+      });
+    });
+    const hello = await until(() => log.find(x => x.ev === 'hello'));
+    assert.equal(hello.sessions.length, 2);
+    const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
+    assert.equal(left && left.sid, 'leave-a'); // 더 오래 조용한 쪽이 퇴근
+    await sleep(2500);
+    assert.equal(log.filter(x => x.ev === 'leave').length, 1); // 마지막 한 명은 남는다
+    userMsg(fa, '다시 일해요');
+    const back = await until(() => log.find(x => x.ev === 'join' && x.sid === 'leave-a'), 4000);
+    assert.ok(back, '다시 출근');
+  } finally {
+    if (req) req.destroy();
+    child.kill();
+  }
+});
+
 test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 연다 (직접 정한 포트는 그대로 실패)', async () => {
   const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
   await new Promise(r => busy.once('listening', r));

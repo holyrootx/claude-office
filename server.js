@@ -32,6 +32,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --no-open       브라우저를 자동으로 열지 않기
     --background    터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기)
     --stop          뒤에서 켜 둔 사무실 끄기
+    --active <분>   빌딩에 머무는 시간 (기본 30분: 그동안 움직임이 없으면 퇴근, 다시 움직이면 출근)
     --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
     -h, --help      이 도움말
 `);
@@ -53,7 +54,8 @@ const HISTORY_EVENTS = 300;
 const MAX_INITIAL_BYTES = 40 * 1024 * 1024; // 세션 하나만 볼 때 처음에 읽는 양
 const ALL_INITIAL_BYTES = 8 * 1024 * 1024; // 빌딩(여러 세션)에서 세션마다 처음에 읽는 양
 const SUB_INITIAL_BYTES = 4 * 1024 * 1024; // 서브에이전트 기록
-const ACTIVE_MS = 30 * 60 * 1000; // 빌딩에 들어오는 세션: 최근 30분 안에 움직인 세션
+// 빌딩에 머무는 세션: 최근 30분 안에 움직인 세션 (--active나 CLAUDE_OFFICE_ACTIVE_MINUTES로 바꿀 수 있다)
+const ACTIVE_MS = (Number(argValue('--active')) || Number(process.env.CLAUDE_OFFICE_ACTIVE_MINUTES) || 30) * 60 * 1000;
 const SUB_IDLE_MS = 10 * 60 * 1000; // 이만큼 조용한 서브에이전트는 처음 화면에 띄우지 않는다
 const MAX_SESSIONS = 12;
 const MAX_HOOK_BYTES = 1024 * 1024;
@@ -763,6 +765,11 @@ class Session {
     return w;
   }
 
+  // 마지막으로 기록이 늘어난 시각 (메인과 서브에이전트 중 가장 늦은 것)
+  lastActive() {
+    return Math.max(this.main.mtime, ...[...this.subs.values()].map(a => a.tail.mtime));
+  }
+
   // 방별 사용량은 서브에이전트가 쓴 도구까지 합친다
   stats() {
     const s = { ...this.main.norm.stats };
@@ -852,6 +859,15 @@ class Follower {
   discover() {
     if (this.mode === 'all') {
       for (const f of activeFiles()) if (!this.sessions.has(path.basename(f, '.jsonl'))) this.join(f);
+      // 오래 조용한 직원은 퇴근한다. 권한을 기다리는 직원과, 빌딩이 텅 비지 않게 마지막 한 명은 남긴다.
+      const quiet = [...this.sessions.values()]
+        .filter(s => !waits.has(s.sid) && Date.now() - s.lastActive() > ACTIVE_MS)
+        .sort((a, b) => a.lastActive() - b.lastActive());
+      while (quiet.length && this.sessions.size > 1) {
+        const s = quiet.shift();
+        this.sessions.delete(s.sid);
+        this.send('leave', { sid: s.sid });
+      }
     } else if (this.mode === 'auto') {
       const cur = [...this.sessions.values()][0];
       if (cur && waits.has(cur.sid)) return; // 내 답을 기다리는 세션에서는 떠나지 않는다

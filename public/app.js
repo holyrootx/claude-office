@@ -214,6 +214,24 @@ function removeSession(sid) {
   if (current === s.floor && !floors.has(current)) current = null;
 }
 
+// 오래 조용한 세션의 직원(과 인턴)이 퇴근한다: 보이는 층이면 걸어 나가고, 아니면 바로 정리한다
+function retireSession(sid) {
+  const s = sessions.get(sid);
+  if (!s) return;
+  feedAdd(s, s.main, { k: 'leave', ts: Date.now() });
+  if (s.floor !== current) {
+    removeSession(sid);
+    render();
+    return;
+  }
+  for (const a of [s.main, ...s.interns.values()]) a.walkOut();
+  setTimeout(() => {
+    if (sessions.get(sid) !== s) return; // 그 사이 다시 출근했다
+    removeSession(sid);
+    render();
+  }, 8000);
+}
+
 function applyUpdate(u) {
   const s = sessions.get(u.sid);
   if (!s) return;
@@ -517,6 +535,7 @@ function feedAdd(s, a, ev) {
       break;
     case 'interrupt': ic = '✋'; cls = 'err'; tx = '사용자가 작업을 중단했어요'; break;
     case 'compact': ic = '🗜'; tx = '대화 압축(요약)'; break;
+    case 'leave': ic = '👋'; tx = '<b>퇴근</b> 한동안 조용해서 빌딩을 나갔어요. 다시 일하면 출근해요'; break;
     case 'apierr': ic = '⚠'; cls = 'err'; tx = `<b>API 오류</b> ${esc(ev.text)}`; break;
     default: return;
   }
@@ -660,7 +679,7 @@ function connect() {
   es.onerror = () => setConn('off', '재연결 중…');
   es.addEventListener('hello', e => { setConn('live', '실시간 · 0.25초 간격'); onHello(JSON.parse(e.data)); });
   es.addEventListener('join', e => onJoin(JSON.parse(e.data)));
-  es.addEventListener('leave', e => { removeSession(JSON.parse(e.data).sid); render(); });
+  es.addEventListener('leave', e => retireSession(JSON.parse(e.data).sid));
   es.addEventListener('events', e => { for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
 }
 
@@ -895,6 +914,7 @@ window.officeDebug = {
   },
   goFloor: key => goFloor(key, true),
   join: snap => onJoin(snap),
+  leave: sid => retireSession(sid),
   state: () => ({
     floor: current, floorAuto, viewMode,
     floors: [...floors.values()].map(f => ({ key: f.key, name: f.name, sids: [...f.sids] })),

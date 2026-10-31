@@ -5,13 +5,16 @@
 //   node server.js               → http://localhost:4777 (브라우저 자동으로 열림)
 //   node server.js --port 5000   → 다른 포트
 //   node server.js --no-open     → 브라우저 자동 열기 끄기
+//   node server.js --background  → 터미널 없이 뒤에서 켜기 (끌 때는 --stop)
 'use strict';
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
+const runtime = require('./lib/runtime');
 
 const args = process.argv.slice(2);
 const argValue = name => {
@@ -26,11 +29,15 @@ if (args.includes('--help') || args.includes('-h')) {
 
     --port <번호>   사용할 포트 (기본 4777, 환경 변수 PORT로도 지정 가능)
     --no-open       브라우저를 자동으로 열지 않기
+    --background    터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기)
+    --stop          뒤에서 켜 둔 사무실 끄기
+    --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
     -h, --help      이 도움말
 `);
   process.exit(0);
 }
 
+const VERSION = require('./package.json').version;
 const PORT = Number(argValue('--port')) || Number(process.env.PORT) || 4777;
 const OPEN_BROWSER = !args.includes('--no-open') && !process.env.NO_OPEN;
 const POLL_MS = 250;
@@ -38,7 +45,15 @@ const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.cl
 const PROJECTS = path.join(CLAUDE_DIR, 'projects');
 const PUBLIC = path.join(__dirname, 'public');
 const HISTORY_EVENTS = 300;
-const MAX_INITIAL_BYTES = 40 * 1024 * 1024;
+const MAX_INITIAL_BYTES = 40 * 1024 * 1024; // 세션 하나만 볼 때 처음에 읽는 양
+const ALL_INITIAL_BYTES = 8 * 1024 * 1024; // 빌딩(여러 세션)에서 세션마다 처음에 읽는 양
+const SUB_INITIAL_BYTES = 4 * 1024 * 1024; // 서브에이전트 기록
+const ACTIVE_MS = 30 * 60 * 1000; // 빌딩에 들어오는 세션: 최근 30분 안에 움직인 세션
+const SUB_IDLE_MS = 10 * 60 * 1000; // 이만큼 조용한 서브에이전트는 처음 화면에 띄우지 않는다
+const MAX_SESSIONS = 12;
+const MAX_HOOK_BYTES = 1024 * 1024;
+// hook 요청은 실행 정보 파일(lib/runtime.js)을 읽을 수 있는 쪽, 즉 이 컴퓨터의 나만 보낼 수 있다
+const TOKEN = crypto.randomBytes(16).toString('hex');
 
 // ───────────────────────── 도구 → 방 매핑 ─────────────────────────
 // library 자료실 · dev 개발실 · server 서버실 · search 정보 검색실 · meeting 회의실 · desk 내 자리
@@ -66,6 +81,9 @@ function roomOf(name) {
   }
   return 'dev';
 }
+
+// 이미 '질문하러 오기'로 보여 주는 도구라 권한 대기로 따로 연출하지 않는다
+const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 
 // ───────────────────────── 텍스트 다듬기 ─────────────────────────
 const clip = (s, n) => {
@@ -204,7 +222,9 @@ function planFromMarkdown(md) {
 // ───────────────────────── jsonl → 이벤트 ─────────────────────────
 // 이벤트 종류(k): user · think · say · tool(+plan/ask) · result · turn_end · interrupt · compact · apierr
 class Normalizer {
-  constructor() {
+  // sidechain: 서브에이전트 기록처럼 isSidechain 줄을 버리지 않고 읽을 때
+  constructor({ sidechain = false } = {}) {
+    this.sidechain = sidechain;
     this.tools = new Map();
     this.plan = null;
     this.taskSeq = 0;
@@ -221,7 +241,7 @@ class Normalizer {
     if (j.type === 'summary' && j.summary && !this.meta.title) this.meta.title = j.summary;
     if (j.cwd) this.meta.cwd = j.cwd;
     if (j.gitBranch) this.meta.branch = j.gitBranch;
-    if (j.isSidechain) return [];
+    if (j.isSidechain && !this.sidechain) return [];
     if (j.uuid) {
       if (this.seen.has(j.uuid)) return [];
       this.seen.add(j.uuid);
@@ -264,12 +284,13 @@ class Normalizer {
     const name = String(b.name || '?');
     const input = b.input || {};
     const room = name === 'web_search' || name === 'web_fetch' ? 'search' : roomOf(name);
-    this.tools.set(b.id, { name, room });
+    const label = labelOf(name, input);
+    this.tools.set(b.id, { name, room, label, done: false });
     this.stats[room]++;
     this.stats.tools++;
     const ev = {
       k: 'tool', ts, id: b.id, name, tool: displayName(name), room,
-      label: labelOf(name, input), detail: detailOf(name, input),
+      label, detail: detailOf(name, input),
       git: (name === 'Bash' || name === 'PowerShell') && isGitCommand(input.command),
     };
     if (name === 'AskUserQuestion') {
@@ -347,8 +368,20 @@ class Normalizer {
     return [{ k: 'user', ts, text }];
   }
 
+  // 아직 결과가 오지 않은 도구 중 가장 최근 것의 id. 이름이 주어지면 그 이름만, 라벨까지 같으면 그쪽을 고른다.
+  openTool(names, label) {
+    let hit = null, loose = null;
+    for (const [id, t] of this.tools) {
+      if (t.done || ASK_TOOLS.has(t.name) || (names.length && !names.includes(t.name))) continue;
+      loose = id;
+      if (label && t.label === label) hit = id;
+    }
+    return hit || loose;
+  }
+
   result(b, ts) {
     const t = this.tools.get(b.tool_use_id) || {};
+    t.done = true;
     const ok = !b.is_error;
     if (!ok) this.stats.errors++;
     const ev = { k: 'result', ts, id: b.tool_use_id, name: t.name, room: t.room, ok };
@@ -436,18 +469,264 @@ function insideProjects(file) {
   return rel && !rel.startsWith('..') && !path.isAbsolute(rel) && rel.endsWith('.jsonl');
 }
 
-// ───────────────────────── 클라이언트별 추적기 ─────────────────────────
-class Follower {
-  constructor(res, requested) {
-    this.res = res;
-    this.auto = requested === 'auto';
-    this.file = null;
+// ───────────────────────── 권한 확인 대기 (hooks) ─────────────────────────
+// 권한 확인 창이 떠 있다는 사실은 세션 기록에 남지 않아서, Claude Code hook(hooks/notify.js)이 알려 준 것을 따로 들고 있다.
+// 세션 id → { kind: 'permission'|'input', ts, match, agentId, name, tool, room, label, detail, text, id, on }
+//   id: 기다리는 도구의 tool_use id · on: 대기를 보여 줄 캐릭터 ('' = 메인, 아니면 서브에이전트 id)
+const waits = new Map();
+const followers = new Set();
+const ENDS_WAIT = new Set(['user', 'turn_end', 'interrupt', 'compact']);
+const waitKey = w => (w ? `${w.ts}|${w.id || ''}|${w.on || ''}` : '');
+const isFinal = e => e.k === 'say' && e.final;
+
+function onHook(h) {
+  const sid = String(h.session_id || '');
+  if (!sid) return;
+  const agentId = h.agent_id ? String(h.agent_id) : '';
+  let w = null;
+  switch (h.hook_event_name) {
+    case 'PermissionRequest': {
+      const name = String(h.tool_name || '');
+      if (!name || ASK_TOOLS.has(name)) return;
+      const input = h.tool_input || {};
+      w = {
+        kind: 'permission', ts: Date.now(), match: [name], agentId, agent: !!agentId,
+        name, tool: displayName(name), room: roomOf(name), label: labelOf(name, input), detail: detailOf(name, input),
+      };
+      break;
+    }
+    case 'Notification': {
+      // 권한 확인 창이 6초쯤 그대로면 오는 알림. PermissionRequest를 못 받았을 때만 쓴다.
+      const t = h.notification_type;
+      if (waits.has(sid) || (t !== 'permission_prompt' && t !== 'elicitation_dialog')) return;
+      w = { kind: t === 'permission_prompt' ? 'permission' : 'input', ts: Date.now(), match: [], agentId, agent: !!agentId, text: clip(h.message, 120) };
+      break;
+    }
+    case 'SessionEnd':
+      if (!waits.delete(sid)) return;
+      break;
+    default:
+      return;
+  }
+  if (w) waits.set(sid, w);
+  let file = null;
+  if (w) for (const f of followers) if (f.mode !== 'file' && !f.sessions.has(sid)) { file = findSession(sid); break; }
+  for (const f of followers) f.hook(sid, file);
+}
+
+function findSession(sid) {
+  const s = scanSessions().find(x => path.basename(x.file, '.jsonl') === sid);
+  return s ? s.file : null;
+}
+
+// 빌딩에 보일 세션: 최근 30분 안에 움직였거나 권한을 기다리는 세션 (하나도 없으면 가장 최근 하나)
+function activeFiles() {
+  const all = scanSessions();
+  const pick = all.filter(s => Date.now() - s.mtime < ACTIVE_MS || waits.has(path.basename(s.file, '.jsonl'))).slice(0, MAX_SESSIONS);
+  return (pick.length ? pick : all.slice(0, 1)).map(s => s.file);
+}
+
+// ───────────────────────── 기록 파일 따라 읽기 ─────────────────────────
+// 파일 하나(메인 세션 또는 서브에이전트)를 끝까지 읽어 두고, 그 뒤로 붙는 줄만 이벤트로 바꾼다.
+class Tail {
+  constructor(file, opts) {
+    this.file = file;
+    this.norm = new Normalizer(opts);
     this.offset = 0;
     this.rest = Buffer.alloc(0);
-    this.tick = 0;
+    this.mtime = 0;
+    this.size = 0;
     this.lastGrow = 0;
+  }
+
+  // 처음 붙을 때: 끝에서 maxBytes까지 읽어 지난 이벤트를 만든다. 파일이 없으면 null.
+  load(maxBytes) {
+    let st;
+    try { st = fs.statSync(this.file); } catch { return null; }
+    const start = Math.max(0, st.size - maxBytes);
+    const buf = readRange(this.file, start, st.size);
+    const nl = buf.lastIndexOf(0x0a);
+    this.rest = Buffer.from(buf.subarray(nl + 1));
+    this.offset = start + buf.length;
+    this.mtime = this.lastGrow = st.mtimeMs;
+    this.size = st.size;
+    const lines = nl >= 0 ? buf.subarray(0, nl).toString('utf8').split('\n') : [];
+    if (start > 0) lines.shift();
+    return this.parse(lines);
+  }
+
+  // 지난번 이후 새로 붙은 줄. 파일이 줄어들었으면(다시 쓰임) null.
+  more() {
+    let st;
+    try { st = fs.statSync(this.file); } catch { return []; }
+    if (st.size < this.offset) return null;
+    if (st.size === this.offset) return [];
+    const buf = readRange(this.file, this.offset, st.size);
+    this.offset += buf.length;
+    this.size = st.size;
+    this.mtime = st.mtimeMs;
+    this.lastGrow = Date.now();
+    const data = this.rest.length ? Buffer.concat([this.rest, buf]) : buf;
+    const nl = data.lastIndexOf(0x0a);
+    if (nl < 0) { this.rest = Buffer.from(data); return []; }
+    this.rest = Buffer.from(data.subarray(nl + 1));
+    return this.parse(data.subarray(0, nl).toString('utf8').split('\n'));
+  }
+
+  parse(lines) {
+    const out = [];
+    for (const l of lines) for (const e of this.norm.line(l)) out.push(e);
+    return out;
+  }
+}
+
+// 세션 하나 = 메인 기록 + 서브에이전트 기록들(<세션id>/subagents/agent-*.jsonl)
+class Session {
+  constructor(file, maxBytes) {
+    this.file = file;
+    this.sid = path.basename(file, '.jsonl');
+    this.subDir = path.join(path.dirname(file), this.sid, 'subagents');
+    this.maxBytes = maxBytes;
+    this.main = new Tail(file);
+    this.subs = new Map(); // 서브에이전트 id → { tail, info }
+    this.waitKey = '';
+  }
+
+  // 화면에 처음 보낼 모습. 파일을 못 읽으면 null.
+  snapshot() {
+    const events = this.main.load(this.maxBytes);
+    if (!events) return null;
+    const agents = [];
+    const subEvents = new Map();
+    for (const { a, evs } of this.findAgents()) {
+      subEvents.set(a.info.id, evs);
+      // 끝났거나 오래 조용한 서브에이전트는 빼고, 지금 일하는 인턴만 보낸다
+      const last = evs[evs.length - 1];
+      if (!last || isFinal(last) || Date.now() - a.tail.mtime > SUB_IDLE_MS) continue;
+      agents.push({ ...a.info, history: evs.slice(-40).map(e => ({ ...e, agent: a.info.id })) });
+    }
+    const wait = this.checkWait(events, subEvents);
+    this.waitKey = waitKey(wait);
+    const st = { file: this.file, mtime: this.main.mtime, size: this.main.size, dir: baseName(path.dirname(this.file)) };
+    return {
+      sid: this.sid,
+      session: { ...describe(st), ...this.metaOut() },
+      history: events.slice(-HISTORY_EVENTS),
+      plan: this.main.norm.plan,
+      stats: this.stats(),
+      wait,
+      agents,
+    };
+  }
+
+  // 새로 생긴 서브에이전트 기록 파일을 등록하고 읽어 둔다 (meta.json에 종류·설명·부모 도구 id가 있다)
+  findAgents() {
+    const found = [];
+    let names;
+    try { names = fs.readdirSync(this.subDir); } catch { return found; }
+    for (const f of names) {
+      const m = f.match(/^agent-(.+)\.jsonl$/);
+      if (!m || this.subs.has(m[1])) continue;
+      let meta = {};
+      try { meta = JSON.parse(fs.readFileSync(path.join(this.subDir, `agent-${m[1]}.meta.json`), 'utf8')); } catch { /* 메타 없음 */ }
+      const a = {
+        tail: new Tail(path.join(this.subDir, f), { sidechain: true }),
+        info: { id: m[1], type: clip(meta.agentType, 30), desc: clip(meta.description, 60), parent: String(meta.toolUseId || '') },
+      };
+      this.subs.set(m[1], a);
+      found.push({ a, evs: a.tail.load(SUB_INITIAL_BYTES) || [] });
+    }
+    return found;
+  }
+
+  // 새 줄을 읽어 화면에 보낼 변화. 변화가 없으면 null, 파일이 다시 쓰였으면 'reset'.
+  poll(tick, force) {
+    const main = this.main.more();
+    if (!main) return 'reset';
+    const events = main.slice();
+    const subEvents = new Map();
+    if (force || tick % 8 === 0) {
+      for (const { a, evs } of this.findAgents()) {
+        subEvents.set(a.info.id, evs);
+        // 새 인턴: 소개 이벤트 다음에 지금까지 한 일을 붙인다
+        events.push({ k: 'agent', ts: Date.now(), agent: a.info.id, type: a.info.type, desc: a.info.desc, parent: a.info.parent });
+        for (const e of evs.slice(-40)) events.push({ ...e, agent: a.info.id });
+      }
+    }
+    for (const [id, a] of this.subs) {
+      const evs = a.tail.more();
+      if (evs === null) { a.tail.load(SUB_INITIAL_BYTES); continue; }
+      if (!evs.length) continue;
+      subEvents.set(id, (subEvents.get(id) || []).concat(evs));
+      for (const e of evs) events.push({ ...e, agent: id });
+    }
+    const wait = this.checkWait(main, subEvents);
+    const key = waitKey(wait);
+    if (!events.length && !force && key === this.waitKey) return null;
+    this.waitKey = key;
+    return { sid: this.sid, events, plan: this.main.norm.plan, stats: this.stats(), meta: this.metaOut(), wait };
+  }
+
+  // 이 세션의 권한 대기. 기다리는 도구를 기록에서 찾아 id를 붙이고, 이미 끝난 대기는 지운다.
+  checkWait(mainEvents, subEvents) {
+    const w = waits.get(this.sid);
+    if (!w) return null;
+    if (!w.id) {
+      const sub = w.agentId && this.subs.get(w.agentId);
+      if (sub) {
+        w.id = sub.tail.norm.openTool(w.match, w.label);
+        w.on = w.agentId;
+      } else {
+        // 서브에이전트 기록을 아직 못 찾았으면 메인 세션에서 실행 중인 Agent 도구에 붙인다
+        w.id = this.main.norm.openTool(w.agentId ? ['Agent', 'Task'] : w.match, w.agentId ? '' : w.label);
+        w.on = '';
+      }
+    }
+    // 다른 화면이 먼저 찾은 서브에이전트일 수 있으니, 없으면 한 번 더 찾아본다
+    const sub = w.on && (this.subs.get(w.on) || (this.findAgents(), this.subs.get(w.on)));
+    const norm = sub ? sub.tail.norm : this.main.norm;
+    const events = w.on ? subEvents.get(w.on) || [] : mainEvents;
+    const t = w.id && norm.tools.get(w.id);
+    const moved = events.some(e => e.ts >= w.ts && (ENDS_WAIT.has(e.k) || isFinal(e)));
+    // 기다린다는 도구가 3초가 지나도 기록에 없으면 이미 끝난 대기로 본다
+    if ((t && t.done) || moved || (!w.id && Date.now() - w.ts > 3000)) {
+      waits.delete(this.sid);
+      return null;
+    }
+    return w;
+  }
+
+  // 방별 사용량은 서브에이전트가 쓴 도구까지 합친다
+  stats() {
+    const s = { ...this.main.norm.stats };
+    for (const a of this.subs.values()) {
+      for (const k of ['library', 'dev', 'server', 'search', 'meeting', 'desk', 'tools', 'errors']) s[k] += a.tail.norm.stats[k];
+    }
+    return s;
+  }
+
+  metaOut() {
+    const m = this.main.norm.meta;
+    const out = { model: m.model, branch: m.branch };
+    if (m.title) out.title = clip(m.title, 70);
+    if (m.cwd) { out.cwd = m.cwd; out.project = baseName(m.cwd); }
+    return out;
+  }
+}
+
+// ───────────────────────── 화면(SSE 연결)마다 ─────────────────────────
+// mode: 'all' 최근에 움직인 세션 전부(빌딩) · 'auto' 가장 최근 세션 하나 · 'file' 고른 세션 하나
+class Follower {
+  constructor(res, want) {
+    this.res = res;
+    this.mode = want === 'all' || want === 'auto' ? want : 'file';
+    this.pinned = this.mode === 'file' ? want : null;
+    this.sessions = new Map();
+    this.tick = 0;
     this.lastWrite = Date.now();
-    this.attach(this.auto ? (scanSessions()[0] || {}).file : requested);
+    followers.add(this);
+    const first = this.mode === 'all' ? activeFiles() : [this.pinned || (scanSessions()[0] || {}).file].filter(Boolean);
+    this.hello(first);
     this.timer = setInterval(() => this.poll(), POLL_MS);
   }
 
@@ -456,105 +735,139 @@ class Follower {
     this.res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   }
 
-  attach(file) {
-    this.file = file || null;
-    this.rest = Buffer.alloc(0);
-    this.offset = 0;
-    this.norm = new Normalizer();
-    if (!this.file) {
-      this.send('hello', { auto: this.auto, session: null, history: [], plan: null, stats: this.norm.stats, root: PROJECTS });
-      return;
-    }
-    let st;
-    try { st = fs.statSync(this.file); } catch {
-      this.send('hello', { auto: this.auto, session: null, history: [], plan: null, stats: this.norm.stats, root: PROJECTS, error: '파일을 열 수 없어요' });
-      this.file = null;
-      return;
-    }
-    const start = Math.max(0, st.size - MAX_INITIAL_BYTES);
-    const buf = readRange(this.file, start, st.size);
-    const nl = buf.lastIndexOf(0x0a);
-    this.rest = Buffer.from(buf.subarray(nl + 1));
-    this.offset = start + buf.length;
-    const lines = nl >= 0 ? buf.subarray(0, nl).toString('utf8').split('\n') : [];
-    if (start > 0) lines.shift();
-    const events = [];
-    for (const l of lines) for (const e of this.norm.line(l)) events.push(e);
-    this.lastGrow = st.mtimeMs;
-    this.send('hello', {
-      auto: this.auto,
-      session: { ...describe({ file: this.file, mtime: st.mtimeMs, size: st.size, dir: baseName(path.dirname(this.file)) }), ...this.metaOut() },
-      history: events.slice(-HISTORY_EVENTS),
-      plan: this.norm.plan,
-      stats: this.norm.stats,
-      root: PROJECTS,
-    });
+  // 보여 줄 세션을 새로 정하고 처음부터 다시 그리게 한다
+  hello(files) {
+    this.sessions.clear();
+    const snaps = files.map(f => this.open(f)).filter(Boolean);
+    this.send('hello', { mode: this.mode, root: PROJECTS, sessions: snaps });
   }
 
-  metaOut() {
-    const m = this.norm.meta;
-    const out = { model: m.model, branch: m.branch };
-    if (m.title) out.title = clip(m.title, 70);
-    if (m.cwd) { out.cwd = m.cwd; out.project = baseName(m.cwd); }
-    return out;
+  open(file) {
+    const s = new Session(file, this.mode === 'all' ? ALL_INITIAL_BYTES : MAX_INITIAL_BYTES);
+    const snap = s.snapshot();
+    if (!snap) return null;
+    this.sessions.set(s.sid, s);
+    return snap;
   }
 
-  maybeSwitch() {
-    const newest = scanSessions()[0];
-    if (!newest || newest.file === this.file) return;
-    const idleMs = Date.now() - this.lastGrow;
-    // 다른 세션이 방금 기록됐고, 지금 세션은 4초 이상 조용하면 갈아탄다.
-    if (!this.file || (Date.now() - newest.mtime < 5000 && idleMs > 4000)) this.attach(newest.file);
+  // 빌딩에 세션 하나를 더한다 (이미 있으면 다시 읽어 바꾼다)
+  join(file) {
+    const snap = this.open(file);
+    if (snap) this.send('join', snap);
+    // 너무 많으면 가장 오래 조용한 세션부터 뺀다 (권한을 기다리는 세션은 남긴다)
+    const quiet = [...this.sessions.values()].filter(s => !waits.has(s.sid)).sort((a, b) => a.main.lastGrow - b.main.lastGrow);
+    while (this.sessions.size > MAX_SESSIONS && quiet.length) {
+      const s = quiet.shift();
+      this.sessions.delete(s.sid);
+      this.send('leave', { sid: s.sid });
+    }
   }
 
   poll() {
     this.tick++;
     try {
-      if (this.auto && this.tick % 8 === 0) this.maybeSwitch();
-      if (this.file) this.readNew();
+      if (this.tick % 8 === 0) this.discover();
+      const updates = [];
+      for (const s of [...this.sessions.values()]) {
+        const u = s.poll(this.tick, false);
+        if (u === 'reset') this.join(s.file);
+        else if (u) updates.push(u);
+      }
+      if (updates.length) this.send('events', { updates });
       if (Date.now() - this.lastWrite > 15000) { this.res.write(': ping\n\n'); this.lastWrite = Date.now(); }
     } catch (e) {
       console.error('[poll]', e.message);
     }
   }
 
-  readNew() {
-    let st;
-    try { st = fs.statSync(this.file); } catch { return; }
-    if (st.size < this.offset) return this.attach(this.file); // 파일이 다시 쓰였음
-    if (st.size === this.offset) return;
-    const buf = readRange(this.file, this.offset, st.size);
-    this.offset += buf.length;
-    this.lastGrow = Date.now();
-    const data = this.rest.length ? Buffer.concat([this.rest, buf]) : buf;
-    const nl = data.lastIndexOf(0x0a);
-    if (nl < 0) { this.rest = Buffer.from(data); return; }
-    this.rest = Buffer.from(data.subarray(nl + 1));
-    const events = [];
-    for (const l of data.subarray(0, nl).toString('utf8').split('\n')) for (const e of this.norm.line(l)) events.push(e);
-    if (events.length) this.send('events', { events, plan: this.norm.plan, stats: this.norm.stats, meta: this.metaOut() });
+  discover() {
+    if (this.mode === 'all') {
+      for (const f of activeFiles()) if (!this.sessions.has(path.basename(f, '.jsonl'))) this.join(f);
+    } else if (this.mode === 'auto') {
+      const cur = [...this.sessions.values()][0];
+      if (cur && waits.has(cur.sid)) return; // 내 답을 기다리는 세션에서는 떠나지 않는다
+      const newest = scanSessions()[0];
+      if (!newest || (cur && newest.file === cur.file)) return;
+      // 다른 세션이 방금 기록됐고, 지금 세션은 4초 이상 조용하면 갈아탄다.
+      if (!cur || (Date.now() - newest.mtime < 5000 && Date.now() - cur.main.lastGrow > 4000)) this.hello([newest.file]);
+    }
+  }
+
+  // hook이 알려 온 일. 보고 있는 세션이면 바로 다시 읽고, 아니면 권한을 기다리는 세션을 데려온다.
+  hook(sid, file) {
+    const s = this.sessions.get(sid);
+    if (s) {
+      const u = s.poll(this.tick, true);
+      if (u === 'reset') this.join(s.file);
+      else if (u) this.send('events', { updates: [u] });
+    } else if (file && this.mode === 'all') this.join(file);
+    else if (file && this.mode === 'auto') this.hello([file]);
   }
 
   close() {
     clearInterval(this.timer);
+    followers.delete(this);
   }
 }
 
 // ───────────────────────── HTTP ─────────────────────────
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function json(res, data) {
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(data));
+}
+
+function sameToken(t) {
+  const a = Buffer.from(String(t || '')), b = Buffer.from(TOKEN);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// hook 알림과 끄기 요청. 실행 정보 파일의 토큰을 아는 쪽(같은 컴퓨터의 나)만 보낼 수 있다.
+function handlePost(req, res, pathname) {
+  if (!sameToken(req.headers['x-office-token'])) { res.writeHead(403); return res.end(); }
+  if (pathname === '/api/shutdown') {
+    runtime.remove(process.pid); // 답하기 전에 지워서, 꺼지는 사이에 다른 요청이 이 서버를 찾지 않게
+    res.writeHead(200);
+    res.end('bye');
+    return setTimeout(() => process.exit(0), 50);
+  }
+  if (pathname !== '/hook') { res.writeHead(404); return res.end(); }
+  const chunks = [];
+  let size = 0;
+  req.on('data', c => {
+    size += c.length;
+    if (size <= MAX_HOOK_BYTES) return chunks.push(c);
+    res.writeHead(413);
+    res.end();
+    req.destroy();
+  });
+  req.on('end', () => {
+    if (res.writableEnded) return;
+    res.writeHead(204);
+    res.end();
+    try { onHook(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { console.error('[hook]', e.message); }
+  });
+}
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, 'http://localhost');
+  // DNS 리바인딩 막기: 다른 사이트 주소로 들어온 요청은 받지 않는다
+  if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden'); }
+  let url;
+  try { url = new URL(req.url, 'http://localhost'); } catch { res.writeHead(400); return res.end(); }
+  if (req.method === 'POST') return handlePost(req, res, url.pathname);
+
+  if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
 
   if (url.pathname === '/api/sessions') {
-    const list = scanSessions().slice(0, 30).map(describe);
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ root: PROJECTS, sessions: list }));
+    const list = scanSessions().slice(0, 30).map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
+    return json(res, { root: PROJECTS, sessions: list });
   }
 
   if (url.pathname === '/api/stream') {
-    const want = url.searchParams.get('file') || 'auto';
-    if (want !== 'auto' && !insideProjects(want)) {
+    const want = url.searchParams.get('file') || 'all';
+    if (want !== 'all' && want !== 'auto' && !insideProjects(want)) {
       res.writeHead(400);
       return res.end('bad file');
     }
@@ -565,9 +878,14 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const rel = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
+  let rel;
+  try { rel = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, ''); } catch {
+    res.writeHead(400);
+    return res.end('bad request');
+  }
   const file = path.join(PUBLIC, rel);
-  if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
+  const inside = path.relative(PUBLIC, file);
+  if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, body) => {
     if (err) { res.writeHead(404); return res.end('not found'); }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
@@ -583,11 +901,17 @@ function openBrowser(url) {
   } catch { /* 브라우저를 못 열어도 주소는 콘솔에 나와 있다 */ }
 }
 
-if (require.main === module) {
+// ───────────────────────── 실행 방법 ─────────────────────────
+function serve() {
   const url = `http://localhost:${PORT}`;
-  server.on('error', e => {
+  server.on('error', async e => {
     if (e.code === 'EADDRINUSE') {
-      console.log(`\n  ⚠ ${PORT}번 포트를 이미 쓰고 있어요. Claude 사무실이 이미 켜져 있다면 ${url} 을 열어 보세요.`);
+      if (await runtime.health(PORT)) {
+        console.log(`\n  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}\n`);
+        if (OPEN_BROWSER) openBrowser(url);
+        process.exit(0);
+      }
+      console.log(`\n  ⚠ ${PORT}번 포트를 다른 프로그램이 쓰고 있어요.`);
       console.log(`    다른 포트로 실행하려면: claude-office --port 4778\n`);
     } else {
       console.error(e);
@@ -595,6 +919,13 @@ if (require.main === module) {
     process.exit(1);
   });
   server.listen(PORT, '127.0.0.1', () => {
+    try {
+      runtime.write({ pid: process.pid, port: PORT, token: TOKEN, version: VERSION });
+    } catch (e) {
+      console.log(`  ⚠ 실행 정보 파일을 쓰지 못해서 hooks 연동은 꺼져 있어요 (${e.message})`);
+    }
+    process.on('exit', () => runtime.remove(process.pid));
+    for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
     console.log(`\n  🏢 Claude 사무실이 열렸어요 → ${url}`);
     console.log(`  📂 세션 기록 폴더: ${PROJECTS}${fs.existsSync(PROJECTS) ? '' : '  (아직 없음 — claude를 한 번 실행하면 생겨요)'}`);
     console.log(`  ⏱  ${POLL_MS}ms마다 최신 세션을 따라 읽는 중… (끄려면 Ctrl+C)\n`);
@@ -602,4 +933,56 @@ if (require.main === module) {
   });
 }
 
-module.exports = { Normalizer, scanSessions, describe };
+// 터미널 창 없이 뒤에서 켠다. 이미 켜져 있으면 화면만 연다. (플러그인의 /office:open이 쓰는 방법)
+async function startBackground() {
+  const running = runtime.read();
+  if (running && (await runtime.health(running.port))) {
+    const url = `http://localhost:${running.port}`;
+    console.log(`  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
+    if (OPEN_BROWSER) openBrowser(url);
+    return;
+  }
+  const childArgs = [__filename, ...args.filter(a => a !== '--background' && a !== '--no-open'), '--no-open'];
+  const child = spawn(process.execPath, childArgs, { detached: true, stdio: 'ignore', windowsHide: true });
+  let exited = false;
+  child.on('exit', () => { exited = true; });
+  child.unref();
+  for (let i = 0; i < 40 && !exited; i++) {
+    await new Promise(r => setTimeout(r, 150));
+    const rt = runtime.read();
+    if (rt && rt.pid === child.pid) {
+      const url = `http://localhost:${rt.port}`;
+      console.log(`  🏢 Claude 사무실을 뒤에서 켰어요 → ${url}`);
+      console.log(`     끄려면: node "${__filename}" --stop`);
+      if (OPEN_BROWSER) openBrowser(url);
+      return;
+    }
+  }
+  console.log(`  ⚠ 사무실을 켜지 못했어요. 터미널에서 node "${__filename}" 로 직접 실행해서 오류를 확인해 보세요.`);
+  process.exitCode = 1;
+}
+
+async function stopServer() {
+  const rt = runtime.read();
+  const r = rt && (await runtime.request(rt.port, 'POST', '/api/shutdown', { token: rt.token }));
+  if (r && r.status === 200) return console.log('  👋 Claude 사무실을 껐어요.');
+  if (rt) runtime.remove(rt.pid); // 이미 꺼진 서버가 남긴 파일
+  console.log('  켜져 있는 Claude 사무실이 없어요.');
+}
+
+// 플러그인 없이 hooks만 쓰고 싶을 때: 이 폴더의 hooks/notify.js를 가리키는 설정을 출력한다
+function printHooks() {
+  const text = fs.readFileSync(path.join(__dirname, 'hooks', 'hooks.json'), 'utf8')
+    .split('${CLAUDE_PLUGIN_ROOT}').join(JSON.stringify(__dirname).slice(1, -1));
+  console.error('  아래 "hooks" 내용을 ~/.claude/settings.json 에 합쳐 넣으세요. (이 폴더를 옮기면 다시 출력해야 해요)\n');
+  console.log(JSON.stringify({ hooks: JSON.parse(text).hooks }, null, 2));
+}
+
+if (require.main === module) {
+  if (args.includes('--print-hooks')) printHooks();
+  else if (args.includes('--stop')) stopServer();
+  else if (args.includes('--background')) startBackground();
+  else serve();
+}
+
+module.exports = { Normalizer, scanSessions, describe, labelOf, roomOf, displayName, planFromMarkdown };

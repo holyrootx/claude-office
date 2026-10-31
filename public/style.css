@@ -77,7 +77,7 @@ button, select { font: inherit; color: inherit; }
 
 /* ───────── 지금 하는 일 ───────── */
 .now {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
   padding: 10px 20px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent, var(--claude)) 22%, var(--panel)) 0%, var(--panel) 55%);
   border-bottom: 1px solid var(--line);
@@ -91,11 +91,61 @@ button, select { font: inherit; color: inherit; }
 .now[data-room="desk"] { --accent: var(--desk); }
 .now[data-mode="error"] { --accent: var(--bad); }
 .now[data-mode="think"] { --accent: #94a3b8; }
+.now[data-mode="wait"] { --accent: #f59e0b; }
+.now[data-mode="wait"] .now-icon { animation: hop 1.4s ease-in-out infinite; }
 .now-icon { font-size: 26px; width: 36px; text-align: center; }
 .now-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .now-text b { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .now-text span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 .now-time { font: 600 13px var(--mono); color: var(--muted); }
+
+/* ───────── 층 ───────── */
+.floorbar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 20px; flex-shrink: 0;
+  background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto;
+}
+.floorbar[hidden] { display: none; }
+.fl-auto, .fl {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font-size: 13px; color: var(--muted);
+}
+.fl-auto.on { color: #fde68a; border-color: #a16207; background: color-mix(in srgb, #a16207 22%, var(--panel-2)); }
+.fl-tabs { display: flex; gap: 6px; }
+.fl b { font: 700 12px var(--mono); color: var(--text); background: #2b3449; border-radius: 5px; padding: 0 6px; }
+.fl small { color: var(--faint); font-size: 11px; }
+.fl.busy b { background: #1f5f43; }
+.fl.active { color: #fff; border-color: var(--claude); background: color-mix(in srgb, var(--claude) 25%, var(--panel-2)); }
+.fl.wait { border-color: #f59e0b; animation: ring 1.4s ease-in-out infinite; }
+@keyframes ring { 50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, .35); } }
+.stage.arrive .floor, .stage.arrive #actors, .stage.arrive #signs { animation: arrive .5s ease-out; }
+@keyframes arrive { from { opacity: .25; } }
+.floor-toast {
+  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%) scale(.9); z-index: 240;
+  background: rgba(14, 19, 29, .9); color: #fff; font: 700 22px var(--ui); padding: 10px 22px; border-radius: 14px;
+  opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none;
+}
+.floor-toast.show { opacity: 1; transform: translate(-50%, -50%); }
+
+.lobby-panel { max-height: 34vh; display: flex; flex-direction: column; }
+.lobby { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 4px; }
+.lb {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: 'f nm t' 'f st st';
+  column-gap: 8px; padding: 5px 8px; border-radius: 8px; cursor: pointer;
+  background: var(--panel-2); border-left: 3px solid var(--wc, var(--line)); font-size: 12.5px;
+}
+.lb:hover { filter: brightness(1.15); }
+.lb b { grid-area: f; font: 700 11px var(--mono); color: var(--muted); align-self: center; }
+.lb .nm { grid-area: nm; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb .nm em { font-style: normal; font-size: 10.5px; color: #c4b5fd; margin-right: 4px; }
+.lb .st { grid-area: st; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb time { grid-area: t; font: 11px var(--mono); color: var(--faint); }
+.lb.intern { margin-left: 14px; }
+.lb.here b { color: var(--text); }
+.lb.wait, .lb.ask { background: color-mix(in srgb, #f59e0b 20%, var(--panel-2)); }
+.lb.wait .st, .lb.ask .st { color: #fde3b0; }
+.lb.error .st { color: #ffc4c6; }
+.lb.sleep { opacity: .65; }
+.lb.none { cursor: default; color: var(--faint); grid-template-areas: 'nm'; display: block; border-left-color: var(--line); }
 
 /* ───────── 레이아웃 ───────── */
 .layout { flex: 1; display: flex; min-height: 0; }
@@ -146,7 +196,15 @@ button, select { font: inherit; color: inherit; }
 .feed li.think { --c: #64748b; }
 .feed li.think .tx { color: #aeb6c8; font-style: italic; }
 .feed li.user { --c: var(--desk); }
+.feed li.wait { --c: #f59e0b; }
+.feed li.wait .tx { color: #fde3b0; }
 .feed li.say .tx { color: #d5dae6; }
+.feed li.agent { --c: #8b5cf6; }
+.feed li .who {
+  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; vertical-align: 1px;
+  font: 600 10.5px/1.6 var(--ui); color: #fff; background: color-mix(in srgb, var(--wc) 70%, #111);
+}
+.feed li[data-floor] { cursor: default; }
 .feed li[data-room="library"] { --c: var(--library); }
 .feed li[data-room="dev"] { --c: var(--dev); }
 .feed li[data-room="server"] { --c: var(--server); }
@@ -225,7 +283,7 @@ button, select { font: inherit; color: inherit; }
   position: absolute; left: 0; top: 0; max-width: 190px; padding: 8px 12px; border-radius: 14px;
   background: #fff7ed; color: #431407; border: 2px solid var(--desk); font: 500 14px/1.35 var(--ui);
   box-shadow: 0 8px 20px rgba(0, 0, 0, .22); opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s;
-  pointer-events: none; z-index: 25;
+  pointer-events: none; z-index: 180;
 }
 .user-bubble.show { opacity: 1; transform: none; }
 .user-bubble::before {
@@ -235,15 +293,29 @@ button, select { font: inherit; color: inherit; }
 .user-bubble .who { font-weight: 700; color: var(--desk); margin-right: 4px; }
 
 /* ───────── Claude 캐릭터 ───────── */
-.claude { position: absolute; left: 0; top: 0; width: 64px; height: 81px; z-index: 20; will-change: transform; }
+.claude { position: absolute; left: 0; top: 0; width: 64px; height: 81px; z-index: 20; will-change: transform; transition: opacity .4s; }
+.actor[hidden] { display: none; }
+.actor.gone .claude, .actor.gone .bubble, .actor.gone .tool-sign { opacity: 0; }
+.claude .name-tag {
+  position: absolute; left: 50%; top: 80px; transform: translateX(-50%);
+  background: rgba(15, 20, 30, .82); color: #fff; font: 600 10.5px/1.6 var(--ui); padding: 0 7px; border-radius: 999px;
+  border-left: 3px solid var(--claude); white-space: nowrap; pointer-events: none;
+}
+.claude .name-tag[hidden] { display: none; }
+/* 인턴(서브에이전트): 작고 밝은 색 */
+.actor.intern .claude svg { transform: scale(.7); transform-origin: 50% 96%; }
+.actor.intern .claude .name-tag { top: 78px; background: rgba(76, 29, 149, .85); }
+.actor.intern .bubble { max-width: 220px; font-size: 13px; padding: 8px 12px; }
+.actor.intern .tool-sign { max-width: 170px; font-size: 11px; padding: 3px 8px 3px 6px; }
+.actor.intern .bubble.think { font-size: 16px; }
 .claude svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .claude .shadow { fill: rgba(0, 0, 0, .22); }
 .claude .flip { transform-box: view-box; transform-origin: 30px 40px; transition: transform .15s; }
 .claude.left .flip { transform: scaleX(-1); }
 .claude .bob { transform-box: view-box; transform-origin: 30px 70px; }
 .claude .body { fill: var(--claude); }
-.claude .leg, .claude .arm { fill: #c4633f; transform-box: fill-box; transform-origin: 50% 10%; }
-.claude .spark path { stroke: #c4633f; stroke-width: 2.6; stroke-linecap: round; }
+.claude .leg, .claude .arm { fill: color-mix(in srgb, var(--claude) 78%, #000); transform-box: fill-box; transform-origin: 50% 10%; }
+.claude .spark path { stroke: color-mix(in srgb, var(--claude) 78%, #000); stroke-width: 2.6; stroke-linecap: round; }
 .claude .eyes ellipse { fill: #2b1d16; }
 .claude .eyes { transform-box: fill-box; transform-origin: center; animation: blink 4.2s infinite; }
 .claude .eyes-x path, .claude .eyes-closed path { stroke: #2b1d16; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -303,6 +375,12 @@ button, select { font: inherit; color: inherit; }
 @keyframes hop { 0%, 60%, 100% { transform: translateY(0); } 75% { transform: translateY(-9px); } }
 @keyframes wave { from { transform: translate(2px, -10px) rotate(30deg); } to { transform: translate(4px, -14px) rotate(-10deg); } }
 
+/* 권한 확인 대기: 허락서를 들고 내 쪽을 보며 기다린다 */
+.claude.permit .prop-paper { display: inline; }
+.claude.permit .bob { animation: hop 1.4s ease-in-out infinite; }
+.claude.permit .eyes ellipse { ry: 5; }
+.claude.permit .arm-r { animation: wave .5s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+
 .claude.report .bob { animation: hop 1.6s ease-in-out 2; }
 .claude.talk .mouth-smile { animation: talk .25s infinite alternate; transform-box: fill-box; transform-origin: center; }
 @keyframes talk { to { transform: scaleY(1.9); } }
@@ -318,7 +396,7 @@ button, select { font: inherit; color: inherit; }
 
 /* ───────── 도구 표지판 ───────── */
 .tool-sign {
-  position: absolute; left: 0; top: 0; transform: translateX(-50%); z-index: 21;
+  position: absolute; left: 0; top: 0; transform: translateX(-50%); z-index: 190;
   display: flex; align-items: center; gap: 7px; max-width: 300px;
   background: #171c29; color: #f1f3f9; padding: 4px 10px 4px 8px; border-radius: 8px;
   border-left: 4px solid var(--c, var(--claude)); font: 12px var(--mono); white-space: nowrap;
@@ -334,7 +412,7 @@ button, select { font: inherit; color: inherit; }
 .tool-sign.fail b::after { content: ' ✗'; color: var(--bad); }
 
 .check-pop {
-  position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; z-index: 22;
+  position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; z-index: 195;
   background: var(--ok); color: #053321; font: 700 16px/26px var(--ui); text-align: center; opacity: 0; pointer-events: none;
 }
 .check-pop.go { animation: pop .8s ease-out; }
@@ -342,7 +420,7 @@ button, select { font: inherit; color: inherit; }
 
 /* ───────── 말풍선 ───────── */
 .bubble {
-  position: absolute; left: 0; top: 0; z-index: 30; max-width: 290px; min-width: 110px;
+  position: absolute; left: 0; top: 0; z-index: 200; max-width: 290px; min-width: 110px;
   padding: 10px 14px; border-radius: 16px; background: #fff; color: #1f2430;
   font: 500 14px/1.42 var(--ui); box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
   opacity: 0; transform: translateY(6px) scale(.96); transition: opacity .18s, transform .18s; pointer-events: none;
@@ -355,6 +433,7 @@ button, select { font: inherit; color: inherit; }
 .bubble.below::after { bottom: auto; top: -6px; }
 .bubble .tag { display: inline-block; font: 700 11px var(--ui); padding: 1px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
 .bubble.say.final .tag { background: #d1fae5; color: #065f46; }
+.bubble .tag.intern-tag { background: #ede9fe; color: #5b21b6; }
 
 .bubble.think {
   background: #fff; color: #3b4357; border-radius: 34px; padding: 12px 18px;
@@ -392,9 +471,17 @@ button, select { font: inherit; color: inherit; }
 .bubble.ask .opts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .bubble.ask .opts span { background: rgba(255, 255, 255, .55); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 500; }
 
+.bubble.permit { background: #fdba74; color: #431407; padding-left: 46px; }
+.bubble.permit.show { animation: nudge 1.6s ease-in-out infinite; }
+.bubble.permit .key { position: absolute; left: 11px; top: 9px; font-size: 22px; line-height: 1; }
+.bubble.permit .head { display: block; font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.bubble.permit .what { display: block; font: 13px/1.4 var(--mono); overflow-wrap: anywhere; }
+.bubble.permit .detail { display: block; margin-top: 2px; font: 11.5px/1.35 var(--mono); opacity: .75; overflow-wrap: anywhere; }
+@keyframes nudge { 50% { transform: translateY(-3px); } }
+
 /* ───────── 빈 상태 ───────── */
 .empty {
-  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%); z-index: 40;
+  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%); z-index: 250;
   background: rgba(14, 19, 29, .92); color: var(--text); border: 1px solid var(--line); border-radius: 14px;
   padding: 18px 22px; display: flex; flex-direction: column; gap: 6px; width: 520px; text-align: center; font-size: 15px;
 }
@@ -413,5 +500,5 @@ button, select { font: inherit; color: inherit; }
   .sess { order: 5; flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .claude *, .led, .globe-land, .steam, .radar { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
+  .claude *, .led, .globe-land, .steam, .radar, .bubble.permit, .now-icon, .fl.wait, .stage.arrive * { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
 }

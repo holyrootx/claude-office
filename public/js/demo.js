@@ -1,0 +1,71 @@
+// 데모: 두 층에서 직원 둘과 인턴 둘이 동시에 일하는 장면.
+// script 항목은 [앞 항목과의 간격(ms), 세션 id, 이벤트]. 이벤트에 agent가 있으면 인턴, { wait }는 hook이 알려 주는 권한 대기 흉내.
+const shop = 'demo-shop', blog = 'demo-blog';
+
+export const DEMO_SESSIONS = [
+  {
+    sid: shop,
+    session: { id: shop, project: '쇼핑몰-api', title: '로그인 401 고치기', cwd: '/demo/shop-api', model: 'claude-opus-5-5', branch: 'fix/auth' },
+    history: [], plan: null, wait: null, agents: [],
+  },
+  {
+    sid: blog,
+    session: { id: blog, project: '기술-블로그', title: '새 글: SSE 실시간 대시보드', cwd: '/demo/blog', model: 'claude-sonnet-5-5', branch: 'main' },
+    history: [], plan: null, wait: null, agents: [],
+  },
+];
+
+const todo = (...st) => ({ title: '할 일', items: ['인증 흐름 파악', '401 재현 테스트 작성', '토큰 갱신 로직 수정', '테스트 통과 후 커밋'].map((text, i) => ({ text, status: st[i] })) });
+
+export const DEMO_SCRIPT = [
+  [300, shop, { k: 'user', text: '로그인하면 가끔 401이 떠요. 원인 찾아서 고쳐줘' }],
+  [900, blog, { k: 'user', text: '이번 주 글 초안 써 줘: SSE로 실시간 대시보드 만들기' }],
+  [700, shop, { k: 'think', text: '토큰 만료 처리 쪽이 의심된다. 조사는 인턴에게 맡기고 계획부터 세우자' }],
+  [900, blog, { k: 'think', text: '먼저 요즘 SSE 자료를 찾아보고 예제 코드를 만들자' }],
+  [1700, shop, { k: 'tool', id: 's1', name: 'TodoWrite', tool: 'TodoWrite', room: 'meeting', label: '할 일 4개 정리', plan: todo('doing', 'todo', 'todo', 'todo') }],
+  [400, shop, { k: 'result', id: 's1', ok: true }],
+  [300, blog, { k: 'tool', id: 'b1', name: 'WebSearch', tool: 'WebSearch', room: 'search', label: 'Server-Sent Events dashboard 2026' }],
+  [500, shop, { k: 'tool', id: 's2', name: 'Agent', tool: 'Agent', room: 'meeting', label: '인증 흐름 조사' }],
+  [700, shop, { k: 'agent', agent: 'i1', type: 'Explore', desc: '인증 흐름 조사' }],
+  [300, shop, { k: 'user', agent: 'i1', text: 'verifyToken이 어디서 401을 내는지 찾아 줘' }],
+  [900, blog, { k: 'result', id: 'b1', ok: true }],
+  [300, blog, { k: 'tool', id: 'b2', name: 'WebFetch', tool: 'WebFetch', room: 'search', label: 'developer.mozilla.org' }],
+  [600, shop, { k: 'tool', agent: 'i1', id: 'i1a', name: 'Grep', tool: 'Grep', room: 'library', label: '"verifyToken" · src' }],
+  [1200, shop, { k: 'result', agent: 'i1', id: 'i1a', ok: true }],
+  [300, shop, { k: 'tool', agent: 'i1', id: 'i1b', name: 'Read', tool: 'Read', room: 'library', label: 'auth.middleware.ts' }],
+  [700, blog, { k: 'result', id: 'b2', ok: true }],
+  [400, blog, { k: 'tool', id: 'b3', name: 'Agent', tool: 'Agent', room: 'meeting', label: '예제 코드 검증' }],
+  [600, blog, { k: 'agent', agent: 'i2', type: 'general-purpose', desc: '예제 코드 검증' }],
+  [300, blog, { k: 'user', agent: 'i2', text: '글에 넣을 SSE 예제가 실제로 돌아가는지 확인해 줘' }],
+  [600, shop, { k: 'result', agent: 'i1', id: 'i1b', ok: true }],
+  [400, shop, { k: 'say', agent: 'i1', final: true, text: '만료 1분 전 갱신 조건이 >= 가 아니라 > 로 되어 있어요 (42줄)' }],
+  [500, blog, { k: 'tool', id: 'b4', name: 'Write', tool: 'Write', room: 'dev', label: 'sse-dashboard.md' }],
+  [700, blog, { k: 'tool', agent: 'i2', id: 'i2a', name: 'Bash', tool: 'Bash', room: 'server', label: '예제 서버 실행', detail: 'node examples/sse.js' }],
+  [1200, shop, { k: 'result', id: 's2', ok: true }],
+  [300, shop, { k: 'say', text: '인턴이 원인 후보를 찾아왔어요. 만료 직전 경계값 처리 문제로 보여요.' }],
+  [900, blog, { k: 'result', id: 'b4', ok: true }],
+  [600, blog, { k: 'result', agent: 'i2', id: 'i2a', ok: true }],
+  [300, blog, { k: 'say', agent: 'i2', final: true, text: '예제 3개 모두 잘 돌아가요. 브라우저에서 이벤트가 1초마다 들어와요.' }],
+  [1500, shop, { k: 'tool', id: 's3', name: 'Edit', tool: 'Edit', room: 'dev', label: 'auth.middleware.ts' }],
+  [1100, shop, { k: 'result', id: 's3', ok: true }],
+  [300, shop, { k: 'tool', id: 's4', name: 'Bash', tool: 'Bash', room: 'server', label: 'npm test', detail: 'npm test -- auth' }],
+  [800, blog, { k: 'tool', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' }],
+  [1300, blog, { wait: { kind: 'permission', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' } }],
+  [900, shop, { k: 'result', id: 's4', ok: false, error: 'Exit code 1 · FAIL auth.spec.ts › refresh: expected 200, received 401' }],
+  [2600, shop, { k: 'think', text: '테스트의 시계 고정값도 같이 바꿔야 하네' }],
+  [2400, shop, { k: 'tool', id: 's5', name: 'Edit', tool: 'Edit', room: 'dev', label: 'auth.spec.ts' }],
+  [500, blog, { wait: null }],
+  [900, shop, { k: 'result', id: 's5', ok: true }],
+  [300, shop, { k: 'tool', id: 's6', name: 'Bash', tool: 'Bash', room: 'server', label: 'npm test', detail: 'npm test -- auth' }],
+  [900, blog, { k: 'result', id: 'b5', ok: true }],
+  [700, blog, { k: 'say', final: true, text: '초안을 쓰고 미리보기로 배포했어요. 예제 코드는 인턴이 모두 확인했어요.' }],
+  [1400, shop, { k: 'result', id: 's6', ok: true }],
+  [300, shop, { k: 'tool', id: 's7', name: 'mcp__ccd_turn__update_plan', tool: 'update_plan', room: 'meeting', label: '진행 상황 갱신', plan: todo('done', 'done', 'done', 'doing') }],
+  [500, shop, { k: 'result', id: 's7', ok: true }],
+  [300, shop, { k: 'tool', id: 's8', name: 'AskUserQuestion', tool: 'AskUserQuestion', room: 'desk', label: '커밋 방식', ask: '바로 커밋할까요, 아니면 PR로 올릴까요?', options: ['바로 커밋', 'PR로 올리기'] }],
+  [4200, shop, { k: 'result', id: 's8', ok: true, answer: '바로 커밋' }],
+  [900, shop, { k: 'tool', id: 's9', name: 'Bash', tool: 'Bash', room: 'server', label: 'git commit -m "fix: 토큰 만료 경계값"', git: true }],
+  [1500, shop, { k: 'result', id: 's9', ok: true }],
+  [500, shop, { k: 'think', text: '' }],
+  [1400, shop, { k: 'say', final: true, text: '401 원인은 토큰 만료 경계값 비교(> → >=)였어요. 수정하고 테스트 통과 후 커밋까지 끝냈어요.' }],
+];

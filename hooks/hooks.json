@@ -1,0 +1,27 @@
+{
+  "description": "권한 확인 창이 뜨면 Claude 사무실에 알려요. 사무실이 꺼져 있으면 아무 일도 하지 않아요.",
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/notify.js"], "async": true }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/notify.js"], "async": true }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/notify.js"], "timeout": 2 }
+        ]
+      }
+    ]
+  }
+}

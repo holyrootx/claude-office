@@ -1,0 +1,12 @@
+{
+  "name": "holyrootx",
+  "owner": { "name": "holyrootx" },
+  "description": "holyrootx가 만든 Claude Code 플러그인",
+  "plugins": [
+    {
+      "name": "office",
+      "source": "./",
+      "description": "Claude Code가 지금 하는 일을 사무실 캐릭터로 보여 주는 실시간 화면"
+    }
+  ]
+}

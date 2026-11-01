@@ -332,13 +332,22 @@ function countLocal(s, ev) {
 
 // ───────────────────────── 층 ─────────────────────────
 const floorNum = key => [...floors.keys()].indexOf(key) + 1;
+// 층 이름: 이름이 같은 층(다른 곳의 같은 이름 폴더)이 있으면 바로 위 폴더 이름을 붙여 구별한다 (blog · work)
+function floorName(key) {
+  const f = floors.get(key);
+  if (!f) return '';
+  const twin = [...floors.values()].some(o => o !== f && o.name === f.name);
+  if (!twin) return f.name;
+  const parent = String(key).split(/[\\/]/).filter(Boolean).slice(-2, -1)[0];
+  return parent ? `${f.name} · ${parent}` : f.name;
+}
 
 function goFloor(key, pin) {
   if (pin) floorAuto = false;
   if (!floors.has(key)) return;
   if (key !== current) {
     current = key;
-    toast(`🛗 ${floorNum(key)}F · ${floors.get(key).name}`);
+    toast(`🛗 ${floorNum(key)}F · ${floorName(key)}`);
     el.stage.classList.remove('arrive');
     void el.stage.offsetWidth;
     el.stage.classList.add('arrive');
@@ -453,7 +462,7 @@ function renderFloorbar() {
     const wait = on.some(a => a.waitState || a.status === 'ask');
     const busy = on.some(a => a.status === 'work' || a.status === 'think');
     return `<button type="button" class="fl${f.key === current ? ' active' : ''}${wait ? ' wait' : ''}${busy ? ' busy' : ''}" data-floor="${esc(f.key)}">`
-      + `<b>${i + 1}F</b>${esc(f.name)}<small>${on.length}명</small>${wait ? '<i>🔐</i>' : ''}</button>`;
+      + `<b>${i + 1}F</b>${esc(floorName(f.key))}<small>${on.length}명</small>${wait ? '<i>🔐</i>' : ''}</button>`;
   }).join('');
   if (html !== floorbarHtml) $('floorTabs').innerHTML = floorbarHtml = html;
 }
@@ -473,7 +482,7 @@ function renderLobby() {
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${s.color}">`
             + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${!a.intern && s.info.queue && s.info.queue.length ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : ''}</span>`
-            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time>`
+            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || (st === 'idle' || st === 'sleep') && a.lastEventTs && ago(a.lastEventTs) || '')}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
         });
       }

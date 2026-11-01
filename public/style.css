@@ -227,6 +227,7 @@ button, select { font: inherit; color: inherit; }
   background: var(--panel-2); border-left: 3px solid var(--wc, var(--line)); font-size: 12.5px;
 }
 .lb:hover { filter: brightness(1.15); }
+.lb:focus-visible { outline: 2px solid var(--claude); outline-offset: 1px; }
 .lb b { grid-area: f; font: 700 11px var(--mono); color: var(--muted); align-self: center; }
 .lb .nm { grid-area: nm; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb .ctx { grid-area: ctx; height: 3px; margin-top: 4px; background: var(--panel); }

@@ -471,7 +471,7 @@ function renderLobby() {
         const st = a.status;
         rows.push({
           rank: STATUS_ORDER[st] ?? 2, floor: i,
-          html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" style="--wc:${s.color}">`
+          html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${s.color}">`
             + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${!a.intern && s.info.queue && s.info.queue.length ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : ''}</span>`
             + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
@@ -482,7 +482,16 @@ function renderLobby() {
   // 나를 기다리는 직원이 맨 위, 나머지는 층 순서대로
   rows.sort((x, y) => x.rank - y.rank || x.floor - y.floor);
   const html = rows.map(r => r.html).join('') || '<li class="lb none">아직 아무도 출근하지 않았어요</li>';
-  if (html !== lobbyHtml) $('lobby').innerHTML = lobbyHtml = html;
+  if (html !== lobbyHtml) {
+    // 다시 그려도 키보드로 고르던 줄은 그대로 고른 채로
+    const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('#lobby [data-actor]');
+    const key = focused && focused.dataset.actor;
+    $('lobby').innerHTML = lobbyHtml = html;
+    if (key) {
+      const again = [...$('lobby').querySelectorAll('[data-actor]')].find(li => li.dataset.actor === key);
+      if (again) again.focus({ preventScroll: true });
+    }
+  }
   const interns = [...actors].filter(a => a.intern && !a.leaving).length;
   $('lobbyCount').textContent = sessions.size ? `직원 ${sessions.size}명${interns ? ` · 인턴 ${interns}명` : ''}` : '';
 }
@@ -798,6 +807,12 @@ function showActor(li) {
   if (a) openCard(a, true);
 }
 $('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
+// 키보드로도: Tab으로 줄을 고르고 Enter
+$('lobby').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  showActor(e.target.closest('[data-floor]'));
+});
 el.feed.addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 
 const sel = $('sessionSelect');

@@ -316,6 +316,7 @@ test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었
   const list = async q => JSON.parse((await get('/api/sessions' + q)).body).sessions;
   const plain = await list('');
   assert.equal(plain.length, 30);
+  assert.equal(JSON.parse((await get('/api/sessions')).body).activeMinutes, 30); // 화면의 '최근 30분' 글자
   assert.ok(!plain.some(s => s.file === pinned));
   const kept = await list('?keep=' + encodeURIComponent(pinned));
   assert.equal(kept.length, 31);

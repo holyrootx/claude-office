@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, PROJECTS, PUBLIC, MAX_HOOK_BYTES,
+  args, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
 } = require('./lib/config');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
@@ -103,7 +103,8 @@ const server = http.createServer((req, res) => {
       if (k && !top.includes(k)) top.push(k);
     }
     const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
-    return json(res, { root: PROJECTS, sessions: list });
+    // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
+    return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list });
   }
 
   if (url.pathname === '/api/journal') {

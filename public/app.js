@@ -683,18 +683,25 @@ function connect() {
 // ───────────────────────── 세션 목록 ─────────────────────────
 const isFile = v => v && v !== 'all' && v !== 'auto';
 // keepFile: 처음 켤 때 저장해 둔 고정 세션 (그 뒤로는 지금 고른 값)
+// 60 → 1시간, 90 → 90분
+const minutesText = m => (m >= 60 && m % 60 === 0 ? `${m / 60}시간` : `${m}분`);
 async function loadSessions(keepFile) {
   const sel = $('sessionSelect');
   const keep = keepFile || sel.value;
   let d;
   try { d = await (await fetch('/api/sessions' + (isFile(keep) ? '?keep=' + encodeURIComponent(keep) : ''))).json(); } catch { return; }
-  sel.innerHTML = '<option value="all">🏢 빌딩 · 최근 30분 세션 모두</option><option value="auto">자동 · 가장 최근 세션 하나</option>';
-  for (const s of d.sessions || []) {
-    const o = document.createElement('option');
-    o.value = s.file;
-    o.textContent = `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`;
-    sel.appendChild(o);
-  }
+  const want = [
+    ['all', `🏢 빌딩 · 최근 ${minutesText(d.activeMinutes || 30)} 세션 모두`],
+    ['auto', '자동 · 가장 최근 세션 하나'],
+    ...(d.sessions || []).map(s => [s.file, `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`]),
+  ];
+  // 통째로 다시 만들지 않고 바뀐 칸만 고친다: 15초마다 새로 고쳐도 열어 둔 목록이 닫히거나 튀지 않게
+  want.forEach(([value, text], i) => {
+    const o = sel.options[i] || sel.appendChild(document.createElement('option'));
+    if (o.value !== value) o.value = value;
+    if (o.textContent !== text) o.textContent = text;
+  });
+  while (sel.options.length > want.length) sel.remove(want.length);
   if ([...sel.options].some(o => o.value === keep)) {
     sel.value = keep;
   } else if (isFile(keep)) {

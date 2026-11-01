@@ -467,7 +467,7 @@ function renderLobby() {
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${s.color}">`
             + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${!a.intern && s.info.queue && s.info.queue.length ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : ''}</span>`
-            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || (st === 'idle' || st === 'sleep') && a.lastEventTs && ago(a.lastEventTs) || '')}</time>`
+            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || (st === 'limit' && a.halt.resets ? `~${a.halt.resets}` : '') || (st === 'idle' || st === 'sleep' || st === 'stopped') && a.lastEventTs && ago(a.lastEventTs) || '')}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
         });
       }
@@ -753,6 +753,8 @@ function buildHelp() {
       ['❓ 노란 말풍선', '나에게 물어볼 게 있어요'],
       ['✅ 완료', '답을 마치고 다음 지시를 기다려요'],
       ['😴 졸기', '한동안 할 일이 없어요'],
+      ['⏳ 졸면서 기다리기', '사용 한도에 걸렸어요. 언제 다시 열리는지 같이 보여 줘요'],
+      ['⚠ 일이 멈춤', '인터넷 끊김·로그인 만료 같은 오류로 멈췄어요. 다시 말을 걸면 이어서 해요'],
       ['작은 캐릭터', '인턴 = 서브에이전트. 일을 마치면 퇴근해요'],
       ['📏 위쪽 막대', '컨텍스트가 얼마나 찼는지 (빨개지면 곧 요약돼요)'],
     ])}</dl>

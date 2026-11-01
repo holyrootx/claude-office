@@ -46,7 +46,7 @@ export function createAlerts({ toast, goFloor, quiet }) {
     const on = notifyOn && canNotify();
     b.textContent = on ? '🔔' : '🔕';
     b.classList.toggle('on', on);
-    b.title = why || (on ? '알림 켜짐: 다른 창을 볼 때 권한 대기·질문·응답 완료를 알려요 (누르면 끔)' : '알림 꺼짐: 누르면 켜요');
+    b.title = why || (on ? '알림 켜짐: 다른 창을 볼 때 권한 대기·질문·응답 완료·사용 한도를 알려요 (누르면 끔)' : '알림 꺼짐: 누르면 켜요');
     if (why) toast(why);
   }
 

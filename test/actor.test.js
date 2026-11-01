@@ -131,6 +131,7 @@ test('사용 한도에 걸리면 생각 중이 아니라 한도가 풀릴 때까
   assert.equal(a.now.title, '사용 한도에 걸려서 쉬어요');
   assert.equal(a.now.sub, '오전 12:40에 다시 열려요');
   assert.ok(a.el.classList.contains('sleep'));
+  assert.equal(a.status, 'limit'); // 로비에서 그냥 쉬는 사람과 구별한다
   a.bookkeep({ k: 'turn_end', ts: Date.now() });
   assert.ok(a.halt, '턴 끝 줄로는 풀리지 않는다');
   a.bookkeep({ k: 'user', ts: Date.now(), text: '다시 해 줘' });
@@ -147,6 +148,7 @@ test('끝내 멈춘 오류는 생각 중으로 남지 않고 왜 멈췄는지 �
   assert.equal(a.turnOpen, false);
   assert.equal(a.now.title, '오류로 일이 멈췄어요');
   assert.match(a.now.sub, /인터넷 연결이 끊겼어요/);
+  assert.equal(a.status, 'stopped');
   const b = actor(office(), { key: 's2', sid: 's2' });
   b.load([{ k: 'user', ts: ago(1), text: '계속' }, { k: 'apierr', ts: ago(0.5), text: 'Anthropic 서버가 붐벼요 (529) · 다시 시도 1/7' }]);
   assert.equal(b.turnOpen, true);

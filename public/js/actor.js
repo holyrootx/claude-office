@@ -629,9 +629,9 @@ export class Actor {
     this.hideSign();
     if (!this.atSpot(this.home)) { this.hideBubble(); this.stroll(this.home); return; }
     const idleMs = Date.now() - Math.max(this.lastActivity, this.lastEventTs || 0);
-    // 사용 한도에 걸려 쉬는 중이거나 오류로 멈춘 채 (반나절이 지나면 그냥 쉬는 걸로)
-    const h = this.halt;
-    if (h && Date.now() - (h.ts || 0) < 12 * 3600 * 1000) {
+    // 사용 한도에 걸려 쉬는 중이거나 오류로 멈춘 채
+    const h = this.activeHalt();
+    if (h) {
       if (h.kind === 'limit') {
         if (this.mode !== 'sleep') this.setMode('sleep');
         this.setNow('⏳', '사용 한도에 걸려서 쉬어요', h.resets ? `${h.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요', this.home);
@@ -653,10 +653,17 @@ export class Actor {
   }
 
   // 로비 안내판에 쓸 한 줄 상태
+  // 사용 한도나 오류로 멈춘 채인지 (반나절이 지나면 그냥 쉬는 걸로 본다)
+  activeHalt() {
+    const h = this.halt;
+    return h && Date.now() - (h.ts || 0) < 12 * 3600 * 1000 ? h : null;
+  }
   get status() {
     if (this.waitState) return 'wait';
     const p = this.lastPending();
     if (p && p.ask) return 'ask';
+    const h = !p && !this.running && !this.turnOpen && this.activeHalt();
+    if (h) return h.kind === 'limit' ? 'limit' : 'stopped';
     if (this.mode === 'sleep') return 'sleep';
     if (this.mode === 'error') return 'error';
     if (p || this.running || this.path.length) return 'work';

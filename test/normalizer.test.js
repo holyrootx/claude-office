@@ -328,3 +328,17 @@ test('표지판 글자가 비던 도구들: 브라우저 묶음, 창 크기, Jir
   assert.equal(labelOf('Artifact', { action: 'publish', file_path: '/tmp/x/report.html' }), 'publish · report.html');
 });
 
+test('Claude Code가 써 넣은 안내: 사용 한도는 쉬는 중, 나머지는 쉬운 말로, 필요 없는 건 뺀다', () => {
+  const note = t => feed(new Normalizer(), assistant([{ type: 'text', text: t }], { model: '<synthetic>' }))[0];
+  assert.deepEqual(
+    (({ kind, resets }) => ({ kind, resets }))(note("You've hit your session limit · resets 12:40am (Asia/Seoul)")),
+    { kind: 'limit', resets: '오전 12:40' },
+  );
+  assert.equal(note("You've hit your session limit · resets 6pm (Asia/Seoul)").resets, '오후 6:00');
+  assert.equal(note('No response requested.'), undefined);
+  assert.equal(note('API Error: Your computer went to sleep mid-response. The response above may be incomplete.').text, '컴퓨터가 잠들어서 답이 중간에 끊겼어요');
+  assert.equal(note("API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)").text, '인터넷 연결이 끊겼어요');
+  assert.equal(note('API Error: 529 Overloaded. This is a server-side issue, usually temporary.').text, 'Anthropic 서버가 붐벼요 (529)');
+  assert.equal(note('Failed to authenticate. API Error: 401 OAuth access token has expired.').text, '로그인이 풀렸어요 (401)');
+});
+

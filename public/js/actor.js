@@ -314,7 +314,11 @@ export class Actor {
       case 'result': this.pending.delete(ev.id); break;
       case 'say': if (ev.final) { this.turnOpen = false; this.pending.clear(); this.lastRoom = this.home; this.lastSay = ev.text; } break;
       case 'turn_end': case 'interrupt': this.turnOpen = false; this.pending.clear(); break;
+      // 사용 한도에 걸리면 이번 차례는 끝난다. 내가 다시 말을 걸 때까지 '쉬는 중'으로 보여 준다
+      case 'apierr': if (ev.kind === 'limit') { this.turnOpen = false; this.pending.clear(); this.limit = ev; } break;
     }
+    // 다시 일하기 시작하면(내 말, 생각, 도구, 대답) 한도는 풀린 것이다
+    if (this.limit && /^(user|think|tool|say)$/.test(ev.k)) this.limit = null;
   }
 
   // 처음 화면을 그릴 때: 지난 기록으로 상태만 맞추고 지금 있어야 할 곳에 바로 세운다
@@ -389,6 +393,13 @@ export class Actor {
         break;
       }
       case 'apierr':
+        if (ev.kind === 'limit') {
+          this.setMode('sleep');
+          this.showBubble('say', `⏳ 사용 한도에 걸려서 쉬어요${ev.resets ? `<br><small>${esc(ev.resets)}에 다시 열려요</small>` : ''}`);
+          this.setNow('⏳', '사용 한도에 걸려서 쉬어요', ev.resets ? `${ev.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요', this.room);
+          await this.dwell(2400);
+          break;
+        }
         this.setMode('error');
         this.sweat(3000);
         this.showBubble('error', `<span class="head">⚠ API 오류</span><span class="msg">${esc(ev.text)}</span>`);
@@ -617,6 +628,12 @@ export class Actor {
     this.hideSign();
     if (!this.atSpot(this.home)) { this.hideBubble(); this.stroll(this.home); return; }
     const idleMs = Date.now() - Math.max(this.lastActivity, this.lastEventTs || 0);
+    // 사용 한도에 걸려 쉬는 중 (반나절이 지나면 그냥 쉬는 걸로)
+    if (this.limit && Date.now() - (this.limit.ts || 0) < 12 * 3600 * 1000) {
+      if (this.mode !== 'sleep') this.setMode('sleep');
+      this.setNow('⏳', '사용 한도에 걸려서 쉬어요', this.limit.resets ? `${this.limit.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요', this.home);
+      return;
+    }
     if (idleMs > 45000) {
       if (this.mode !== 'sleep') { this.setMode('sleep'); this.hideBubble(); }
       this.setNow('😴', '쉬는 중', '지시가 오면 바로 일어나요', this.home);

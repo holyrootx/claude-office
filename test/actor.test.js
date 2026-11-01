@@ -119,3 +119,21 @@ test('인턴의 집은 회의실, 직원의 집은 내 자리', () => {
   m.load([]);
   assert.equal(m.room, 'desk');
 });
+
+test('사용 한도에 걸리면 생각 중이 아니라 한도가 풀릴 때까지 쉬는 중이고, 내가 말을 걸면 풀린다', () => {
+  const a = actor(office());
+  a.load([
+    { k: 'user', ts: ago(3), text: '계속해 줘' },
+    { k: 'think', ts: ago(2.5), text: '' },
+    { k: 'apierr', ts: ago(2), kind: 'limit', text: '사용 한도에 걸렸어요', resets: '오전 12:40' },
+  ]);
+  assert.equal(a.turnOpen, false);
+  assert.equal(a.now.title, '사용 한도에 걸려서 쉬어요');
+  assert.equal(a.now.sub, '오전 12:40에 다시 열려요');
+  assert.ok(a.el.classList.contains('sleep'));
+  a.bookkeep({ k: 'turn_end', ts: Date.now() });
+  assert.ok(a.limit, '턴 끝 줄로는 풀리지 않는다');
+  a.bookkeep({ k: 'user', ts: Date.now(), text: '다시 해 줘' });
+  assert.equal(a.limit, null);
+});
+

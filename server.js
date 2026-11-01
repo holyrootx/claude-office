@@ -261,10 +261,11 @@ async function printJournal() {
   const t = j.totals;
   console.log(`\n  📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`);
   if (!j.projects.length) return console.log('  오늘은 아직 일한 기록이 없어요\n');
-  console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns}\n`);
+  const tok = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString()); // 화면과 같은 꼴 (12.3만)
+  console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns} · 출력 토큰 ${tok(t.tokens)}\n`);
   for (const p of j.projects) {
     console.log(`  ${p.project}  ${hm(p.first)}~${hm(p.last)} · ${worked(p.workedMs)}`);
-    console.log(`    메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}`);
+    console.log(`    메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${tok(p.tokens)}` : ''}`);
     console.log('    ' + Object.entries(icons).map(([r, i]) => `${i} ${p.rooms[r]}`).join('  '));
     for (const s of p.sessions) console.log(`    - ${s.title} (${worked(s.workedMs)})`);
     console.log('');

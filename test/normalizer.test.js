@@ -285,3 +285,19 @@ test('아직 결과가 없는 도구를 찾는다 (권한 대기에 붙일 도�
   assert.equal(norm.openTool(['Read'], ''), null); // 이미 끝난 도구
   assert.equal(norm.openTool([], ''), 'b'); // 이름 없이 찾으면 질문 도구는 빼고 가장 최근
 });
+
+test('출력 토큰은 답(message.id)마다 한 번만 센다', () => {
+  const norm = new Normalizer();
+  const usage = { input_tokens: 3, cache_read_input_tokens: 90000, output_tokens: 1200 };
+  // 답 하나가 생각·도구 두 줄로 나뉘어 기록되고, usage는 두 줄에 똑같이 붙는다
+  const evs = feed(norm,
+    assistant([{ type: 'thinking', thinking: '살펴보자' }], { id: 'msg_1', usage }),
+    assistant([{ type: 'tool_use', id: 't1', name: 'Read', input: { file_path: '/a' } }], { id: 'msg_1', usage }),
+    assistant([{ type: 'text', text: '다 봤어요' }], { id: 'msg_2', usage: { ...usage, output_tokens: 80 }, stop_reason: 'end_turn' }),
+  );
+  assert.equal(evs.reduce((n, e) => n + (e.tok || 0), 0), 1280);
+  assert.equal(evs[0].tok, 1200);
+  // 오류 안내처럼 진짜 답이 아닌 것은 세지 않는다
+  const syn = feed(new Normalizer(), line({ type: 'assistant', message: { model: '<synthetic>', id: 'x', usage, content: [{ type: 'text', text: 'API Error' }] } }));
+  assert.equal(syn[0].tok, undefined);
+});

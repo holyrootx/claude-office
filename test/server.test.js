@@ -196,6 +196,8 @@ test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', a
   assert.ok(shop.tools >= 2); // 메인의 Read + 인턴의 Grep
   assert.ok(shop.interns >= 1);
   assert.ok(shop.rooms.library >= 2);
+  assert.ok(shop.tokens >= 300); // 앞에서 쓴 답의 출력 토큰
+  assert.equal(j.totals.tokens, j.projects.reduce((n, p) => n + p.tokens, 0));
   assert.ok(!j.projects.some(p => p.sessions.some(s => s.id === OLD)) || fs.statSync(old).mtimeMs >= j.since); // 오늘 안 움직인 세션은 빠진다
   assert.equal(j.totals.projects, j.projects.length);
 });

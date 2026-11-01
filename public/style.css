@@ -169,6 +169,7 @@ button, select { font: inherit; color: inherit; }
   position: absolute; z-index: 220; width: 300px; padding: 12px 14px 12px; border-radius: 14px;
   background: var(--float); color: var(--text); border: 1px solid var(--line); box-shadow: var(--float-shadow);
   font: 13px/1.45 var(--ui);
+  transform: scale(var(--k, 1)); transform-origin: 0 0; /* 무대가 작게 줄어든 화면에서 다시 키운다 */
 }
 .card[hidden] { display: none; }
 .card-x { position: absolute; right: 8px; top: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; }

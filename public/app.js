@@ -126,15 +126,23 @@ function buildChrome() {
 }
 
 function fit() {
-  const pad = 36;
+  // 감싼 칸의 실제 안쪽 여백만큼 빼고 맞춘다 (좁은 화면은 여백이 작다)
+  const cs = getComputedStyle(el.wrap);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 4;
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 4;
   const narrow = matchMedia('(max-width: 1100px)').matches;
-  const byWidth = (el.wrap.clientWidth - pad) / W;
-  const s = narrow ? byWidth : Math.min(byWidth, (el.wrap.clientHeight - pad) / H, 1.6);
-  const scale = Math.max(0.3, s);
+  const byWidth = (el.wrap.clientWidth - padX) / W;
+  const s = narrow ? byWidth : Math.min(byWidth, (el.wrap.clientHeight - padY) / H, 1.6);
+  // 폰 화면(375px)에서도 옆으로 삐져나가지 않게 아주 작게까지 줄인다
+  const scale = Math.max(0.15, s);
   el.stage.style.transform = `scale(${scale})`;
   el.box.style.width = W * scale + 'px';
   el.box.style.height = H * scale + 'px';
+  // 정보 카드는 무대와 같이 줄어들면 못 읽으니까, 무대가 작을 때는 그만큼 다시 키운다 (화면에서 300px 가까이)
+  cardK = Math.max(1, 0.85 / scale);
+  if (cardActor) renderCard();
 }
+let cardK = 1;
 
 let userTimer = 0;
 function userSay(text) {
@@ -612,7 +620,10 @@ function renderCard() {
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
   card.hidden = false;
   // 캐릭터 오른쪽 위에 붙이되 무대 밖으로 나가지 않게
-  const w = card.offsetWidth, h = card.offsetHeight;
+  // 키워도 무대 높이를 넘지 않게
+  const k = Math.min(cardK, (H - 16) / card.offsetHeight);
+  card.style.setProperty('--k', k.toFixed(3));
+  const w = card.offsetWidth * k, h = card.offsetHeight * k;
   card.style.left = Math.max(8, Math.min(a.x + 34, W - w - 8)) + 'px';
   card.style.top = Math.max(8, Math.min(a.y - h - 20, H - h - 8)) + 'px';
 }

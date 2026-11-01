@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
-const { spawn, execFileSync } = require('child_process');
+const { spawn, execFile, execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-test-'));
@@ -342,94 +342,110 @@ test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었
   assert.equal((await list('?keep=' + encodeURIComponent('/etc/passwd'))).length, 30); // 기록 폴더 밖은 무시
 });
 
-test('빌딩: 오래 조용한 직원은 퇴근하고(마지막 한 명은 남김), 다시 움직이면 출근한다', async () => {
-  const cfg = path.join(TMP, 'claude-leave');
-  const P = path.join(cfg, 'projects', '-tmp-leave');
-  fs.mkdirSync(P, { recursive: true });
-  const fa = path.join(P, 'leave-a.jsonl'), fb = path.join(P, 'leave-b.jsonl');
-  userMsg(fa, '첫 번째');
-  await sleep(50);
-  userMsg(fb, '두 번째');
-  const port = PORT + 7;
-  const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-leave.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
-  const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
-  const log = [];
-  let req;
-  try {
-    assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
-    req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', c => {
-        buf += c;
-        let i;
-        while ((i = buf.indexOf('\n\n')) >= 0) {
-          const blk = buf.slice(0, i);
-          buf = buf.slice(i + 2);
-          const ev = (blk.match(/^event: (.*)$/m) || [])[1];
-          const d = (blk.match(/^data: (.*)$/m) || [])[1];
-          if (ev) log.push({ ev, ...JSON.parse(d) });
-        }
+// 사무실을 따로 띄워서 확인하는 것들. 서로 파일·포트가 겹치지 않아서 한꺼번에 돌린다
+// ('다음 포트로 연다' 테스트는 빈 포트 번호가 옆 테스트와 겹칠 수 있어서 따로 돌린다)
+// (퇴근을 기다리는 테스트가 몇 초씩 걸려서, 차례로 돌리면 전체 테스트가 10초쯤 늘어난다)
+test.describe('따로 띄운 사무실', { concurrency: true }, () => {
+  test('빌딩: 오래 조용한 직원은 퇴근하고(마지막 한 명은 남김), 다시 움직이면 출근한다', async () => {
+    const cfg = path.join(TMP, 'claude-leave');
+    const P = path.join(cfg, 'projects', '-tmp-leave');
+    fs.mkdirSync(P, { recursive: true });
+    const fa = path.join(P, 'leave-a.jsonl'), fb = path.join(P, 'leave-b.jsonl');
+    userMsg(fa, '첫 번째');
+    await sleep(50);
+    userMsg(fb, '두 번째');
+    const port = PORT + 7;
+    const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-leave.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+    const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+    const log = [];
+    let req;
+    try {
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+      req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+        let buf = '';
+        res.setEncoding('utf8');
+        res.on('data', c => {
+          buf += c;
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const blk = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const ev = (blk.match(/^event: (.*)$/m) || [])[1];
+            const d = (blk.match(/^data: (.*)$/m) || [])[1];
+            if (ev) log.push({ ev, ...JSON.parse(d) });
+          }
+        });
       });
-    });
-    const hello = await until(() => log.find(x => x.ev === 'hello'));
-    assert.equal(hello.sessions.length, 2);
-    const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
-    assert.equal(left && left.sid, 'leave-a'); // 더 오래 조용한 쪽이 퇴근
-    await sleep(2500);
-    assert.equal(log.filter(x => x.ev === 'leave').length, 1); // 마지막 한 명은 남는다
-    userMsg(fa, '다시 일해요');
-    const back = await until(() => log.find(x => x.ev === 'join' && x.sid === 'leave-a'), 4000);
-    assert.ok(back, '다시 출근');
-  } finally {
-    if (req) req.destroy();
-    child.kill();
-  }
-});
+      const hello = await until(() => log.find(x => x.ev === 'hello'));
+      assert.equal(hello.sessions.length, 2);
+      const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
+      assert.equal(left && left.sid, 'leave-a'); // 더 오래 조용한 쪽이 퇴근
+      await sleep(2500);
+      assert.equal(log.filter(x => x.ev === 'leave').length, 1); // 마지막 한 명은 남는다
+      userMsg(fa, '다시 일해요');
+      const back = await until(() => log.find(x => x.ev === 'join' && x.sid === 'leave-a'), 4000);
+      assert.ok(back, '다시 출근');
+    } finally {
+      if (req) req.destroy();
+      child.kill();
+    }
+  });
 
-test('빌딩: 사용 한도가 풀리기를 기다리는 직원은 조용해도 퇴근하지 않는다', async () => {
-  const cfg = path.join(TMP, 'claude-limit');
-  const P = path.join(cfg, 'projects', '-tmp-limit');
-  fs.mkdirSync(P, { recursive: true });
-  const fl = path.join(P, 'limit-a.jsonl'), fq = path.join(P, 'quiet-b.jsonl');
-  const d = new Date(Date.now() + 2 * 3600 * 1000);
-  const clock = `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`;
-  userMsg(fl, '계속해 줘');
-  put(fl, { type: 'assistant', cwd: '/tmp/limit', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock} (Asia/Seoul)` }] } });
-  await sleep(50);
-  userMsg(fq, '그냥 조용한 세션');
-  const port = PORT + 8;
-  const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-limit.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
-  const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
-  const log = [];
-  let req;
-  try {
-    assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
-    req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', c => {
-        buf += c;
-        let i;
-        while ((i = buf.indexOf('\n\n')) >= 0) {
-          const blk = buf.slice(0, i);
-          buf = buf.slice(i + 2);
-          const ev = (blk.match(/^event: (.*)$/m) || [])[1];
-          const dd = (blk.match(/^data: (.*)$/m) || [])[1];
-          if (ev) log.push({ ev, ...JSON.parse(dd) });
-        }
+  test('빌딩: 사용 한도가 풀리기를 기다리는 직원은 조용해도 퇴근하지 않는다', async () => {
+    const cfg = path.join(TMP, 'claude-limit');
+    const P = path.join(cfg, 'projects', '-tmp-limit');
+    fs.mkdirSync(P, { recursive: true });
+    const fl = path.join(P, 'limit-a.jsonl'), fq = path.join(P, 'quiet-b.jsonl');
+    const d = new Date(Date.now() + 2 * 3600 * 1000);
+    const clock = `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`;
+    userMsg(fl, '계속해 줘');
+    put(fl, { type: 'assistant', cwd: '/tmp/limit', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock} (Asia/Seoul)` }] } });
+    await sleep(50);
+    userMsg(fq, '그냥 조용한 세션');
+    const port = PORT + 8;
+    const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-limit.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+    const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+    const log = [];
+    let req;
+    try {
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+      req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+        let buf = '';
+        res.setEncoding('utf8');
+        res.on('data', c => {
+          buf += c;
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const blk = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const ev = (blk.match(/^event: (.*)$/m) || [])[1];
+            const dd = (blk.match(/^data: (.*)$/m) || [])[1];
+            if (ev) log.push({ ev, ...JSON.parse(dd) });
+          }
+        });
       });
-    });
-    const hello = await until(() => log.find(x => x.ev === 'hello'));
-    assert.equal(hello.sessions.length, 2);
-    const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
-    assert.equal(left && left.sid, 'quiet-b'); // 더 오래 조용한 limit-a가 아니라 그냥 조용한 쪽이 퇴근
-    await sleep(2000);
-    assert.ok(!log.some(x => x.ev === 'leave' && x.sid === 'limit-a'));
-  } finally {
-    if (req) req.destroy();
-    child.kill();
-  }
+      const hello = await until(() => log.find(x => x.ev === 'hello'));
+      assert.equal(hello.sessions.length, 2);
+      const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
+      assert.equal(left && left.sid, 'quiet-b'); // 더 오래 조용한 limit-a가 아니라 그냥 조용한 쪽이 퇴근
+      await sleep(2000);
+      assert.ok(!log.some(x => x.ev === 'leave' && x.sid === 'limit-a'));
+    } finally {
+      if (req) req.destroy();
+      child.kill();
+    }
+  });
+
+  test('뒤에서 켜지 못하면 사무실이 남긴 말을 보여 준다', async () => {
+    const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
+    await new Promise(r => busy.once('listening', r));
+    const env = { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-bg-fail.json') };
+    // 같이 도는 테스트를 멈추지 않게 기다리는 동안 이벤트 루프를 비워 둔다 (execFileSync 대신)
+    const out = await new Promise(resolve => execFile(process.execPath, [path.join(ROOT, 'server.js'), '--background', '--port', String(busy.address().port)], { env }, (e, stdout) => resolve(String(stdout))));
+    busy.close();
+    assert.match(out, /켜지 못했어요/);
+    assert.match(out, /다른 프로그램이 쓰고 있어요/);
+  });
 });
 
 test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 연다 (직접 정한 포트는 그대로 실패)', async () => {
@@ -498,22 +514,6 @@ test('실행 정보 파일이 지워져도 켜져 있는 사무실을 찾고, �
   assert.ok(await until(() => fs.existsSync(ENV.CLAUDE_OFFICE_RUNTIME), 5000), '다시 써 둔다');
   const after = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
   assert.deepEqual([after.pid, after.port, after.token], [before.pid, before.port, before.token]);
-});
-
-test('뒤에서 켜지 못하면 사무실이 남긴 말을 보여 준다', async () => {
-  const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
-  await new Promise(r => busy.once('listening', r));
-  const env = { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-bg-fail.json') };
-  let out = '';
-  try {
-    execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--background', '--port', String(busy.address().port)], { env });
-  } catch (e) {
-    out = String(e.stdout);
-  } finally {
-    busy.close();
-  }
-  assert.match(out, /켜지 못했어요/);
-  assert.match(out, /다른 프로그램이 쓰고 있어요/);
 });
 
 test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하고, --stop으로 끈다', async () => {

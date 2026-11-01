@@ -536,10 +536,29 @@ function render() {
   renderFloorbar();
   renderLobby();
   renderStats();
+  renderFeedScope();
   renderHeader(focus);
   renderCard();
   $('empty').hidden = sessions.size > 0 || viewMode === 'demo';
 }
+
+// 활동 기록 '이 층만': 층이 둘 이상일 때만 버튼이 보이고, 고른 것은 기억해 둔다
+const FEED_KEY = 'claude-office-feed-floor';
+let feedThisFloor = false, feedScope;
+try { feedThisFloor = localStorage.getItem(FEED_KEY) === '1'; } catch { /* 저장소 없음 */ }
+function renderFeedScope() {
+  const btn = $('feedScope');
+  btn.hidden = floors.size < 2;
+  btn.classList.toggle('on', feedThisFloor);
+  btn.setAttribute('aria-pressed', String(feedThisFloor));
+  const want = feedThisFloor && floors.size > 1 ? current : null;
+  if (want !== feedScope) feed.only((feedScope = want));
+}
+$('feedScope').addEventListener('click', () => {
+  feedThisFloor = !feedThisFloor;
+  try { localStorage.setItem(FEED_KEY, feedThisFloor ? '1' : '0'); } catch { /* 저장소 없음 */ }
+  renderFeedScope();
+});
 
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
@@ -743,6 +762,7 @@ function buildHelp() {
     <h3>누르기</h3><dl>${rows([
       ['캐릭터', '정보 카드: 지금 하는 일, 컨텍스트, 다시 보기·이 세션만 보기'],
       ['로비 안내판·활동 기록 줄', '그 사람이 있는 층으로 가서 정보 카드 열기'],
+      ['활동 기록 · 이 층만', '지금 보는 층에서 한 일만 보기 (층이 둘 이상일 때)'],
       ['층 버튼 · 🛗 자동', '층 고르기 · 일이 생기는 층으로 알아서'],
       ['⏪ 다시 보기', '세션을 처음부터 빠르게 (⏸ 멈춤, 10× 빠르기, 노란 막대를 누르면 건너뛰기)'],
       ['📓 업무 일지', '오늘 한 일을 프로젝트별로'],

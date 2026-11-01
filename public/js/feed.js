@@ -5,9 +5,11 @@ import { ROOMS } from './scene.js';
 const MAX_LINES = 200;
 
 // manyPeople(): 여러 세션이 있어서 줄마다 누가 한 일인지 이름표를 붙여야 할 때 true
+// only(층): 그 층에서 한 일만 보여 준다 (null이면 모든 층). 가린 줄도 지우지 않고 남겨 둔다.
 export function createFeed(list, { manyPeople }) {
   const items = new Map();
   const known = new Map();
+  let onlyFloor = null;
   function add(s, a, ev) {
     let ic = '', cls = '', tx = '', room = '';
     switch (ev.k) {
@@ -53,6 +55,7 @@ export function createFeed(list, { manyPeople }) {
     if (cls) li.className = cls;
     if (room) li.dataset.room = room;
     li.dataset.floor = s.floor;
+    if (onlyFloor && s.floor !== onlyFloor) li.classList.add('away');
     if (a) li.dataset.actor = a.key;
     li.innerHTML = `<time>${stamp(ev.at || ev.ts || Date.now(), ev.atDate)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
     if (ev.k === 'tool') items.set(ev.id, li);
@@ -68,5 +71,10 @@ export function createFeed(list, { manyPeople }) {
     known.clear();
     list.innerHTML = '';
   }
-  return { add, clear };
+  function only(floor) {
+    onlyFloor = floor || null;
+    list.classList.toggle('only', !!onlyFloor);
+    for (const li of list.children) li.classList.toggle('away', !!onlyFloor && li.dataset.floor !== onlyFloor);
+  }
+  return { add, clear, only };
 }

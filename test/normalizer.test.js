@@ -235,6 +235,31 @@ test('세션 정보: 자동 제목, PR, 비용, 권한 모드를 읽는다', () 
   assert.equal(norm.meta.mode, 'plan');
 });
 
+test('압축 전후 토큰을 읽고, 같은 압축은 한 번만 알린다', () => {
+  const norm = new Normalizer();
+  norm.ctx = 960000;
+  const evs = feed(norm,
+    line({ type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'auto', preTokens: 968026, postTokens: 19254 } }),
+    line({ type: 'user', isCompactSummary: true, message: { role: 'user', content: '요약' } }),
+  );
+  assert.equal(evs.length, 1);
+  assert.deepEqual([evs[0].k, evs[0].trigger, evs[0].pre, evs[0].post], ['compact', 'auto', 968026, 19254]);
+  assert.equal(norm.ctx, 19254); // 다음 답을 기다리지 않고 바로 줄어든다
+});
+
+test('바쁠 때 보낸 내 메시지 대기열을 따라간다', () => {
+  const norm = new Normalizer();
+  const q = o => JSON.stringify({ type: 'queue-operation', timestamp: ts, ...o });
+  feed(norm, q({ operation: 'enqueue', content: '바로 처리' }), q({ operation: 'dequeue' })); // 평소 메시지: 넣자마자 받아 감
+  assert.deepEqual(norm.queue, []);
+  feed(norm, q({ operation: 'enqueue', content: '이것도 해 줘' }), q({ operation: 'enqueue', content: '그리고 저것도' }));
+  assert.deepEqual(norm.queue, ['이것도 해 줘', '그리고 저것도']);
+  feed(norm, q({ operation: 'remove', content: '그리고 저것도' }));
+  assert.deepEqual(norm.queue, ['이것도 해 줘']);
+  feed(norm, q({ operation: 'dequeue' }));
+  assert.deepEqual(norm.queue, []);
+});
+
 test('질문과 답을 읽는다', () => {
   const norm = new Normalizer();
   const evs = feed(norm,

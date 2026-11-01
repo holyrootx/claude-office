@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, hhmmss, stamp, ago } from './js/util.js';
+import { $, esc, clip, hhmmss, stamp, ago, fmtTokens } from './js/util.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -12,8 +12,6 @@ const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F'
 const STATUS_ORDER = { wait: 0, ask: 1 };
 const emptyStats = () => ({ library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0, tools: 0, errors: 0, prompts: 0 });
 const shortName = info => clip(info.title || info.project || '세션', 18);
-// 548123 → '54.8만'
-const fmtTokens = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : n.toLocaleString());
 // 컨텍스트가 얼마나 찼는지: 비율과 색 단계
 function ctxOf(s) {
   const c = s && s.info.ctx;
@@ -457,7 +455,7 @@ function renderLobby() {
         rows.push({
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" style="--wc:${s.color}">`
-            + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}</span>`
+            + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${!a.intern && s.info.queue && s.info.queue.length ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : ''}</span>`
             + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
         });
@@ -564,6 +562,8 @@ function renderCard() {
   }
   if (!a.intern && info.mode && MODE_NAMES[info.mode]) extras.push(`🛡 ${MODE_NAMES[info.mode]}`);
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
+  const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
+  const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 내 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
   const nums = a.intern ? '' : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const live = viewMode !== 'demo' && viewMode !== 'replay' && info.file;
@@ -572,7 +572,7 @@ function renderCard() {
     : '';
   const html = `<button class="card-x" type="button" data-act="close" aria-label="닫기">✕</button><div class="card-head" style="--wc:${s.color}">${head}</div>`
     + `<div class="card-now">${esc(a.now.icon)} ${esc(a.now.title)}${a.now.time ? ` <time>${esc(a.now.time)}</time>` : ''}${a.now.sub ? `<small>${esc(clip(a.now.sub, 120))}</small>` : ''}</div>`
-    + ctxRow + nums + extraRow + acts;
+    + ctxRow + nums + extraRow + queueRow + acts;
   const card = $('card');
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
   card.hidden = false;

@@ -14,6 +14,8 @@ export const stamp = (ts, withDate) => {
   const d = new Date(ts);
   return `${d.getMonth() + 1}/${d.getDate()} ${hhmmss(ts).slice(0, 5)}`;
 };
+// 548123 → '54.8만'
+export const fmtTokens = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString());
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
 export function ago(ms) {
   const s = Math.round((Date.now() - ms) / 1000);

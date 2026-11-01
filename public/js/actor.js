@@ -1,5 +1,5 @@
 // 캐릭터 한 명: 세션의 메인 Claude(직원) 또는 서브에이전트(인턴). 받은 이벤트를 차례로 연출한다.
-import { esc, clamp, clip, sleep, secs } from './util.js';
+import { esc, clamp, clip, sleep, secs, fmtTokens } from './util.js';
 import { ROOMS, W, LANE_Y, SPEED, slotPoint, doorInside } from './scene.js';
 
 class Abort extends Error {}
@@ -379,12 +379,15 @@ export class Actor {
         this.setNow('✋', '사용자가 작업을 중단했어요', '', this.room, 'error');
         await this.dwell(2200);
         break;
-      case 'compact':
+      case 'compact': {
+        const how = ev.trigger === 'manual' ? '내가 요청한 압축' : '자동 압축';
+        const size = ev.pre && ev.post ? `${fmtTokens(ev.pre)} → ${fmtTokens(ev.post)} 토큰` : '';
         this.setMode('talk');
-        this.showBubble('say', '🗜 대화가 길어져서 앞부분을 요약·정리하는 중이에요');
-        this.setNow('🗜', '대화 압축 중', '', this.room);
+        this.showBubble('say', `🗜 대화가 길어져서 앞부분을 요약했어요${size ? `<br><small>${how} · ${size}</small>` : ''}`);
+        this.setNow('🗜', '대화 압축', size ? `${how} · ${size}` : '', this.room);
         await this.dwell(2000);
         break;
+      }
       case 'apierr':
         this.setMode('error');
         this.sweat(3000);

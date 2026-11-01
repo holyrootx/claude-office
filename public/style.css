@@ -139,6 +139,9 @@ button, select { font: inherit; color: inherit; }
 .card-extra { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .card-extra i { font-style: normal; margin: 0 6px; color: var(--faint); }
 .card-extra a { color: #93c5fd; text-decoration: none; }
+.card-queue { background: color-mix(in srgb, var(--desk) 14%, var(--panel-2)); border-radius: 9px; padding: 6px 9px; margin-bottom: 8px; font-size: 12px; }
+.card-queue small { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb .nm .q { font-size: 11px; color: #fdba74; font-weight: 600; }
 .card-extra a:hover { text-decoration: underline; }
 .card-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .card-acts button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12.5px; cursor: pointer; }

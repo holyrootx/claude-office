@@ -209,6 +209,32 @@ test('마지막 답의 usage로 컨텍스트 크기를 잰다', () => {
   assert.equal(contextWindow('claude-sonnet-4-5', 250000), 1000000); // 이미 20만을 넘었다면 큰 창
 });
 
+test('API 오류를 알아듣기 쉽게 바꾼다', () => {
+  const sys = o => JSON.stringify({ uuid: 'e' + ++n, timestamp: ts, type: 'system', subtype: 'api_error', level: 'error', ...o });
+  const [a, b, c] = feed(new Normalizer(),
+    sys({ error: { message: '529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}' }, retryAttempt: 1, maxRetries: 7 }),
+    sys({ error: { message: '429 {"type":"error","error":{"type":"rate_limit_error","message":"x"}}' } }),
+    sys({ content: 'fetch failed: ECONNRESET' }),
+  );
+  assert.equal(a.text, 'Anthropic 서버가 붐벼요 (529) · 다시 시도 1/7');
+  assert.equal(b.text, '요청 한도에 걸렸어요 (429)');
+  assert.equal(c.text, '인터넷 연결이 끊겼어요');
+});
+
+test('세션 정보: 자동 제목, PR, 비용, 권한 모드를 읽는다', () => {
+  const norm = new Normalizer();
+  feed(norm,
+    line({ type: 'ai-title', aiTitle: '로그인 버그 고치기' }),
+    line({ type: 'pr-link', prNumber: 17, prUrl: 'https://github.com/a/b/pull/17', prRepository: 'a/b' }),
+    line({ type: 'cost-state', totalCostUSD: 12.5, totalLinesAdded: 300, totalLinesRemoved: 20 }),
+    line({ type: 'mode', mode: 'plan' }),
+  );
+  assert.equal(norm.meta.aiTitle, '로그인 버그 고치기');
+  assert.deepEqual(norm.meta.pr, { number: 17, url: 'https://github.com/a/b/pull/17', repo: 'a/b' });
+  assert.deepEqual(norm.meta.cost, { usd: 12.5, added: 300, removed: 20 });
+  assert.equal(norm.meta.mode, 'plan');
+});
+
 test('질문과 답을 읽는다', () => {
   const norm = new Normalizer();
   const evs = feed(norm,

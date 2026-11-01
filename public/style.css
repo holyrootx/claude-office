@@ -135,7 +135,11 @@ button, select { font: inherit; color: inherit; }
 .card-now small { display: block; color: var(--muted); font: 11.5px/1.35 var(--mono); overflow-wrap: anywhere; margin-top: 2px; }
 .card-ctx { display: flex; margin-bottom: 6px; flex-wrap: wrap; row-gap: 2px; }
 .card-ctx small { flex-basis: 100%; color: var(--faint); font: 11px var(--mono); }
-.card-nums { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.card-nums { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.card-extra { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.card-extra i { font-style: normal; margin: 0 6px; color: var(--faint); }
+.card-extra a { color: #93c5fd; text-decoration: none; }
+.card-extra a:hover { text-decoration: underline; }
 .card-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .card-acts button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12.5px; cursor: pointer; }
 .card-acts button:hover { border-color: var(--claude); }

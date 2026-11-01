@@ -533,6 +533,8 @@ function render() {
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
 let cardActor = null, cardHtml = '';
+// 기본 모드(normal)는 굳이 안 보여 준다
+const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
 function openCard(a, keep) {
   cardActor = cardActor === a && !keep ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
@@ -553,6 +555,15 @@ function renderCard() {
   const head = a.intern
     ? `<b><em>인턴</em> ${esc(a.name)}</b><small>${esc(a.desc || '')}${a.desc ? ' · ' : ''}${esc(s.main.name)}의 인턴</small>`
     : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;
+  // PR, 비용(Claude Code가 남긴 API 요금 기준), 권한 모드
+  const extras = [];
+  if (!a.intern && info.pr && info.pr.url) extras.push(`<a href="${esc(info.pr.url)}" target="_blank" rel="noopener">🔗 PR #${esc(info.pr.number)}</a>`);
+  if (!a.intern && info.cost) {
+    const lines = info.cost.added || info.cost.removed ? ` · +${info.cost.added} −${info.cost.removed}줄` : '';
+    extras.push(`<span title="Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요">💵 $${info.cost.usd.toFixed(2)}${lines}</span>`);
+  }
+  if (!a.intern && info.mode && MODE_NAMES[info.mode]) extras.push(`🛡 ${MODE_NAMES[info.mode]}`);
+  const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const nums = a.intern ? '' : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const live = viewMode !== 'demo' && viewMode !== 'replay' && info.file;
@@ -561,7 +572,7 @@ function renderCard() {
     : '';
   const html = `<button class="card-x" type="button" data-act="close" aria-label="닫기">✕</button><div class="card-head" style="--wc:${s.color}">${head}</div>`
     + `<div class="card-now">${esc(a.now.icon)} ${esc(a.now.title)}${a.now.time ? ` <time>${esc(a.now.time)}</time>` : ''}${a.now.sub ? `<small>${esc(clip(a.now.sub, 120))}</small>` : ''}</div>`
-    + ctxRow + nums + acts;
+    + ctxRow + nums + extraRow + acts;
   const card = $('card');
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
   card.hidden = false;

@@ -17,6 +17,7 @@ export function createReplay(office) {
     // 직접 준 세션(업무 일지·정보 카드), 아니면 보기 메뉴에서 고른 세션이나 지금 보는 직원의 세션
     const file = fileArg || office.pickFile();
     if (!file) return office.toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
+    office.toast('⏳ 기록을 처음부터 읽는 중이에요');
     let d;
     try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
     if (!d || !d.events || !d.events.length) return office.toast('다시 볼 기록이 없어요');
@@ -28,7 +29,10 @@ export function createReplay(office) {
     const multiDay = day(d.events[0].ts) !== day(d.events[d.events.length - 1].ts);
     r = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0, multiDay };
     renderBtns();
-    office.toast(`⏪ ${clip(d.session.title || d.session.project, 24)} 처음부터 다시 보기`);
+    const title = clip(d.session.title || d.session.project, 24);
+    office.toast(d.skipped
+      ? `⏪ ${title} · 너무 길어서 앞부분 ${d.skipped.toLocaleString()}개는 빼고 볼게요`
+      : `⏪ ${title} 처음부터 다시 보기`);
     step();
   }
 

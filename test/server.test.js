@@ -175,6 +175,8 @@ test('다시 보기: 세션 전체를 시간 순으로, 인턴은 출근 소개�
   assert.equal(r.sid, SHOP);
   assert.equal(r.session.project, 'shop');
   assert.equal(r.session.ctx, undefined);
+  assert.equal(r.skipped, 0);
+  assert.equal(r.total, r.events.length);
   const ts = r.events.map(e => e.ts);
   assert.deepEqual(ts, ts.slice().sort((a, b) => a - b));
   for (const id of ['done1', 'busy1', 'new2']) {

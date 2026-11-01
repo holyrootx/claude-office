@@ -110,9 +110,15 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/replay') {
     const file = url.searchParams.get('file') || '';
     if (!insideProjects(file)) { res.writeHead(400); return res.end('bad file'); }
-    const r = replayOf(path.resolve(file));
-    if (!r) { res.writeHead(404); return res.end('not found'); }
-    return json(res, r);
+    replayOf(path.resolve(file)).then(r => {
+      if (!r) { res.writeHead(404); return res.end('not found'); }
+      json(res, r);
+    }, e => {
+      console.error('[replay]', e.message);
+      res.writeHead(500);
+      res.end();
+    });
+    return;
   }
 
   if (url.pathname === '/api/stream') {

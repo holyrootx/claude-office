@@ -1,5 +1,6 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, hhmmss, stamp, ago, fmtTokens, resumeCommand } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf } from './js/util.js';
+import { cardHtml as buildCard } from './js/card.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -14,12 +15,6 @@ const STATUS_ORDER = { wait: 0, ask: 1 };
 const emptyStats = () => ({ library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0, tools: 0, errors: 0, prompts: 0 });
 const shortName = info => clip(info.title || info.project || '세션', 18);
 // 컨텍스트가 얼마나 찼는지: 비율과 색 단계
-function ctxOf(s) {
-  const c = s && s.info.ctx;
-  if (!c || !c.tokens) return null;
-  const p = Math.min(100, Math.round((c.tokens / c.window) * 100));
-  return { p, level: p >= 85 ? 'high' : p >= 60 ? 'mid' : 'low', text: `${fmtTokens(c.tokens)} / ${fmtTokens(c.window)} 토큰` };
-}
 
 // ───────────────────────── 상태 ─────────────────────────
 const sessions = new Map(); // 세션 id → { sid, info, floor, color, main, interns, plan, planAt, stats, wait }
@@ -569,12 +564,10 @@ $('feedScope').addEventListener('click', () => {
 });
 
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
-// 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
+// 캐릭터를 누르면 옆에 뜬다. 내용은 js/card.js가 만들고, 여기서는 띄울 자리만 정한다.
 let cardActor = null, cardHtml = '';
 // 이어 하기 명령을 Windows(PowerShell) 꼴로 만들지
 const IS_WIN = /Win/i.test(navigator.platform || navigator.userAgent || '');
-// 기본 모드(normal)는 굳이 안 보여 준다
-const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
 function openCard(a, keep) {
   cardActor = cardActor === a && !keep ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
@@ -589,41 +582,20 @@ function renderCard() {
   const a = cardActor;
   const s = a && sessions.get(a.sid);
   if (!a || !s || a.leaving || a.floor !== current) return closeCard();
-  const info = s.info;
-  const ctx = !a.intern && ctxOf(s);
-  const where = [info.project, (info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : ''].filter(Boolean).map(esc).join(' · ');
-  const head = a.intern
-    ? `<b><em>인턴</em> ${esc(a.name)}</b><small>${esc(a.desc || '')}${a.desc ? ' · ' : ''}${esc(s.main.name)}의 인턴</small>`
-    : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;
-  // PR, 비용(Claude Code가 남긴 API 요금 기준), 권한 모드
-  const extras = [];
-  if (!a.intern && info.pr && info.pr.url) extras.push(`<a href="${esc(info.pr.url)}" target="_blank" rel="noopener">🔗 PR #${esc(info.pr.number)}</a>`);
-  if (!a.intern && info.cost) {
-    const lines = info.cost.added || info.cost.removed ? ` · +${info.cost.added} −${info.cost.removed}줄` : '';
-    extras.push(`<span title="Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요">💵 $${info.cost.usd.toFixed(2)}${lines}</span>`);
-  }
-  if (!a.intern && info.mode && MODE_NAMES[info.mode]) extras.push(`🛡 ${MODE_NAMES[info.mode]}`);
-  const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
-  const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
-  const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 내 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
-  const nums = a.intern ? '' : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
-  const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
-  const live = viewMode !== 'demo' && viewMode !== 'replay' && info.file;
-  const acts = !a.intern && live
-    ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>${viewMode === 'file' ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`
-      + `<button type="button" data-act="resume" title="${esc(resumeCommand(info.cwd, s.sid, IS_WIN))}">📋 이어 하기 명령 복사</button></div>`
-    : '';
-  const html = `<button class="card-x" type="button" data-act="close" aria-label="닫기">✕</button><div class="card-head" style="--wc:${s.color}">${head}</div>`
-    + `<div class="card-now">${esc(a.now.icon)} ${esc(a.now.title)}${a.now.time ? ` <time>${esc(a.now.time)}</time>` : ''}${a.now.sub ? `<small>${esc(clip(a.now.sub, 120))}</small>` : ''}</div>`
-    + ctxRow + nums + extraRow + queueRow + acts;
+  const html = buildCard(a, s, {
+    ctx: a.intern ? null : ctxOf(s),
+    live: viewMode !== 'demo' && viewMode !== 'replay' && !!s.info.file,
+    pinned: viewMode === 'file',
+    win: IS_WIN,
+  });
   const card = $('card');
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
   card.hidden = false;
-  // 캐릭터 오른쪽 위에 붙이되 무대 밖으로 나가지 않게
-  // 키워도 무대 높이를 넘지 않게
+  // 작은 무대에서는 다시 키우되 무대 높이는 넘지 않게
   const k = Math.min(cardK, (H - 16) / card.offsetHeight);
   card.style.setProperty('--k', k.toFixed(3));
   const w = card.offsetWidth * k, h = card.offsetHeight * k;
+  // 캐릭터 오른쪽 위에 붙이되 무대 밖으로 나가지 않게
   card.style.left = Math.max(8, Math.min(a.x + 34, W - w - 8)) + 'px';
   card.style.top = Math.max(8, Math.min(a.y - h - 20, H - h - 8)) + 'px';
 }

@@ -33,3 +33,11 @@ export function resumeCommand(cwd, sid, win) {
   return win ? `cd "${cwd}"; ${resume}` : `cd '${String(cwd).replace(/'/g, `'\\''`)}' && ${resume}`;
 }
 
+// 컨텍스트가 얼마나 찼는지 (초록 → 노랑 60% → 빨강 85%). 세션 정보에 ctx가 없으면 null
+export function ctxOf(s) {
+  const c = s && s.info && s.info.ctx;
+  if (!c || !c.tokens) return null;
+  const p = Math.min(100, Math.round((c.tokens / c.window) * 100));
+  return { p, level: p >= 85 ? 'high' : p >= 60 ? 'mid' : 'low', text: `${fmtTokens(c.tokens)} / ${fmtTokens(c.window)} 토큰` };
+}
+

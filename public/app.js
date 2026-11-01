@@ -456,7 +456,7 @@ function renderLobby() {
         const st = a.status;
         rows.push({
           rank: STATUS_ORDER[st] ?? 2, floor: i,
-          html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" style="--wc:${s.color}">`
+          html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" style="--wc:${s.color}">`
             + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}</span>`
             + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || '')}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
@@ -533,8 +533,9 @@ function render() {
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
 let cardActor = null, cardHtml = '';
-function openCard(a) {
-  cardActor = cardActor === a ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
+// keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
+function openCard(a, keep) {
+  cardActor = cardActor === a && !keep ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
   cardHtml = '';
   renderCard();
 }
@@ -717,7 +718,7 @@ function buildHelp() {
     ])}</dl>
     <h3>누르기</h3><dl>${rows([
       ['캐릭터', '정보 카드: 지금 하는 일, 컨텍스트, 다시 보기·이 세션만 보기'],
-      ['로비 안내판 줄', '그 직원이 있는 층으로'],
+      ['로비 안내판·활동 기록 줄', '그 사람이 있는 층으로 가서 정보 카드 열기'],
       ['층 버튼 · 🛗 자동', '층 고르기 · 일이 생기는 층으로 알아서'],
       ['⏪ 다시 보기', '세션을 처음부터 빠르게 (⏸ 멈춤, 10× 빠르기, 노란 막대를 누르면 건너뛰기)'],
       ['📓 업무 일지', '오늘 한 일을 프로젝트별로'],
@@ -761,10 +762,15 @@ $('floorTabs').addEventListener('click', e => {
   if (b) goFloor(b.dataset.floor, true);
 });
 $('floorAuto').addEventListener('click', () => { floorAuto = true; autoFloor(); render(); });
-$('lobby').addEventListener('click', e => {
-  const li = e.target.closest('[data-floor]');
-  if (li) goFloor(li.dataset.floor, true);
-});
+// 로비 안내판 줄이나 활동 기록 줄을 누르면 그 층으로 가서, 그 사람의 정보 카드를 연다
+function showActor(li) {
+  if (!li) return;
+  goFloor(li.dataset.floor, true);
+  const a = [...actors].find(x => x.key === li.dataset.actor && !x.leaving);
+  if (a) openCard(a, true);
+}
+$('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
+el.feed.addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 
 const sel = $('sessionSelect');
 const VIEW_KEY = 'claude-office-view';

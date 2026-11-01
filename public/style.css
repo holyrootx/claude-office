@@ -291,7 +291,8 @@ button, select { font: inherit; color: inherit; }
   display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; vertical-align: 1px;
   font: 600 10.5px/1.6 var(--ui); color: #fff; background: color-mix(in srgb, var(--wc) 70%, #111);
 }
-.feed li[data-floor] { cursor: default; }
+.feed li[data-floor] { cursor: pointer; }
+.feed li[data-floor]:hover { filter: brightness(1.18); }
 .feed li[data-room="library"] { --c: var(--library); }
 .feed li[data-room="dev"] { --c: var(--dev); }
 .feed li[data-room="server"] { --c: var(--server); }

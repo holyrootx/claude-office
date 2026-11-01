@@ -53,6 +53,7 @@ export function createFeed(list, { manyPeople }) {
     if (cls) li.className = cls;
     if (room) li.dataset.room = room;
     li.dataset.floor = s.floor;
+    if (a) li.dataset.actor = a.key;
     li.innerHTML = `<time>${stamp(ev.at || ev.ts || Date.now(), ev.atDate)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
     if (ev.k === 'tool') items.set(ev.id, li);
     list.prepend(li);

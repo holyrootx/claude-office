@@ -273,6 +273,9 @@ test('긴 세션은 화면을 먼저 띄우고, 건너뛴 앞부분의 도구 �
   s.close();
   assert.ok(full, '앞부분까지 합쳐 3만 개');
   assert.equal(full.stats.library, 30000);
+  // 업무 일지도 오늘 일이 끝부분보다 앞에서 시작했으면 처음부터 읽어서 센다
+  const j = JSON.parse((await get('/api/journal')).body);
+  assert.equal(j.projects.find(p => p.project === 'big').tools, 30000);
 });
 
 test('보고 있지 않던 세션이 권한을 기다리면 빌딩에 데려온다', async () => {

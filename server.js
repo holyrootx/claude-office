@@ -105,7 +105,14 @@ const server = http.createServer((req, res) => {
     return json(res, { root: PROJECTS, sessions: list });
   }
 
-  if (url.pathname === '/api/journal') return json(res, journal());
+  if (url.pathname === '/api/journal') {
+    journal().then(j => json(res, j), e => {
+      console.error('[journal]', e.message);
+      res.writeHead(500);
+      res.end();
+    });
+    return;
+  }
 
   if (url.pathname === '/api/replay') {
     const file = url.searchParams.get('file') || '';

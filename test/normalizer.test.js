@@ -301,3 +301,30 @@ test('출력 토큰은 답(message.id)마다 한 번만 센다', () => {
   const syn = feed(new Normalizer(), line({ type: 'assistant', message: { model: '<synthetic>', id: 'x', usage, content: [{ type: 'text', text: 'API Error' }] } }));
   assert.equal(syn[0].tok, undefined);
 });
+
+test('망가진 JSON으로 남은 도구 입력도 질문·파일 이름은 건진다 (__unparsedToolInput)', () => {
+  const norm = new Normalizer();
+  const raw = '{"questions": [{"question": "application.yaml\\uc758 \\ubcc0\\uacbd, \\ub9de\\ub098\\uc694?", "header": "확인"';
+  const [ask] = feed(norm, assistant([{ type: 'tool_use', id: 'q1', name: 'AskUserQuestion', input: { __unparsedToolInput: { raw, len: raw.length } } }]));
+  assert.equal(ask.ask, 'application.yaml의 변경, 맞나요?');
+  const [read] = feed(norm, assistant([{ type: 'tool_use', id: 'r1', name: 'Read', input: { __unparsedToolInput: { raw: '{"file_path": "/a/b/PostBody.vue", "offset": 70">\n, "limit": 20}' } } }]));
+  assert.equal(read.label, 'PostBody.vue');
+  assert.equal(read.detail, '/a/b/PostBody.vue');
+});
+
+test('표지판 글자가 비던 도구들: 브라우저 묶음, 창 크기, Jira, 크론, 메시지', () => {
+  const batch = { actions: [{ name: 'navigate', input: { url: 'http://x' } }, { name: 'computer', input: { action: 'wait' } }, { name: 'computer', input: { action: 'wait' } }, { name: 'computer', input: { action: 'screenshot' } }] };
+  assert.equal(labelOf('mcp__Claude_Browser__browser_batch', batch), '4단계 · navigate → wait ×2 → screenshot');
+  assert.equal(labelOf('mcp__Claude_Browser__resize_window', { width: 1280, height: 850 }), '1280×850');
+  assert.equal(labelOf('mcp__Claude_Browser__resize_window', { preset: 'mobile' }), 'mobile');
+  const jira = 'mcp__9be74c07-6424-43bb-ba00-725d536ca1b7__';
+  assert.equal(labelOf(jira + 'addCommentToJiraIssue', { cloudId: 'c', issueIdOrKey: 'QA-1', commentBody: '긴 글' }), 'QA-1');
+  assert.equal(labelOf(jira + 'searchJiraIssuesUsingJql', { cloudId: 'c', jql: 'project = KAN' }), 'project = KAN');
+  assert.equal(labelOf('mcp__mcp-registry__search_mcp_registry', { keywords: ['jira', 'confluence'] }), 'jira, confluence');
+  assert.equal(labelOf('mcp__ccd_session_mgmt__send_message', { message: '**버그 두 개**가 있어요\n자세히는…' }), '버그 두 개가 있어요');
+  assert.equal(labelOf('SendMessage', { to: 'a8fe', summary: '전제가 바뀌었어요', message: '긴 글' }), '전제가 바뀌었어요');
+  assert.equal(labelOf('CronCreate', { cron: '17 * * * *', prompt: '자동 개선 1회' }), '17 * * * * · 자동 개선 1회');
+  assert.equal(labelOf('Monitor', { description: '테스트 끝날 때까지', command: 'until …' }), '테스트 끝날 때까지');
+  assert.equal(labelOf('Artifact', { action: 'publish', file_path: '/tmp/x/report.html' }), 'publish · report.html');
+});
+

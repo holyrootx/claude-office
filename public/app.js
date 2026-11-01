@@ -7,6 +7,7 @@ import { createFeed } from './js/feed.js';
 import { createAlerts } from './js/alerts.js';
 import { createJournal } from './js/journal.js';
 import { createReplay } from './js/replay.js';
+import { firstFloor, nextFloor, floorLabel } from './js/floors.js';
 
 const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F', '#1FA3A3', '#7C8799'];
 const STATUS_ORDER = { wait: 0, ask: 1 };
@@ -332,15 +333,7 @@ function countLocal(s, ev) {
 
 // ───────────────────────── 층 ─────────────────────────
 const floorNum = key => [...floors.keys()].indexOf(key) + 1;
-// 층 이름: 이름이 같은 층(다른 곳의 같은 이름 폴더)이 있으면 바로 위 폴더 이름을 붙여 구별한다 (blog · work)
-function floorName(key) {
-  const f = floors.get(key);
-  if (!f) return '';
-  const twin = [...floors.values()].some(o => o !== f && o.name === f.name);
-  if (!twin) return f.name;
-  const parent = String(key).split(/[\\/]/).filter(Boolean).slice(-2, -1)[0];
-  return parent ? `${f.name} · ${parent}` : f.name;
-}
+const floorName = key => floorLabel(floors, key);
 
 function goFloor(key, pin) {
   if (pin) floorAuto = false;
@@ -357,16 +350,9 @@ function goFloor(key, pin) {
   render();
 }
 
-// 처음 볼 층: 나를 기다리는 직원이 있는 층, 없으면 가장 최근에 일한 층
-function busiestFloor() {
-  let best = null;
-  for (const a of actors) {
-    if (!best || (!!a.waitState > !!best.waitState) || (!!a.waitState === !!best.waitState && a.lastEventTs > best.lastEventTs)) best = a;
-  }
-  return best ? best.floor : [...floors.keys()][0] || null;
-}
+const busiestFloor = () => firstFloor(actors, [...floors.keys()]);
 
-// 자동: 지금 층이 15초 넘게 조용하고 다른 층에서 방금 일이 생겼으면 그리로 간다
+// 자동으로 층 옮기기 (어느 층으로 갈지는 floors.js의 nextFloor가 정한다)
 function autoFloor() {
   if (!current || !floors.has(current)) {
     current = busiestFloor();
@@ -374,16 +360,8 @@ function autoFloor() {
     return;
   }
   if (!floorAuto || floors.size < 2) return;
-  const here = [...actors].filter(a => a.floor === current);
-  const needsMe = a => a.waitState || a.status === 'ask';
-  if (here.some(needsMe)) return;
-  // 다른 층에서 누가 나를 기다리면 바로 그리로
-  const waiting = [...actors].find(a => a.floor !== current && needsMe(a));
-  if (waiting) return goFloor(waiting.floor);
-  if (Date.now() - Math.max(0, ...here.map(a => a.lastActivity)) < 15000) return;
-  let best = null;
-  for (const a of actors) if (a.floor !== current && Date.now() - a.lastActivity < 4000 && (!best || a.lastActivity > best.lastActivity)) best = a;
-  if (best) goFloor(best.floor);
+  const to = nextFloor(current, actors);
+  if (to) goFloor(to);
 }
 
 let toastTimer = 0;

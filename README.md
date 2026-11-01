@@ -291,6 +291,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `public/js/actor.js` | 캐릭터 한 명(직원·인턴)의 이동·말풍선·표지판 |
 | `public/js/scene.js` | 사무실 바닥 그림, 방 정의, 방마다 서는 자리 |
 | `public/js/demo.js` | 데모 장면 |
+| `public/js/floors.js` | 처음 볼 층, 자동으로 옮겨 갈 층, 같은 이름 층 구별 (테스트 있음) |
 | `public/js/feed.js` · `alerts.js` · `journal.js` · `replay.js` | 활동 기록, 알림·탭 아이콘, 업무 일지, 다시 보기 |
 | `public/style.css` | 디자인과 애니메이션 |
 | `test/` | 테스트 (`npm test`, 설치할 것 없음) |

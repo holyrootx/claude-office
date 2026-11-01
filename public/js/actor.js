@@ -56,7 +56,7 @@ export class Actor {
     this.waitState = null;
     this.shownWait = 0;
     this.leaving = false;
-    this.now = { icon: '⏳', title: '준비 중', sub: '', room: this.home, mode: '', time: '' };
+    this.now = { icon: '☕', title: '준비 중', sub: '', room: this.home, mode: '', time: '' };
     this.hl = this.home;
     this.sweatTimer = this.popTimer = 0;
   }

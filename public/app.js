@@ -407,7 +407,8 @@ function highlight(rooms) {
 
 let nowKey = '', titleKey = '';
 function renderNow(a, many) {
-  const st = a ? a.now : { icon: '⏳', title: sessions.size ? '이 층은 비어 있어요' : '따라갈 세션이 없어요', sub: '', room: 'desk', mode: '', time: '' };
+  // ⏳는 '사용 한도'에 쓰니까 빈 상태는 다른 그림으로
+  const st = a ? a.now : { icon: sessions.size ? '🏢' : '🔍', title: sessions.size ? '이 층은 비어 있어요' : '따라갈 세션이 없어요', sub: '', room: 'desk', mode: '', time: '' };
   const sub = a && many ? `${a.intern ? '인턴 ' : ''}${a.name}${st.sub ? ' · ' + st.sub : ''}` : st.sub;
   // 지금 보는 직원의 컨텍스트 (인턴은 따로 세지 않는다)
   const ctx = a && !a.intern ? ctxOf(sessions.get(a.sid)) : null;

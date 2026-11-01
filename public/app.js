@@ -697,6 +697,46 @@ function stopDemo(reconnect) {
   if (reconnect) connect();
 }
 
+// ───────────────────────── 도움말 ─────────────────────────
+// 방이 뭘 하는 곳인지, 캐릭터 모습이 무슨 뜻인지, 무엇을 누르고 어떤 키를 쓰는지 한눈에 (❔ 버튼이나 ? 키)
+function buildHelp() {
+  const rows = list => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const rooms = ROOM_IDS.map(id => [`${ROOMS[id].icon} ${ROOMS[id].name}`, ROOMS[id].sub]);
+  $('helpBody').innerHTML = `
+    <h3>방</h3><dl>${rows(rooms)}</dl>
+    <p class="help-tip">도구에 따라 캐릭터가 이 방들을 오가요. 처음 보는 도구는 이름을 보고 방을 골라요.</p>
+    <h3>캐릭터 모습</h3><dl>${rows([
+      ['💭 구름 말풍선', '생각하는 중'],
+      ['😰 식은땀, 빨간 말풍선', '도구가 실패했어요'],
+      ['🔐 허락서를 들고 내 자리에', '권한 확인 창이 떠서 내 허락을 기다려요 (hooks가 켜져 있을 때)'],
+      ['❓ 노란 말풍선', '나에게 물어볼 게 있어요'],
+      ['✅ 완료', '답을 마치고 다음 지시를 기다려요'],
+      ['😴 졸기', '한동안 할 일이 없어요'],
+      ['작은 캐릭터', '인턴 = 서브에이전트. 일을 마치면 퇴근해요'],
+      ['📏 위쪽 막대', '컨텍스트가 얼마나 찼는지 (빨개지면 곧 요약돼요)'],
+    ])}</dl>
+    <h3>누르기</h3><dl>${rows([
+      ['캐릭터', '정보 카드: 지금 하는 일, 컨텍스트, 다시 보기·이 세션만 보기'],
+      ['로비 안내판 줄', '그 직원이 있는 층으로'],
+      ['층 버튼 · 🛗 자동', '층 고르기 · 일이 생기는 층으로 알아서'],
+      ['⏪ 다시 보기', '세션을 처음부터 빠르게 (⏸ 멈춤, 10× 빠르기, 노란 막대를 누르면 건너뛰기)'],
+      ['📓 업무 일지', '오늘 한 일을 프로젝트별로'],
+      ['🔔 알림', '다른 창을 볼 때 권한 대기·질문·응답 완료를 알려 줘요'],
+    ])}</dl>
+    <h3>단축키</h3><dl>${rows([
+      ['<kbd>1</kbd>~<kbd>9</kbd> · <kbd>0</kbd>', '그 층으로 · 층 자동'],
+      ['<kbd>Space</kbd> · <kbd>←</kbd> <kbd>→</kbd>', '다시 보기 멈추기 · 5%씩 앞뒤로'],
+      ['<kbd>?</kbd> · <kbd>Esc</kbd>', '이 도움말 · 창 닫기'],
+    ])}</dl>`;
+}
+function openHelp() {
+  if (!$('helpBody').innerHTML) buildHelp();
+  $('help').hidden = false;
+}
+function closeHelp() {
+  $('help').hidden = true;
+}
+
 // ───────────────────────── 시작 ─────────────────────────
 buildFloor($('floor'));
 buildChrome();
@@ -750,14 +790,22 @@ $('card').addEventListener('click', e => {
   }
 });
 el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 닫기
+$('helpBtn').addEventListener('click', openHelp);
+$('helpClose').addEventListener('click', closeHelp);
+$('help').addEventListener('click', e => { if (e.target === e.currentTarget) closeHelp(); });
 // 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
   if (cardActor && e.key === 'Escape') return closeCard();
+  if (!$('help').hidden) {
+    if (e.key === 'Escape' || e.key === '?') closeHelp();
+    return;
+  }
   if (journal.isOpen()) {
     if (e.key === 'Escape') journal.close();
     return;
   }
+  if (e.key === '?') return openHelp();
   if (replay.isOn() && e.key === ' ') {
     e.preventDefault();
     replay.togglePause();

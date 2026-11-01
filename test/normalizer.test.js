@@ -336,6 +336,9 @@ test('Claude Code가 써 넣은 안내: 사용 한도는 쉬는 중, 나머지�
   );
   assert.equal(note("You've hit your session limit · resets 6pm (Asia/Seoul)").resets, '오후 6:00');
   assert.equal(note('No response requested.'), undefined);
+  assert.equal(note('API Error: Your computer went to sleep mid-response.').stop, true); // 이번 차례는 여기서 끝
+  // 다시 시도 중인 system api_error 줄은 stop이 없다
+  assert.equal(feed(new Normalizer(), line({ type: 'system', subtype: 'api_error', level: 'error', content: '529 overloaded', retryAttempt: 1, maxRetries: 7 }))[0].stop, undefined);
   assert.equal(note('API Error: Your computer went to sleep mid-response. The response above may be incomplete.').text, '컴퓨터가 잠들어서 답이 중간에 끊겼어요');
   assert.equal(note("API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)").text, '인터넷 연결이 끊겼어요');
   assert.equal(note('API Error: 529 Overloaded. This is a server-side issue, usually temporary.').text, 'Anthropic 서버가 붐벼요 (529)');

@@ -304,6 +304,10 @@ function applyUpdate(u) {
     feed.add(s, a, ev);
     if (ev.k === 'tool' && ev.ask) alerts.notify(s, '❓ 물어볼 게 있어요', ev.ask);
     if (ev.k === 'say' && ev.final && !ev.agent) alerts.notify(s, '✅ 응답 완료', ev.text);
+    // 사용 한도나 오류로 끝내 멈췄을 때도 알린다 (응답 완료가 오지 않으니까)
+    if (ev.k === 'apierr' && ev.stop && !ev.agent) {
+      alerts.notify(s, ev.kind === 'limit' ? '⏳ 사용 한도에 걸렸어요' : '⚠ 오류로 일이 멈췄어요', ev.kind === 'limit' ? (ev.resets ? `${ev.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요') : ev.text);
+    }
     if (!batches.has(a)) batches.set(a, []);
     batches.get(a).push(ev);
   }

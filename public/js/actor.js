@@ -314,11 +314,12 @@ export class Actor {
       case 'result': this.pending.delete(ev.id); break;
       case 'say': if (ev.final) { this.turnOpen = false; this.pending.clear(); this.lastRoom = this.home; this.lastSay = ev.text; } break;
       case 'turn_end': case 'interrupt': this.turnOpen = false; this.pending.clear(); break;
-      // 사용 한도에 걸리면 이번 차례는 끝난다. 내가 다시 말을 걸 때까지 '쉬는 중'으로 보여 준다
-      case 'apierr': if (ev.kind === 'limit') { this.turnOpen = false; this.pending.clear(); this.limit = ev; } break;
+      // 사용 한도나 끝내 멈춘 오류면 이번 차례는 끝난다. 다시 일할 때까지 왜 멈췄는지 보여 준다
+      // (서버가 붐벼서 다시 시도하는 중인 오류는 stop이 없다)
+      case 'apierr': if (ev.stop || ev.kind === 'limit') { this.turnOpen = false; this.pending.clear(); this.halt = ev; } break;
     }
-    // 다시 일하기 시작하면(내 말, 생각, 도구, 대답) 한도는 풀린 것이다
-    if (this.limit && /^(user|think|tool|say)$/.test(ev.k)) this.limit = null;
+    // 다시 일하기 시작하면(내 말, 생각, 도구, 대답) 멈춤은 풀린 것이다
+    if (this.halt && /^(user|think|tool|say)$/.test(ev.k)) this.halt = null;
   }
 
   // 처음 화면을 그릴 때: 지난 기록으로 상태만 맞추고 지금 있어야 할 곳에 바로 세운다
@@ -628,10 +629,16 @@ export class Actor {
     this.hideSign();
     if (!this.atSpot(this.home)) { this.hideBubble(); this.stroll(this.home); return; }
     const idleMs = Date.now() - Math.max(this.lastActivity, this.lastEventTs || 0);
-    // 사용 한도에 걸려 쉬는 중 (반나절이 지나면 그냥 쉬는 걸로)
-    if (this.limit && Date.now() - (this.limit.ts || 0) < 12 * 3600 * 1000) {
-      if (this.mode !== 'sleep') this.setMode('sleep');
-      this.setNow('⏳', '사용 한도에 걸려서 쉬어요', this.limit.resets ? `${this.limit.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요', this.home);
+    // 사용 한도에 걸려 쉬는 중이거나 오류로 멈춘 채 (반나절이 지나면 그냥 쉬는 걸로)
+    const h = this.halt;
+    if (h && Date.now() - (h.ts || 0) < 12 * 3600 * 1000) {
+      if (h.kind === 'limit') {
+        if (this.mode !== 'sleep') this.setMode('sleep');
+        this.setNow('⏳', '사용 한도에 걸려서 쉬어요', h.resets ? `${h.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요', this.home);
+      } else {
+        if (this.mode !== 'idle' && !(this.bubbleKind === 'error' && Date.now() - this.bubbleAt < 8000)) this.setMode('idle');
+        this.setNow('⚠', '오류로 일이 멈췄어요', `${h.text} · 다시 말을 걸면 이어서 해요`, this.home, 'error');
+      }
       return;
     }
     if (idleMs > 45000) {

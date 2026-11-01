@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 // 내 진짜 ~/.claude/claude-office.json 설정이 결과를 바꾸지 않게 빈 임시 폴더를 쓴다
 process.env.CLAUDE_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-norm-'));
-const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG } = require('../server.js');
+const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG, rootCwd } = require('../server.js');
 
 let n = 0;
 const ts = '2026-10-25T01:00:00.000Z';
@@ -356,5 +356,15 @@ test('사용 한도가 풀리는 때(resetAt)를 기록 시각 뒤로 처음 돌
   assert.equal(at(morning, "You've hit your session limit · resets 1:40pm (Asia/Seoul)"), new Date(2026, 10, 2, 13, 40).getTime()); // 같은 날
   assert.equal(at(morning, 'Claude AI usage limit reached|1793563200'), 1793563200 * 1000);
   assert.equal(at(morning, "You've hit your weekly limit"), 0); // 언제 풀리는지 모르면 0
+});
+
+test('세션 중에 하위 폴더로 옮겨 다녀도 시작한 폴더를 찾는다 (기록 폴더 이름과 맞는 위 폴더)', () => {
+  const dir = '-Users-me-work-blog';
+  assert.equal(rootCwd(['/Users/me/work/blog/frontend'], dir), '/Users/me/work/blog');
+  assert.equal(rootCwd(['/Users/me/work/blog/.claude/worktrees/x/backend'], dir), '/Users/me/work/blog');
+  assert.equal(rootCwd(['/tmp/else', '/Users/me/work/blog/backend'], dir), '/Users/me/work/blog');
+  assert.equal(rootCwd(['C:\\code\\shop\\web'], 'C--code-shop'), 'C:\\code\\shop');
+  assert.equal(rootCwd(['/Users/me/돈/src'], '-Users-me--'), '/Users/me/돈');
+  assert.equal(rootCwd(['/tmp/else'], dir), '/tmp/else'); // 맞는 게 없으면 처음 본 폴더
 });
 

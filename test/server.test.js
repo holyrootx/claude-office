@@ -475,6 +475,22 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
   }
 });
 
+test('하위 폴더로 옮겨 다닌 세션도 시작한 폴더의 층·프로젝트로 묶는다', async () => {
+  const f = path.join(PROJ, 'eeeeeeee-5555-0000-0000-000000000001.jsonl');
+  try {
+    userMsg(f, '프론트 고쳐 줘'); // cwd: /tmp/shop
+    put(f, { type: 'assistant', cwd: '/tmp/shop/frontend', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id: 'sub1', name: 'Read', input: { file_path: '/tmp/shop/frontend/a.ts' } }] } });
+    const r = JSON.parse((await get('/api/replay?file=' + encodeURIComponent(f))).body);
+    assert.equal(r.session.cwd, '/tmp/shop');
+    assert.equal(r.session.project, 'shop');
+    assert.equal(r.session.here, '/tmp/shop/frontend');
+    const list = JSON.parse((await get('/api/sessions')).body).sessions;
+    assert.equal(list.find(x => x.file === f).project, 'shop'); // 마지막 줄이 frontend여도
+  } finally {
+    fs.rmSync(f, { force: true });
+  }
+});
+
 test('사용 한도가 풀리기를 기다리는 세션은 30분이 지나도 빌딩에 남고, 풀린 세션은 나간다', async () => {
   const min = m => Date.now() - m * 60000;
   const clock = t => { const d = new Date(t); return `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`; };

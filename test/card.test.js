@@ -39,6 +39,12 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
   assert.match(html, /title="cd &#39;\/u\/shop&#39; &amp;&amp; claude --resume sid-1"/);
 });
 
+test('하위 폴더에서 일하는 중이면 머리에 📂 그 폴더를 붙이고, 이어 하기는 시작한 폴더로', () => {
+  const html = cardHtml(main, session({ cwd: '/u/shop', here: '/u/shop/frontend/src' }), { live: true });
+  assert.match(html, /⎇ fix\/auth · 📂 frontend\/src<\/small>/);
+  assert.match(html, /cd &#39;\/u\/shop&#39; &amp;&amp; claude --resume/);
+});
+
 test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에서는 버튼이 다 없다', () => {
   assert.doesNotMatch(cardHtml(main, session(), { live: true, pinned: true }), /data-act="pin"/);
   assert.doesNotMatch(cardHtml(main, session(), { live: false }), /card-acts/);

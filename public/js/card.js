@@ -11,7 +11,9 @@ const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용',
 // live: 실제 세션을 보는 중(데모·다시 보기가 아님), pinned: 이 세션만 보는 중, win: 이어 하기 명령을 PowerShell 꼴로
 export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win = false } = {}) {
   const info = s.info;
-  const where = [info.project, (info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : ''].filter(Boolean).map(esc).join(' · ');
+  // 지금 하위 폴더에 있으면 그 폴더도 (📂 frontend)
+  const sub = info.here && info.cwd && info.here.startsWith(info.cwd) ? info.here.slice(info.cwd.length).replace(/^[\\/]+/, '') : '';
+  const where = [info.project, (info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : '', sub ? '📂 ' + sub : ''].filter(Boolean).map(esc).join(' · ');
   const head = a.intern
     ? `<b><em>인턴</em> ${esc(a.name)}</b><small>${esc(a.desc || '')}${a.desc ? ' · ' : ''}${esc(s.main.name)}의 인턴</small>`
     : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;

@@ -723,7 +723,7 @@ function stopDemo(reconnect) {
 }
 
 // ───────────────────────── 도움말 ─────────────────────────
-// 방이 뭘 하는 곳인지, 캐릭터 모습이 무슨 뜻인지, 무엇을 누르고 어떤 키를 쓰는지 한눈에 (❔ 버튼이나 ? 키)
+// 방이 뭘 하는 곳인지, 캐릭터 모습이 무슨 뜻인지, 무엇을 누르고 어떤 키를 쓰는지 한눈에 (? 버튼이나 ? 키)
 function buildHelp() {
   const rows = list => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const rooms = ROOM_IDS.map(id => [`${ROOMS[id].icon} ${ROOMS[id].name}`, ROOMS[id].sub]);

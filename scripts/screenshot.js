@@ -4,6 +4,7 @@
 // 필요한 것: Chrome이나 Chromium (못 찾으면 CHROME 환경 변수로 경로를 알려 주세요)
 //   npm run screenshot                     → 데모 14초 지점 (인턴이 보고하는 장면), docs/screenshot.png
 //   npm run screenshot -- --at 22 --out x.png
+//   npm run screenshot -- --theme light --out light.png   → 밝은 화면으로
 'use strict';
 
 const fs = require('fs');
@@ -19,6 +20,7 @@ const opt = (name, def) => { const i = args.indexOf(name); return i >= 0 ? args[
 const AT = Number(opt('--at', 14));
 const OUT = path.resolve(opt('--out', path.join(ROOT, 'docs', 'screenshot.png')));
 const SIZE = opt('--size', '1680,945');
+const THEME = /^(light|dark)$/.test(opt('--theme', '')) ? opt('--theme') : '';
 
 function findChrome() {
   const list = [process.env.CHROME].filter(Boolean);
@@ -63,7 +65,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const r = spawnSync(chrome, [
       '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--no-default-browser-check',
       `--user-data-dir=${path.join(tmp, 'chrome')}`, `--window-size=${SIZE}`, `--virtual-time-budget=${AT * 1000}`,
-      `--screenshot=${OUT}`, `http://localhost:${port}/?demo`,
+      `--screenshot=${OUT}`, `http://localhost:${port}/?demo${THEME ? '&theme=' + THEME : ''}`,
     ], { stdio: 'ignore', timeout: 120000 });
     if (r.status !== 0 || !fs.existsSync(OUT)) throw new Error('Chrome이 화면을 찍지 못했어요');
     console.log(`  ✅ ${path.relative(process.cwd(), OUT)} (${Math.round(fs.statSync(OUT).size / 1024)}KB)`);

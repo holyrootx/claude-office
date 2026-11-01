@@ -6,6 +6,11 @@
 <title>Claude 사무실</title>
 <link rel="icon" id="favicon" href="data:,">
 <script>
+  // 밝은/어두운 화면은 컴퓨터 설정을 따라간다. ?theme=light나 ?theme=dark로 직접 고를 수도 있다.
+  (function () {
+    var m = /[?&]theme=(light|dark)\b/.exec(location.search);
+    if (m) document.documentElement.setAttribute('data-theme', m[1]);
+  })();
   // 웹 글꼴은 화면을 막지 않게 따로 불러온다: 못 받아도 기본 글꼴로 바로 뜨고, 받으면 바꿔 끼운다.
   // 주소에 ?nofonts를 붙이면 바깥(Google Fonts)에 아예 연결하지 않는다.
   (function () {
@@ -39,7 +44,7 @@
   <button class="btn-icon" id="replayBtn" type="button" aria-label="다시 보기">⏪</button>
   <button class="btn-icon" id="pauseBtn" type="button" title="멈추기 (Space)" hidden>⏸</button>
   <button class="btn-icon speed" id="speedBtn" type="button" title="빠르기 바꾸기" hidden>10×</button>
-  <button class="btn-icon" id="helpBtn" type="button" title="도움말 (?)">❔</button>
+  <button class="btn-icon help" id="helpBtn" type="button" title="도움말 (?)">?</button>
   <button class="btn-icon" id="journalBtn" type="button" title="오늘의 업무 일지">📓</button>
   <button class="btn-icon" id="notifyBtn" type="button" aria-label="알림 켜고 끄기">🔕</button>
   <button class="btn" id="demoBtn" type="button">데모 보기</button>
@@ -110,7 +115,7 @@
 
 <div class="journal help" id="help" hidden>
   <div class="journal-box" role="dialog" aria-label="도움말">
-    <div class="journal-head"><b>❔ 이렇게 봐요</b><button class="btn-icon" id="helpClose" type="button" aria-label="닫기">✕</button></div>
+    <div class="journal-head"><b>💡 이렇게 봐요</b><button class="btn-icon" id="helpClose" type="button" aria-label="닫기">✕</button></div>
     <div id="helpBody"></div>
     <p class="journal-note">더 자세한 내용과 설치 방법은 GitHub의 README에 있어요.</p>
   </div>

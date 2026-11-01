@@ -345,3 +345,16 @@ test('Claude Code가 써 넣은 안내: 사용 한도는 쉬는 중, 나머지�
   assert.equal(note('Failed to authenticate. API Error: 401 OAuth access token has expired.').text, '로그인이 풀렸어요 (401)');
 });
 
+test('사용 한도가 풀리는 때(resetAt)를 기록 시각 뒤로 처음 돌아오는 그 시각으로 잡는다', () => {
+  const at = (when, text) => {
+    const l = JSON.stringify({ type: 'assistant', timestamp: new Date(when).toISOString(), message: { model: '<synthetic>', content: [{ type: 'text', text }] } });
+    return new Normalizer().line(l)[0].resetAt;
+  };
+  const night = new Date(2026, 10, 2, 23, 10).getTime();
+  assert.equal(at(night, "You've hit your session limit · resets 12:40am (Asia/Seoul)"), new Date(2026, 10, 3, 0, 40).getTime()); // 다음 날
+  const morning = new Date(2026, 10, 2, 10, 0).getTime();
+  assert.equal(at(morning, "You've hit your session limit · resets 1:40pm (Asia/Seoul)"), new Date(2026, 10, 2, 13, 40).getTime()); // 같은 날
+  assert.equal(at(morning, 'Claude AI usage limit reached|1793563200'), 1793563200 * 1000);
+  assert.equal(at(morning, "You've hit your weekly limit"), 0); // 언제 풀리는지 모르면 0
+});
+

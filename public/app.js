@@ -797,7 +797,20 @@ function step() {
 (function frame() { step(); requestAnimationFrame(frame); })();
 // 탭이 가려져 rAF가 멈춰도 걸음이 멈추지 않게 타이머로도 한 번씩 진행시킨다
 setInterval(() => { if (performance.now() - lastT > 150) step(); }, 100);
-setInterval(() => { for (const a of actors) if (!a.running) a.rest(); retireInterns(); }, 500);
+setInterval(() => { for (const a of actors) if (!a.running) a.rest(); retireInterns(); tellFreed(); }, 500);
+
+// 사용 한도가 풀리는 때가 되면 알려 준다 (활동 기록 한 줄 + 알림). 10분 넘게 지난 건 조용히 넘어간다.
+function tellFreed() {
+  if (viewMode === 'demo' || viewMode === 'replay') return;
+  for (const s of sessions.values()) {
+    const h = s.main && s.main.halt;
+    if (!h || h.kind !== 'limit' || !h.resetAt || h.told || Date.now() < h.resetAt) continue;
+    h.told = true;
+    if (Date.now() - h.resetAt > 10 * 60 * 1000) continue;
+    feed.add(s, s.main, { k: 'freed', ts: h.resetAt });
+    alerts.notify(s, '✅ 사용 한도가 풀렸어요', '다시 일을 시킬 수 있어요');
+  }
+}
 setInterval(() => { autoFloor(); render(); }, 250);
 
 $('floorTabs').addEventListener('click', e => {

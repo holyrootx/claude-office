@@ -43,6 +43,7 @@ export function createFeed(list, { manyPeople }) {
         break;
       case 'interrupt': ic = '✋'; cls = 'err'; tx = '사용자가 작업을 중단했어요'; break;
       case 'compact': ic = '🗜'; tx = `<b>대화 압축</b>${ev.pre && ev.post ? ` ${fmtTokens(ev.pre)} → ${fmtTokens(ev.post)} 토큰${ev.trigger === 'manual' ? ' (내가 요청)' : ' (자동)'}` : ''}`; break;
+      case 'freed': ic = '✅'; cls = 'say'; tx = '<b>사용 한도가 풀렸어요</b> 다시 일을 시킬 수 있어요'; break;
       case 'leave': ic = '👋'; tx = '<b>퇴근</b> 한동안 조용해서 빌딩을 나갔어요. 다시 일하면 출근해요'; break;
       case 'apierr':
         if (ev.kind === 'limit') { ic = '⏳'; cls = 'wait'; tx = `<b>사용 한도</b> ${ev.resets ? `${esc(ev.resets)}에 다시 열려요` : '한도가 풀리면 다시 일해요'}`; break; }

@@ -643,7 +643,7 @@ export class Actor {
     }
     if (idleMs > 45000) {
       if (this.mode !== 'sleep') { this.setMode('sleep'); this.hideBubble(); }
-      this.setNow('😴', '쉬는 중', '지시가 오면 바로 일어나요', this.home);
+      this.setNow('😴', '쉬는 중', this.halt && this.halt.kind === 'limit' ? '사용 한도가 풀렸어요 · 지시가 오면 바로 일어나요' : '지시가 오면 바로 일어나요', this.home);
     } else {
       if (this.mode !== 'idle' && this.mode !== 'report') this.setMode('idle');
       if (this.bubbleKind && Date.now() - this.bubbleAt > 14000) this.hideBubble();
@@ -656,7 +656,9 @@ export class Actor {
   // 사용 한도나 오류로 멈춘 채인지 (반나절이 지나면 그냥 쉬는 걸로 본다)
   activeHalt() {
     const h = this.halt;
-    return h && Date.now() - (h.ts || 0) < 12 * 3600 * 1000 ? h : null;
+    if (!h || Date.now() - (h.ts || 0) >= 12 * 3600 * 1000) return null;
+    if (h.kind === 'limit' && h.resetAt && Date.now() >= h.resetAt) return null; // 한도가 풀렸다
+    return h;
   }
   get status() {
     if (this.waitState) return 'wait';

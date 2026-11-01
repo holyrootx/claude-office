@@ -155,3 +155,14 @@ test('끝내 멈춘 오류는 생각 중으로 남지 않고 왜 멈췄는지 �
   assert.equal(b.halt, undefined);
 });
 
+test('사용 한도가 풀리는 때가 지나면 더는 쉬는 중이 아니고, 풀렸다고 알려 준다', () => {
+  const a = actor(office());
+  a.load([
+    { k: 'user', ts: ago(30), text: '계속' },
+    { k: 'apierr', ts: ago(20), stop: true, kind: 'limit', text: '사용 한도에 걸렸어요', resets: '오전 12:40', resetAt: ago(1) },
+  ]);
+  assert.notEqual(a.status, 'limit');
+  assert.equal(a.now.title, '쉬는 중');
+  assert.match(a.now.sub, /사용 한도가 풀렸어요/);
+});
+

@@ -192,6 +192,7 @@ button, select { font: inherit; color: inherit; }
 .card-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .card-acts button { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12.5px; cursor: pointer; }
 .card-acts button:hover { border-color: var(--claude); }
+.card-acts button[data-act="resume"] { flex-basis: 100%; color: var(--muted); } /* 다시 보기·고정 아래 한 줄로 */
 
 /* ───────── 업무 일지 ───────── */
 .journal { position: fixed; inset: 0; z-index: 500; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 16px; }

@@ -24,3 +24,12 @@ export function ago(ms) {
   if (s < 86400) return `${Math.round(s / 3600)}시간 전`;
   return `${Math.round(s / 86400)}일 전`;
 }
+
+// 터미널에서 이 세션을 이어서 하는 명령: 그 폴더로 가서 claude --resume <세션 id>
+// win이면 PowerShell 꼴 (cd "C:\x"; …), 아니면 sh 꼴 (cd '/x' && …)
+export function resumeCommand(cwd, sid, win) {
+  const resume = `claude --resume ${sid}`;
+  if (!cwd) return resume;
+  return win ? `cd "${cwd}"; ${resume}` : `cd '${String(cwd).replace(/'/g, `'\\''`)}' && ${resume}`;
+}
+

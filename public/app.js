@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, hhmmss, stamp, ago, fmtTokens } from './js/util.js';
+import { $, esc, clip, hhmmss, stamp, ago, fmtTokens, resumeCommand } from './js/util.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -563,6 +563,8 @@ $('feedScope').addEventListener('click', () => {
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다: 지금 하는 일, 컨텍스트, 도구 수, 다시 보기·이 세션만 보기 버튼
 let cardActor = null, cardHtml = '';
+// 이어 하기 명령을 Windows(PowerShell) 꼴로 만들지
+const IS_WIN = /Win/i.test(navigator.platform || navigator.userAgent || '');
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
@@ -600,7 +602,8 @@ function renderCard() {
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const live = viewMode !== 'demo' && viewMode !== 'replay' && info.file;
   const acts = !a.intern && live
-    ? `<div class="card-acts"><button type="button" data-act="replay">⏪ 처음부터 다시 보기</button>${viewMode === 'file' ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}</div>`
+    ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>${viewMode === 'file' ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`
+      + `<button type="button" data-act="resume" title="${esc(resumeCommand(info.cwd, s.sid, IS_WIN))}">📋 이어 하기 명령 복사</button></div>`
     : '';
   const html = `<button class="card-x" type="button" data-act="close" aria-label="닫기">✕</button><div class="card-head" style="--wc:${s.color}">${head}</div>`
     + `<div class="card-now">${esc(a.now.icon)} ${esc(a.now.title)}${a.now.time ? ` <time>${esc(a.now.time)}</time>` : ''}${a.now.sub ? `<small>${esc(clip(a.now.sub, 120))}</small>` : ''}</div>`
@@ -682,9 +685,9 @@ function connect() {
 
 // ───────────────────────── 세션 목록 ─────────────────────────
 const isFile = v => v && v !== 'all' && v !== 'auto';
-// keepFile: 처음 켤 때 저장해 둔 고정 세션 (그 뒤로는 지금 고른 값)
 // 60 → 1시간, 90 → 90분
 const minutesText = m => (m >= 60 && m % 60 === 0 ? `${m / 60}시간` : `${m}분`);
+// keepFile: 처음 켤 때 저장해 둔 고정 세션 (그 뒤로는 지금 고른 값)
 async function loadSessions(keepFile) {
   const sel = $('sessionSelect');
   const keep = keepFile || sel.value;
@@ -851,7 +854,25 @@ $('card').addEventListener('click', e => {
     sel.value = s.info.file;
     sel.dispatchEvent(new Event('change'));
   }
+  if (act.dataset.act === 'resume') {
+    const cmd = resumeCommand(s.info.cwd, s.sid, IS_WIN);
+    copyText(cmd).then(ok => toast(ok ? '📋 복사했어요 · 터미널에 붙여 넣으면 이 세션을 이어서 해요' : `복사하지 못했어요: ${cmd}`));
+  }
 });
+
+// 클립보드에 넣기. 막혀 있으면 옛 방식(숨긴 글상자 + copy)으로 한 번 더 해 본다
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* 권한 없음 */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* 안 됨 */ }
+  ta.remove();
+  return ok;
+}
 el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 닫기
 $('helpBtn').addEventListener('click', openHelp);
 $('helpClose').addEventListener('click', closeHelp);

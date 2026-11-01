@@ -6,6 +6,7 @@ import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
 import { createFeed } from './js/feed.js';
 import { createAlerts } from './js/alerts.js';
 import { createJournal } from './js/journal.js';
+import { createReplay } from './js/replay.js';
 
 const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F', '#1FA3A3', '#7C8799'];
 const STATUS_ORDER = { wait: 0, ask: 1 };
@@ -30,7 +31,7 @@ const seenWaits = new Set();
 let current = null; // 보고 있는 층
 let floorAuto = true;
 let viewMode = 'all'; // all 빌딩 · auto 가장 최근 세션 · file 고른 세션 · demo
-let es = null, demo = null, replay = null;
+let es = null, demo = null;
 let boardSid = null, boardPlan = null;
 
 // 캐릭터들이 같이 쓰는 것: 자리 배정, 화이트보드, '나'의 말풍선, 퇴근 처리
@@ -81,7 +82,26 @@ const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: 
 const signs = {}, statRows = {};
 const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1 });
 const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
-const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => startReplay(file) });
+const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => replay.start(file) });
+const replay = createReplay({
+  pickFile: () => {
+    const focus = focusActor([...actors].filter(a => a.floor === current));
+    return isFile(sel.value) ? sel.value : focus && sessions.get(focus.sid) && sessions.get(focus.sid).info.file;
+  },
+  beforeStart: () => {
+    stopDemo(false);
+    if (es) { es.close(); es = null; }
+    floorAuto = true;
+  },
+  hello: d => onHello(d),
+  update: u => applyUpdate(u),
+  busy: sid => Math.max(0, ...[...actors].filter(a => a.sid === sid).map(a => a.queue.length + (a.running ? 1 : 0))),
+  setConn: (state, text) => setConn(state, text),
+  toast: text => toast(text),
+  emptyStats,
+  countLocal: (s, ev) => countLocal(s, ev),
+  reconnect: () => connect(),
+});
 
 function buildChrome() {
   for (const id of ROOM_IDS) {
@@ -647,7 +667,7 @@ async function loadSessions(keepFile) {
 // ───────────────────────── 데모 ─────────────────────────
 function startDemo() {
   stopDemo(false);
-  stopReplay(false);
+  replay.stop(false);
   if (es) { es.close(); es = null; }
   floorAuto = true;
   onHello({ mode: 'demo', root: '', sessions: DEMO_SESSIONS.map(s => ({ ...s, session: { ...s.session, mtime: Date.now() }, stats: emptyStats() })) });
@@ -675,124 +695,6 @@ function stopDemo(reconnect) {
   $('demoBtn').textContent = '데모 보기';
   $('demoBtn').classList.remove('stop');
   if (reconnect) connect();
-}
-
-// ───────────────────────── 다시 보기 ─────────────────────────
-// 지난 세션을 처음부터 빠르게 다시 틀어 준다. 오래 쉬던 시간은 15초까지로 줄이고, 캐릭터 연출이 밀리면 기다려 준다.
-const REPLAY_SPEEDS = [5, 10, 30];
-// 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
-const REPLAY_QUEUE = { 5: 1, 10: 3, 30: 12 };
-async function startReplay(fileArg) {
-  // 직접 준 세션(업무 일지에서 고른 것), 목록에서 고른 세션, 아니면 지금 보고 있는 직원의 세션
-  const focus = focusActor([...actors].filter(a => a.floor === current));
-  const file = fileArg || (isFile(sel.value) ? sel.value : focus && sessions.get(focus.sid) && sessions.get(focus.sid).info.file);
-  if (!file) return toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
-  let d;
-  try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
-  if (!d || !d.events || !d.events.length) return toast('다시 볼 기록이 없어요');
-  stopDemo(false);
-  stopReplay(false);
-  if (es) { es.close(); es = null; }
-  floorAuto = true;
-  onHello({ mode: 'replay', root: '', sessions: [{ sid: d.sid, session: d.session, history: [], plan: null, stats: emptyStats(), wait: null, agents: [] }] });
-  const day = ts => new Date(ts).toDateString();
-  // 하루를 넘기는 세션이면 시각마다 날짜를 붙인다
-  const multiDay = day(d.events[0].ts) !== day(d.events[d.events.length - 1].ts);
-  replay = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0, multiDay };
-  renderReplayBtns();
-  toast(`⏪ ${clip(d.session.title || d.session.project, 24)} 처음부터 다시 보기`);
-  replayStep();
-}
-function replayStep() {
-  const r = replay;
-  if (!r || r.paused) return;
-  if (r.i >= r.events.length) {
-    setConn('demo', '다시 보기 끝 · 잠시 뒤 실시간으로');
-    r.timer = setTimeout(() => stopReplay(true), 9000);
-    return;
-  }
-  // 캐릭터가 앞 장면을 아직 연출하는 중이면 조금 기다린다
-  const busy = Math.max(0, ...[...actors].filter(a => a.sid === r.sid).map(a => a.queue.length + (a.running ? 1 : 0)));
-  if (busy > REPLAY_QUEUE[r.speed]) {
-    r.timer = setTimeout(replayStep, 120);
-    return;
-  }
-  const ev = r.events[r.i++];
-  // 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
-  applyUpdate({ sid: r.sid, events: [{ ...ev, at: ev.ts, atDate: r.multiDay, ts: Date.now() }] });
-  setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${stamp(ev.ts, r.multiDay)}`);
-  renderReplayBar();
-  const next = r.events[r.i];
-  const gap = next ? Math.min(Math.max(next.ts - ev.ts, 0), 15000) / r.speed : 0;
-  r.timer = setTimeout(replayStep, gap);
-}
-// 진행 막대를 누른 지점으로 건너뛴다: 그때까지의 기록으로 사무실을 다시 세우고 거기서부터 이어 간다
-function seekReplay(frac) {
-  const r = replay;
-  if (!r || !Number.isFinite(frac)) return;
-  const idx = Math.max(0, Math.min(r.events.length - 1, Math.round(frac * r.events.length)));
-  clearTimeout(r.timer);
-  const done = r.events.slice(0, idx);
-  // 원래 시간 간격은 그대로 두고, 마지막 일이 '지금' 일어난 것처럼 시각을 옮긴다 (오래된 일로 보고 정리해 버리지 않게)
-  const shift = done.length ? Date.now() - done[done.length - 1].ts : 0;
-  const moved = done.map(e => ({ ...e, at: e.ts, atDate: r.multiDay, ts: e.ts + shift }));
-  const byAgent = new Map();
-  for (const e of moved) if (e.agent) (byAgent.get(e.agent) || byAgent.set(e.agent, []).get(e.agent)).push(e);
-  const agents = [];
-  for (const [id, list] of byAgent) {
-    const last = list[list.length - 1];
-    if (last.k === 'say' && last.final) continue; // 그 시점엔 이미 퇴근한 인턴
-    const intro = list.find(e => e.k === 'agent') || {};
-    agents.push({ id, type: intro.type || '', desc: intro.desc || '', history: list });
-  }
-  const main = moved.filter(e => !e.agent);
-  const stats = emptyStats();
-  for (const e of moved) countLocal({ stats }, e);
-  const planEv = [...main].reverse().find(e => e.k === 'tool' && e.plan);
-  onHello({ mode: 'replay', root: '', sessions: [{ sid: r.sid, session: r.session, history: main, plan: planEv ? planEv.plan : null, stats, wait: null, agents }] });
-  r.i = idx;
-  toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${stamp(r.events[idx].ts, r.multiDay)}`);
-  renderReplayBar();
-  replayStep();
-}
-function renderReplayBar() {
-  const bar = $('replayBar');
-  bar.hidden = !replay;
-  if (!replay) return;
-  const r = replay;
-  const at = r.events[Math.min(r.i, r.events.length - 1)];
-  bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
-  const t = ts => stamp(ts, r.multiDay);
-  bar.querySelector('span').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
-}
-// 멈췄다가 이어 보기 (Space)
-function togglePause() {
-  const r = replay;
-  if (!r) return;
-  r.paused = !r.paused;
-  clearTimeout(r.timer);
-  if (r.paused) setConn('demo', `다시 보기 멈춤 · ${Math.round((r.i / r.events.length) * 100)}%`);
-  else replayStep();
-  renderReplayBtns();
-}
-function stopReplay(reconnect) {
-  if (!replay) return;
-  clearTimeout(replay.timer);
-  replay = null;
-  renderReplayBtns();
-  if (reconnect) connect();
-}
-function renderReplayBtns() {
-  $('replayBtn').textContent = replay ? '⏹' : '⏪';
-  $('replayBtn').title = replay ? '다시 보기 끝내고 실시간으로 돌아가기' : '고른 세션(없으면 지금 보는 직원)을 처음부터 빠르게 다시 보기';
-  $('replayBtn').classList.toggle('on', !!replay);
-  $('speedBtn').hidden = $('pauseBtn').hidden = !replay;
-  if (replay) {
-    $('speedBtn').textContent = replay.speed + '×';
-    $('pauseBtn').textContent = replay.paused ? '▶' : '⏸';
-    $('pauseBtn').title = replay.paused ? '이어 보기 (Space)' : '멈추기 (Space)';
-  }
-  renderReplayBar();
 }
 
 // ───────────────────────── 시작 ─────────────────────────
@@ -829,17 +731,11 @@ const VIEW_KEY = 'claude-office-view';
 sel.addEventListener('change', () => {
   try { localStorage.setItem(VIEW_KEY, sel.value); } catch { /* 저장소 없음 */ }
   stopDemo(false);
-  stopReplay(false);
+  replay.stop(false);
   floorAuto = true;
   connect();
 });
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
-$('replayBtn').addEventListener('click', () => (replay ? stopReplay(true) : startReplay()));
-$('replayBar').addEventListener('click', e => {
-  const r = e.currentTarget.getBoundingClientRect();
-  seekReplay((e.clientX - r.left) / r.width);
-});
-$('pauseBtn').addEventListener('click', togglePause);
 $('card').addEventListener('click', e => {
   e.stopPropagation();
   const act = e.target.closest('[data-act]');
@@ -847,7 +743,7 @@ $('card').addEventListener('click', e => {
   if (!act || !s) return;
   if (act.dataset.act === 'close') return closeCard();
   closeCard();
-  if (act.dataset.act === 'replay') startReplay(s.info.file);
+  if (act.dataset.act === 'replay') replay.start(s.info.file);
   if (act.dataset.act === 'pin') {
     sel.value = s.info.file;
     sel.dispatchEvent(new Event('change'));
@@ -862,12 +758,12 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') journal.close();
     return;
   }
-  if (replay && e.key === ' ') {
+  if (replay.isOn() && e.key === ' ') {
     e.preventDefault();
-    togglePause();
-  } else if (replay && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    replay.togglePause();
+  } else if (replay.isOn() && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
     e.preventDefault();
-    seekReplay(replay.i / replay.events.length + (e.key === 'ArrowRight' ? 0.05 : -0.05));
+    replay.seekBy(e.key === 'ArrowRight' ? 0.05 : -0.05);
   } else if (/^[1-9]$/.test(e.key)) {
     const key = [...floors.keys()][Number(e.key) - 1];
     if (key) goFloor(key, true);
@@ -876,11 +772,6 @@ document.addEventListener('keydown', e => {
     autoFloor();
     render();
   }
-});
-$('speedBtn').addEventListener('click', () => {
-  if (!replay) return;
-  replay.speed = REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(replay.speed) + 1) % REPLAY_SPEEDS.length];
-  renderReplayBtns();
 });
 let saved = 'all';
 try { saved = localStorage.getItem(VIEW_KEY) || 'all'; } catch { /* 저장소 없음 */ }

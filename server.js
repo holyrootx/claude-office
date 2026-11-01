@@ -34,6 +34,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --stop          뒤에서 켜 둔 사무실 끄기
     --active <분>   빌딩에 머무는 시간 (기본 30분: 그동안 움직임이 없으면 퇴근, 다시 움직이면 출근)
     --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
+    --journal       오늘의 업무 일지를 터미널에 출력 (서버를 켜지 않아요)
     -h, --help      이 도움말
 `);
   process.exit(0);
@@ -249,8 +250,30 @@ function printHooks() {
   console.log(JSON.stringify({ hooks: JSON.parse(text).hooks }, null, 2));
 }
 
+// 오늘의 업무 일지를 터미널에 (브라우저의 📓과 같은 내용)
+async function printJournal() {
+  const j = await journal();
+  const worked = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
+  const hm = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const icons = { library: '📚', dev: '💻', server: '🖥️', search: '🌐', meeting: '🗂️', desk: '🙋' };
+  const d = new Date(j.since);
+  const t = j.totals;
+  console.log(`\n  📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`);
+  if (!j.projects.length) return console.log('  오늘은 아직 일한 기록이 없어요\n');
+  console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns}\n`);
+  for (const p of j.projects) {
+    console.log(`  ${p.project}  ${hm(p.first)}~${hm(p.last)} · ${worked(p.workedMs)}`);
+    console.log(`    메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}`);
+    console.log('    ' + Object.entries(icons).map(([r, i]) => `${i} ${p.rooms[r]}`).join('  '));
+    for (const s of p.sessions) console.log(`    - ${s.title} (${worked(s.workedMs)})`);
+    console.log('');
+  }
+  console.log('  (일한 시간은 기록 사이 간격이 5분보다 짧은 것만 더해요)\n');
+}
+
 if (require.main === module) {
-  if (args.includes('--print-hooks')) printHooks();
+  if (args.includes('--journal')) printJournal();
+  else if (args.includes('--print-hooks')) printHooks();
   else if (args.includes('--stop')) stopServer();
   else if (args.includes('--background')) startBackground();
   else serve();

@@ -200,6 +200,13 @@ test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', a
   assert.equal(j.totals.projects, j.projects.length);
 });
 
+test('업무 일지를 터미널에도 출력한다 (--journal)', () => {
+  const out = server('--journal');
+  assert.match(out, /업무 일지/);
+  assert.match(out, /\bshop\b/);
+  assert.match(out, /일한 시간/);
+});
+
 test('일한 시간은 5분보다 짧은 간격만 더한다', () => {
   const { workedMs } = require('../lib/sessions');
   const m = 60000;

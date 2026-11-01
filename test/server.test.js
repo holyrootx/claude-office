@@ -202,6 +202,22 @@ test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', a
   assert.equal(j.totals.projects, j.projects.length);
 });
 
+test('업무 일지: 지난 날도 볼 수 있다 (?day=-1, YYYY-MM-DD)', async () => {
+  const { dayRange } = require('../lib/sessions');
+  const today = dayRange(0), y = dayRange(-1);
+  assert.equal(y.until, today.since); // 어제는 오늘 0시에 끝난다
+  assert.equal(dayRange('2026-10-31').since, new Date(2026, 9, 31).getTime());
+  assert.equal(dayRange('2026-10-31').until, new Date(2026, 10, 1).getTime());
+  const now = JSON.parse((await get('/api/journal')).body);
+  assert.equal(now.today, true);
+  // 테스트 기록은 모두 방금 쓴 것이라 어제 일지에는 없다
+  const past = JSON.parse((await get('/api/journal?day=-1')).body);
+  assert.equal(past.today, false);
+  assert.equal(past.since, y.since);
+  assert.ok(!past.projects.some(p => p.sessions.some(x => x.id === SHOP)));
+  assert.match(server('--journal', '어제'), /이날은 일한 기록이 없어요/);
+});
+
 test('업무 일지를 터미널에도 출력한다 (--journal)', () => {
   const out = server('--journal');
   assert.match(out, /업무 일지/);

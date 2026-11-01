@@ -201,6 +201,9 @@ button, select { font: inherit; color: inherit; }
 .journal-box { width: min(680px, 100%); max-height: 90vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--float-shadow); }
 .journal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .journal-head b { font-size: 18px; }
+.journal-head b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+.journal-nav { display: flex; gap: 6px; }
+.journal-nav button:disabled { opacity: .3; cursor: default; }
 .journal-totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
 .journal-totals div { background: var(--panel-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; }
 .journal-totals b { font: 600 17px var(--mono); white-space: nowrap; }

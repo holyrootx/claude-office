@@ -34,7 +34,8 @@ if (args.includes('--help') || args.includes('-h')) {
     --stop          뒤에서 켜 둔 사무실 끄기
     --active <분>   빌딩에 머무는 시간 (기본 30분: 그동안 움직임이 없으면 퇴근, 다시 움직이면 출근)
     --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
-    --journal       오늘의 업무 일지를 터미널에 출력 (서버를 켜지 않아요)
+    --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
+                    날은 비우면 오늘, 어제·-2(그저께)·2026-10-31처럼 고를 수 있어요
     -h, --help      이 도움말
 `);
   process.exit(0);
@@ -108,7 +109,8 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === '/api/journal') {
-    journal().then(j => json(res, j), e => {
+    // ?day=-1 (어제) 또는 ?day=2026-10-31. 없으면 오늘
+    journal(url.searchParams.get('day') || 0).then(j => json(res, j), e => {
       console.error('[journal]', e.message);
       res.writeHead(500);
       res.end();
@@ -252,15 +254,24 @@ function printHooks() {
 }
 
 // 오늘의 업무 일지를 터미널에 (브라우저의 📓과 같은 내용)
+// --journal 뒤에 어제·yesterday·-2·2026-10-31을 붙이면 그날 일지
+function journalDay() {
+  const v = args[args.indexOf('--journal') + 1];
+  if (!v || v.startsWith('--')) return 0;
+  if (v === '어제' || v === 'yesterday') return -1;
+  if (v === '오늘' || v === 'today') return 0;
+  return v;
+}
+
 async function printJournal() {
-  const j = await journal();
+  const j = await journal(journalDay());
   const worked = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
   const hm = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   const icons = { library: '📚', dev: '💻', server: '🖥️', search: '🌐', meeting: '🗂️', desk: '🙋' };
   const d = new Date(j.since);
   const t = j.totals;
   console.log(`\n  📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`);
-  if (!j.projects.length) return console.log('  오늘은 아직 일한 기록이 없어요\n');
+  if (!j.projects.length) return console.log(j.today ? '  오늘은 아직 일한 기록이 없어요\n' : '  이날은 일한 기록이 없어요\n');
   const tok = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString()); // 화면과 같은 꼴 (12.3만)
   console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns} · 출력 토큰 ${tok(t.tokens)}\n`);
   for (const p of j.projects) {

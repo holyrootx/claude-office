@@ -786,7 +786,7 @@ function buildHelp() {
       ['활동 기록 · 이 층만', '지금 보는 층에서 한 일만 보기 (층이 둘 이상일 때)'],
       ['층 버튼 · 🛗 자동', '층 고르기 · 일이 생기는 층으로 알아서'],
       ['⏪ 다시 보기', '세션을 처음부터 빠르게 (⏸ 멈춤, 10× 빠르기, 노란 막대를 누르면 건너뛰기)'],
-      ['📓 업무 일지', '오늘 한 일을 프로젝트별로'],
+      ['📓 업무 일지', '오늘 한 일을 프로젝트별로 (◀ ▶나 ← → 키로 지난 날)'],
       ['🔔 알림', '다른 창을 볼 때 권한 대기·질문·응답 완료를 알려 줘요'],
     ])}</dl>
     <h3>단축키</h3><dl>${rows([
@@ -898,6 +898,8 @@ document.addEventListener('keydown', e => {
   }
   if (journal.isOpen()) {
     if (e.key === 'Escape') journal.close();
+    if (e.key === 'ArrowLeft') journal.prev();
+    if (e.key === 'ArrowRight') journal.next();
     return;
   }
   if (e.key === '?') return openHelp();

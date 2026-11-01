@@ -414,6 +414,32 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
   }
 });
 
+test('실행 정보 파일이 지워져도 켜져 있는 사무실을 찾고, 몇 초 안에 다시 써 둔다', async () => {
+  const before = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+  fs.unlinkSync(ENV.CLAUDE_OFFICE_RUNTIME);
+  // 파일이 없어도 포트에 물어봐서 이미 켜져 있는 걸 안다 (두 번째 사무실을 띄우지 않는다)
+  assert.match(server('--background', '--port', String(PORT)), /이미 켜져/);
+  assert.ok(await until(() => fs.existsSync(ENV.CLAUDE_OFFICE_RUNTIME), 5000), '다시 써 둔다');
+  const after = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+  assert.deepEqual([after.pid, after.port, after.token], [before.pid, before.port, before.token]);
+});
+
+test('뒤에서 켜지 못하면 사무실이 남긴 말을 보여 준다', async () => {
+  const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
+  await new Promise(r => busy.once('listening', r));
+  const env = { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-bg-fail.json') };
+  let out = '';
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--background', '--port', String(busy.address().port)], { env });
+  } catch (e) {
+    out = String(e.stdout);
+  } finally {
+    busy.close();
+  }
+  assert.match(out, /켜지 못했어요/);
+  assert.match(out, /다른 프로그램이 쓰고 있어요/);
+});
+
 test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하고, --stop으로 끈다', async () => {
   assert.match(server('--port', String(PORT)), /이미 켜져/);
   assert.match(server('--stop'), /껐어요/);

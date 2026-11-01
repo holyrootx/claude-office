@@ -62,6 +62,7 @@ function sameToken(t) {
 function handlePost(req, res, pathname) {
   if (!sameToken(req.headers['x-office-token'])) { res.writeHead(403); return res.end(); }
   if (pathname === '/api/shutdown') {
+    closing = true;
     runtime.remove(process.pid); // 답하기 전에 지워서, 꺼지는 사이에 다른 요청이 이 서버를 찾지 않게
     res.writeHead(200);
     res.end('bye');
@@ -169,6 +170,7 @@ function openBrowser(url) {
 }
 
 // ───────────────────────── 실행 방법 ─────────────────────────
+let closing = false;
 function serve() {
   let port = PORT;
   server.on('error', async e => {
@@ -192,11 +194,18 @@ function serve() {
   server.listen(port, '127.0.0.1', () => {
     const url = `http://localhost:${port}`;
     if (port !== PORT) console.log(`\n  ℹ ${PORT}번 포트를 다른 프로그램이 쓰고 있어서 ${port}번으로 열었어요.`);
+    const info = { pid: process.pid, port, token: TOKEN, version: VERSION };
     try {
-      runtime.write({ pid: process.pid, port, token: TOKEN, version: VERSION });
+      runtime.write(info);
     } catch (e) {
       console.log(`  ⚠ 실행 정보 파일을 쓰지 못해서 hooks 연동은 꺼져 있어요 (${e.message})`);
     }
+    // 실행 정보 파일이 지워지면(며칠 켜 두는 사이 임시 폴더가 정리되는 등) hooks가 이 서버를 못 찾는다.
+    // 3초마다 보고, 없으면 다시 쓴다. 다른 사무실이 자기 것을 써 두었으면 건드리지 않는다.
+    setInterval(() => {
+      if (closing || runtime.read()) return;
+      try { runtime.write(info); } catch { /* 다음에 다시 */ }
+    }, 3000).unref();
     process.on('exit', () => runtime.remove(process.pid));
     for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
     console.log(`\n  🏢 Claude 사무실이 열렸어요 → ${url}`);
@@ -209,16 +218,38 @@ function serve() {
 }
 
 // 터미널 창 없이 뒤에서 켠다. 이미 켜져 있으면 화면만 연다. (플러그인의 /office:open이 쓰는 방법)
+// 켜져 있는 사무실의 포트. 실행 정보 파일을 먼저 보고, 없거나 맞지 않으면 쓸 수 있는 포트에 차례로 물어본다.
+async function findRunning() {
+  const rt = runtime.read();
+  if (rt && (await runtime.health(rt.port))) return rt.port;
+  const ports = PORT_GIVEN ? [PORT] : Array.from({ length: PORT_TRIES }, (_, i) => PORT + i);
+  for (const p of ports) if (await runtime.health(p)) return p;
+  return 0;
+}
+
+// 뒤에서 켠 서버가 남긴 출력의 마지막 몇 줄
+function logTail(n = 6) {
+  try {
+    return fs.readFileSync(runtime.LOG, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(-n);
+  } catch {
+    return [];
+  }
+}
+
 async function startBackground() {
-  const running = runtime.read();
-  if (running && (await runtime.health(running.port))) {
-    const url = `http://localhost:${running.port}`;
+  const found = await findRunning();
+  if (found) {
+    const url = `http://localhost:${found}`;
     console.log(`  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
     if (OPEN_BROWSER) openBrowser(url);
     return;
   }
   const childArgs = [__filename, ...args.filter(a => a !== '--background' && a !== '--no-open'), '--no-open'];
-  const child = spawn(process.execPath, childArgs, { detached: true, stdio: 'ignore', windowsHide: true });
+  // 출력은 버리지 않고 기록 파일에 남긴다 (켜지 못했을 때 이유를 보여 주려고)
+  let out = 'ignore';
+  try { out = fs.openSync(runtime.LOG, 'w', 0o600); } catch { /* 기록 없이 켠다 */ }
+  const child = spawn(process.execPath, childArgs, { detached: true, stdio: ['ignore', out, out], windowsHide: true });
+  if (typeof out === 'number') fs.closeSync(out);
   let exited = false;
   child.on('exit', () => { exited = true; });
   child.unref();
@@ -233,7 +264,10 @@ async function startBackground() {
       return;
     }
   }
-  console.log(`  ⚠ 사무실을 켜지 못했어요. 터미널에서 node "${__filename}" 로 직접 실행해서 오류를 확인해 보세요.`);
+  const tail = logTail();
+  console.log(`  ⚠ 사무실을 켜지 못했어요.${tail.length ? ' 사무실이 남긴 말:' : ''}`);
+  for (const l of tail) console.log('     ' + l);
+  console.log(`     터미널에서 node "${__filename}" 로 직접 실행하면 자세히 볼 수 있어요.`);
   process.exitCode = 1;
 }
 

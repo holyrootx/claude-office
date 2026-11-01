@@ -387,6 +387,51 @@ test('빌딩: 오래 조용한 직원은 퇴근하고(마지막 한 명은 남�
   }
 });
 
+test('빌딩: 사용 한도가 풀리기를 기다리는 직원은 조용해도 퇴근하지 않는다', async () => {
+  const cfg = path.join(TMP, 'claude-limit');
+  const P = path.join(cfg, 'projects', '-tmp-limit');
+  fs.mkdirSync(P, { recursive: true });
+  const fl = path.join(P, 'limit-a.jsonl'), fq = path.join(P, 'quiet-b.jsonl');
+  const d = new Date(Date.now() + 2 * 3600 * 1000);
+  const clock = `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`;
+  userMsg(fl, '계속해 줘');
+  put(fl, { type: 'assistant', cwd: '/tmp/limit', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock} (Asia/Seoul)` }] } });
+  await sleep(50);
+  userMsg(fq, '그냥 조용한 세션');
+  const port = PORT + 8;
+  const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-limit.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+  const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+  const log = [];
+  let req;
+  try {
+    assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+    req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+      let buf = '';
+      res.setEncoding('utf8');
+      res.on('data', c => {
+        buf += c;
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const blk = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          const ev = (blk.match(/^event: (.*)$/m) || [])[1];
+          const dd = (blk.match(/^data: (.*)$/m) || [])[1];
+          if (ev) log.push({ ev, ...JSON.parse(dd) });
+        }
+      });
+    });
+    const hello = await until(() => log.find(x => x.ev === 'hello'));
+    assert.equal(hello.sessions.length, 2);
+    const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
+    assert.equal(left && left.sid, 'quiet-b'); // 더 오래 조용한 limit-a가 아니라 그냥 조용한 쪽이 퇴근
+    await sleep(2000);
+    assert.ok(!log.some(x => x.ev === 'leave' && x.sid === 'limit-a'));
+  } finally {
+    if (req) req.destroy();
+    child.kill();
+  }
+});
+
 test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 연다 (직접 정한 포트는 그대로 실패)', async () => {
   const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
   await new Promise(r => busy.once('listening', r));
@@ -411,6 +456,37 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
   } finally {
     child.kill();
     busy.close();
+  }
+});
+
+test('사용 한도가 풀리기를 기다리는 세션은 30분이 지나도 빌딩에 남고, 풀린 세션은 나간다', async () => {
+  const min = m => Date.now() - m * 60000;
+  const clock = t => { const d = new Date(t); return `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`; };
+  const write = (id, resetsAt) => {
+    const f = path.join(PROJ, id + '.jsonl');
+    const at = t => new Date(t).toISOString();
+    fs.writeFileSync(f, [
+      { type: 'user', uuid: id + 'u', timestamp: at(min(41)), cwd: '/tmp/shop', message: { role: 'user', content: '계속해 줘' } },
+      { type: 'assistant', uuid: id + 'a', timestamp: at(min(40)), cwd: '/tmp/shop', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock(resetsAt)} (Asia/Seoul)` }] } },
+    ].map(o => JSON.stringify(o)).join('\n') + '\n');
+    fs.utimesSync(f, new Date(min(40)), new Date(min(40)));
+    return f;
+  };
+  const LIM = 'dddddddd-4444-0000-0000-000000000001';
+  const FREE = 'dddddddd-4444-0000-0000-000000000002';
+  const files = [write(LIM, Date.now() + 2 * 3600 * 1000), write(FREE, min(20))];
+  try {
+    const s = stream('all');
+    const hello = await until(() => s.log.find(x => x.ev === 'hello'));
+    s.close();
+    const sids = hello.sessions.map(x => x.sid);
+    assert.ok(sids.includes(LIM), '한도가 풀리기를 기다리는 세션은 데려온다');
+    assert.ok(!sids.includes(FREE), '이미 풀린 세션은 데려오지 않는다');
+    const list = JSON.parse((await get('/api/sessions')).body).sessions;
+    assert.ok(list.find(x => x.id === LIM).limitUntil > Date.now()); // 보기 메뉴에 ⏳
+    assert.ok(!(list.find(x => x.id === FREE).limitUntil > Date.now()));
+  } finally {
+    for (const f of files) fs.rmSync(f, { force: true });
   }
 });
 

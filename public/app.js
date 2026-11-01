@@ -684,7 +684,7 @@ async function loadSessions(keepFile) {
   const want = [
     ['all', `🏢 빌딩 · 최근 ${minutesText(d.activeMinutes || 30)} 세션 모두`],
     ['auto', '자동 · 가장 최근 세션 하나'],
-    ...(d.sessions || []).map(s => [s.file, `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`]),
+    ...(d.sessions || []).map(s => [s.file, `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.limitUntil > Date.now() ? '⏳ ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.mtime)}`]),
   ];
   // 통째로 다시 만들지 않고 바뀐 칸만 고친다: 15초마다 새로 고쳐도 열어 둔 목록이 닫히거나 튀지 않게
   want.forEach(([value, text], i) => {

@@ -201,9 +201,8 @@ function addSession(snap) {
   const key = info.cwd || info.project || snap.sid;
   if (!floors.has(key)) floors.set(key, { key, name: info.project || clip(key, 20), sids: new Set() });
   floors.get(key).sids.add(snap.sid);
-  if (!colorOf.has(snap.sid)) colorOf.set(snap.sid, COLORS[colorOf.size % COLORS.length]);
   const s = {
-    sid: snap.sid, info, floor: key, color: colorOf.get(snap.sid), interns: new Map(),
+    sid: snap.sid, info, floor: key, color: pickColor(snap.sid), interns: new Map(),
     plan: snap.plan || null, planAt: snap.plan ? 1 : 0, stats: snap.stats || emptyStats(), wait: snap.wait || null,
   };
   sessions.set(s.sid, s);
@@ -215,6 +214,24 @@ function addSession(snap) {
   for (const a of snap.agents || []) addIntern(s, a).load(a.history || [], w && w.on === a.id ? w : null);
   if (w) seenWaits.add(waitId(s.sid, w));
   return s;
+}
+
+// 직원 색: 처음 출근한 직원은 늘 Claude 주황, 그다음부터는 세션 id로 정한다.
+// 그래서 새로 고쳐도, 다른 탭에서 봐도 같은 세션은 대개 같은 색이다. 지금 빌딩에 같은 색이 있으면 다음 색을 쓴다.
+function pickColor(sid) {
+  if (colorOf.has(sid)) return colorOf.get(sid);
+  const used = new Set([...sessions.values()].map(s => s.color));
+  let color = COLORS[0];
+  if (used.size) {
+    let h = 0;
+    for (const c of sid) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const rest = COLORS.slice(1);
+    let i = h % rest.length;
+    for (let n = 0; n < rest.length && used.has(rest[i]); n++) i = (i + 1) % rest.length;
+    color = rest[i];
+  }
+  colorOf.set(sid, color);
+  return color;
 }
 
 function addIntern(s, a) {

@@ -252,6 +252,29 @@ test('인턴의 권한 대기는 그 인턴에게 붙고, 인턴의 결과로 �
   s.close();
 });
 
+test('긴 세션은 화면을 먼저 띄우고, 건너뛴 앞부분의 도구 사용량을 뒤이어 세어 합친다', async () => {
+  const P = path.join(CFG, 'projects', '-tmp-big');
+  fs.mkdirSync(P, { recursive: true });
+  const f = path.join(P, 'big-1.jsonl');
+  const pad = 'x'.repeat(250);
+  const lines = [];
+  for (let i = 0; i < 30000; i++) {
+    lines.push(JSON.stringify({ type: 'assistant', uuid: 'big' + i, timestamp: iso(), cwd: '/tmp/big', pad, message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id: 'bt' + i, name: 'Read', input: { file_path: '/a' } }] } }));
+  }
+  fs.writeFileSync(f, lines.join('\n') + '\n'); // 빌딩이 처음에 읽는 8MB보다 크다
+  const s = stream('all');
+  const first = await until(() => {
+    const h = s.log.find(x => x.ev === 'hello');
+    return (h && h.sessions.find(x => x.sid === 'big-1')) || s.log.find(x => x.ev === 'join' && x.sid === 'big-1');
+  }, 5000);
+  assert.ok(first, '빌딩에 들어옴');
+  assert.ok(first.stats.tools < 30000, '처음엔 끝부분만 센다');
+  const full = await until(() => s.updates('big-1').find(u => u.stats.tools === 30000), 8000);
+  s.close();
+  assert.ok(full, '앞부분까지 합쳐 3만 개');
+  assert.equal(full.stats.library, 30000);
+});
+
 test('보고 있지 않던 세션이 권한을 기다리면 빌딩에 데려온다', async () => {
   const hourAgo = new Date(Date.now() - 3600 * 1000);
   toolUse(old, 'o1', 'Edit', { file_path: '/tmp/shop/x.ts' });

@@ -375,3 +375,17 @@ test('워크트리(…/.claude/worktrees/이름)에서 시작한 세션은 원�
   assert.equal(worktreeOf('/Users/me/blog/.claude/worktrees/x/backend'), null); // 워크트리 안의 하위 폴더는 시작 폴더가 아니다
 });
 
+test('Claude가 일하는 동안 보낸 내 메시지(queued_command 첨부)도 내 메시지로 센다', () => {
+  const norm = new Normalizer();
+  const att = a => line({ type: 'attachment', attachment: { type: 'queued_command', ...a } });
+  const evs = feed(norm,
+    att({ prompt: '배포는 vercel로만 해 줘', commandMode: 'prompt', origin: { kind: 'human' } }),
+    att({ prompt: '<task-notification>\n<status>completed</status>\n</task-notification>', commandMode: 'task-notification', origin: { kind: 'task-notification' } }),
+    att({ prompt: '<cross-session-message from="x">안녕</cross-session-message>', commandMode: 'prompt', origin: { kind: 'peer' } }),
+    att({ prompt: [{ type: 'text', text: '이것도 봐 줘' }, { type: 'image' }], commandMode: 'prompt' }), // origin이 없는 옛 기록
+    line({ type: 'attachment', attachment: { type: 'total_tokens_reminder', text: '...' } }),
+  );
+  assert.deepEqual(evs.map(e => [e.k, e.text, e.queued]), [['user', '배포는 vercel로만 해 줘', true], ['user', '이것도 봐 줘 [이미지]', true]]);
+  assert.equal(norm.stats.prompts, 2);
+});
+

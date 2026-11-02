@@ -22,7 +22,8 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
     : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;
   // PR, 비용(Claude Code가 남긴 API 요금 기준), 권한 모드
   const extras = [];
-  if (!a.intern && info.pr && info.pr.url) extras.push(`<a href="${esc(info.pr.url)}" target="_blank" rel="noopener">🔗 PR #${esc(info.pr.number)}</a>`);
+  // PR 주소는 http(s)만 링크로 (기록에 javascript: 같은 주소가 들어 있어도 누를 수 없게)
+  if (!a.intern && info.pr && /^https?:\/\//i.test(info.pr.url || '')) extras.push(`<a href="${esc(info.pr.url)}" target="_blank" rel="noopener">🔗 PR #${esc(info.pr.number)}</a>`);
   if (!a.intern && info.cost) {
     const lines = info.cost.added || info.cost.removed ? ` · +${info.cost.added} −${info.cost.removed}줄` : '';
     extras.push(`<span title="Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요">💵 $${info.cost.usd.toFixed(2)}${lines}</span>`);

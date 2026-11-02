@@ -46,6 +46,13 @@ const TOKEN = crypto.randomBytes(16).toString('hex');
 
 // ───────────────────────── HTTP ─────────────────────────
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+// 화면은 세션 기록(웹 페이지 내용, 명령 출력 등이 섞인)을 보여 주니까, 혹시 글자 처리를 빠뜨린 곳이 있어도
+// 이 서버의 스크립트 파일만 돌게 막아 둔다. 글꼴만 Google Fonts에서 받는다.
+const CSP = [
+  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data:", "connect-src 'self'",
+  "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'",
+].join('; ');
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
 function json(res, data) {
@@ -156,7 +163,9 @@ const server = http.createServer((req, res) => {
   if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, body) => {
     if (err) { res.writeHead(404); return res.end('not found'); }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+    const headers = { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
+    if (path.extname(file) === '.html') Object.assign(headers, { 'Content-Security-Policy': CSP, 'Referrer-Policy': 'no-referrer' });
+    res.writeHead(200, headers);
     res.end(body);
   });
 });

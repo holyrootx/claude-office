@@ -66,6 +66,11 @@ test('인턴 카드: 누구의 인턴인지만, 숫자·버튼·비용은 없다
   assert.doesNotMatch(html, /card-nums|card-acts|💵/);
 });
 
+test('PR 주소가 http(s)가 아니면 링크로 만들지 않는다', () => {
+  assert.doesNotMatch(cardHtml(main, session({ pr: { number: 1, url: 'javascript:alert(1)' } }), { live: true }), /href=|PR #1/);
+  assert.match(cardHtml(main, session({ pr: { number: 2, url: 'https://github.com/o/r/pull/2' } }), { live: true }), /href="https:\/\/github.com\/o\/r\/pull\/2"/);
+});
+
 test('세션 제목이나 메시지에 든 HTML은 글자로 나온다', () => {
   const html = cardHtml(main, session({ title: '<img src=x onerror=alert(1)>', queue: ['<b>굵게</b>'] }), { live: true });
   assert.doesNotMatch(html, /<img|<b>굵게/);

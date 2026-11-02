@@ -34,7 +34,7 @@ function get(pathname, headers = {}) {
     http.get({ host: '127.0.0.1', port: PORT, path: pathname, headers }, res => {
       let d = '';
       res.on('data', c => { d += c; });
-      res.on('end', () => resolve({ status: res.statusCode, body: d }));
+      res.on('end', () => resolve({ status: res.statusCode, body: d, headers: res.headers }));
     }).on('error', () => resolve({ status: 0, body: '' }));
   });
 }
@@ -127,6 +127,17 @@ test('보안: 잘못된 주소·다른 사이트 주소·폴더 밖 파일·토�
   });
   assert.equal(r, 403);
   assert.equal((await get('/')).status, 200); // 그래도 서버는 살아 있다
+});
+
+test('보안: 화면에는 이 서버의 스크립트 파일만 돌게 하는 CSP를 붙이고, 페이지 안에 직접 쓴 스크립트는 없다', async () => {
+  const r = await get('/');
+  const csp = r.headers['content-security-policy'] || '';
+  assert.match(csp, /script-src 'self'(;|$)/);
+  assert.match(csp, /object-src 'none'/);
+  assert.equal(r.headers['x-content-type-options'], 'nosniff');
+  // <script>는 모두 src로 불러온다 (안에 직접 쓴 스크립트는 CSP가 막으니까)
+  assert.deepEqual((r.body.match(/<script\b[^>]*>/g) || []).filter(t => !/\bsrc=/.test(t)), []);
+  assert.doesNotMatch(r.body, /\son[a-z]+=/i); // onclick= 같은 것도 없다
 });
 
 test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함께 보낸다', async () => {

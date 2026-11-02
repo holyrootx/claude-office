@@ -45,6 +45,13 @@ test('하위 폴더에서 일하는 중이면 머리에 📂 그 폴더를 붙�
   assert.match(html, /cd &#39;\/u\/shop&#39; &amp;&amp; claude --resume/);
 });
 
+test('워크트리에서 일하면 🌿 그 이름을 붙인다 (워크트리에서 시작했든, 들어갔든)', () => {
+  assert.match(cardHtml(main, session({ cwd: '/u/shop/.claude/worktrees/fix-login', home: '/u/shop', worktree: 'fix-login' }), { live: true }), /🌿 fix-login<\/small>/);
+  assert.match(cardHtml(main, session({ cwd: '/u/shop', here: '/u/shop/.claude/worktrees/fix-login/backend' }), { live: true }), /🌿 fix-login · 📂 backend<\/small>/);
+  // 이어 하기는 워크트리 폴더에서 (세션을 시작한 곳)
+  assert.match(cardHtml(main, session({ cwd: '/u/shop/.claude/worktrees/fix-login', home: '/u/shop', worktree: 'fix-login' }), { live: true }), /cd &#39;\/u\/shop\/.claude\/worktrees\/fix-login&#39;/);
+});
+
 test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에서는 버튼이 다 없다', () => {
   assert.doesNotMatch(cardHtml(main, session(), { live: true, pinned: true }), /data-act="pin"/);
   assert.doesNotMatch(cardHtml(main, session(), { live: false }), /card-acts/);

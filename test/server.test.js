@@ -491,6 +491,23 @@ test('하위 폴더로 옮겨 다닌 세션도 시작한 폴더의 층·프로�
   }
 });
 
+test('워크트리에서 시작한 세션은 원래 프로젝트 층·이름으로, 이어 하기는 워크트리에서', async () => {
+  const wt = '/tmp/shop/.claude/worktrees/fix-login';
+  const dir = path.join(CFG, 'projects', wt.replace(/[^a-zA-Z0-9]/g, '-'));
+  fs.mkdirSync(dir, { recursive: true });
+  const f = path.join(dir, 'ffffffff-6666-0000-0000-000000000001.jsonl');
+  try {
+    put(f, { type: 'user', cwd: wt, message: { role: 'user', content: '로그인 고쳐 줘' } });
+    const r = JSON.parse((await get('/api/replay?file=' + encodeURIComponent(f))).body);
+    assert.deepEqual([r.session.home, r.session.project, r.session.worktree, r.session.cwd], ['/tmp/shop', 'shop', 'fix-login', wt]);
+    const j = JSON.parse((await get('/api/journal')).body);
+    const shop = j.projects.find(p => p.project === 'shop');
+    assert.ok(shop.sessions.some(x => x.file === f), '업무 일지에서도 shop 프로젝트에 묶인다');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('사용 한도가 풀리기를 기다리는 세션은 30분이 지나도 빌딩에 남고, 풀린 세션은 나간다', async () => {
   const min = m => Date.now() - m * 60000;
   const clock = t => { const d = new Date(t); return `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`; };

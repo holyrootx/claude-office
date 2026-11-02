@@ -202,7 +202,8 @@ function refreshBoard() {
 function addSession(snap) {
   removeSession(snap.sid);
   const info = { ...(snap.session || {}) };
-  const key = info.cwd || info.project || snap.sid;
+  // 층: 프로젝트 폴더마다 하나 (워크트리에서 시작한 세션도 원래 프로젝트 층으로)
+  const key = info.home || info.cwd || info.project || snap.sid;
   if (!floors.has(key)) floors.set(key, { key, name: info.project || clip(key, 20), sids: new Set() });
   floors.get(key).sids.add(snap.sid);
   const s = {

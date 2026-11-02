@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 // 내 진짜 ~/.claude/claude-office.json 설정이 결과를 바꾸지 않게 빈 임시 폴더를 쓴다
 process.env.CLAUDE_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-norm-'));
-const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG, rootCwd } = require('../server.js');
+const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG, rootCwd, worktreeOf } = require('../server.js');
 
 let n = 0;
 const ts = '2026-10-25T01:00:00.000Z';
@@ -366,5 +366,12 @@ test('세션 중에 하위 폴더로 옮겨 다녀도 시작한 폴더를 찾는
   assert.equal(rootCwd(['C:\\code\\shop\\web'], 'C--code-shop'), 'C:\\code\\shop');
   assert.equal(rootCwd(['/Users/me/돈/src'], '-Users-me--'), '/Users/me/돈');
   assert.equal(rootCwd(['/tmp/else'], dir), '/tmp/else'); // 맞는 게 없으면 처음 본 폴더
+});
+
+test('워크트리(…/.claude/worktrees/이름)에서 시작한 세션은 원래 프로젝트 폴더를 안다', () => {
+  assert.deepEqual(worktreeOf('/Users/me/blog/.claude/worktrees/fix-login'), { home: '/Users/me/blog', name: 'fix-login' });
+  assert.deepEqual(worktreeOf('C:\\code\\shop\\.claude\\worktrees\\a'), { home: 'C:\\code\\shop', name: 'a' });
+  assert.equal(worktreeOf('/Users/me/blog'), null);
+  assert.equal(worktreeOf('/Users/me/blog/.claude/worktrees/x/backend'), null); // 워크트리 안의 하위 폴더는 시작 폴더가 아니다
 });
 

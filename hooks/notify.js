@@ -26,6 +26,7 @@ async function send(raw) {
   const body = {};
   for (const k of KEEP) if (h[k] != null) body[k] = h[k];
   if (h.tool_input) body.tool_input = slim(h.tool_input);
+  body.ppid = process.ppid; // 이 hook을 띄운 Claude Code (꺼지면 사무실이 기다림을 지운다)
   await runtime.request(rt.port, 'POST', '/hook', { token: rt.token, body: JSON.stringify(body) });
 }
 

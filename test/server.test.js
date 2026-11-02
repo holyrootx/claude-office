@@ -274,6 +274,28 @@ test('권한 대기: hook으로 받아 도구에 붙이고, 결과가 나면 푼
   s.close();
 });
 
+test('권한 창을 띄운 채 Claude Code가 꺼지면(SessionEnd 없이) 기다림을 지운다', { skip: process.platform === 'win32' }, async () => {
+  const s = stream('all');
+  await until(() => s.log.find(x => x.ev === 'hello'));
+  toolUse(shop, 'k9', 'Bash', { command: 'npm publish', description: '배포' });
+  await sleep(400);
+  // 곧 끝나는 프로세스를 'Claude Code'로 삼는다 (hook의 부모 pid 자리에 넣는다)
+  const fake = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 1200)'], { stdio: 'ignore' });
+  const rt = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+  const body = JSON.stringify({ session_id: SHOP, hook_event_name: 'PermissionRequest', tool_name: 'Bash', tool_input: { command: 'npm publish', description: '배포' }, ppid: fake.pid });
+  await new Promise(resolve => {
+    const req = http.request({ host: '127.0.0.1', port: PORT, method: 'POST', path: '/hook', headers: { 'X-Office-Token': rt.token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => { res.resume(); res.on('end', resolve); });
+    req.end(body);
+  });
+  const w = await until(() => s.lastWait(SHOP));
+  assert.equal(w.id, 'k9');
+  await sleep(600);
+  assert.ok(s.lastWait(SHOP), '아직 살아 있으면 계속 기다린다');
+  assert.equal(await until(() => s.lastWait(SHOP) === null, 5000), true, '꺼지면 지운다');
+  toolResult(shop, 'k9', false);
+  s.close();
+});
+
 test('인턴의 권한 대기는 그 인턴에게 붙고, 인턴의 결과로 풀린다', async () => {
   const s = stream('all');
   await until(() => s.log.find(x => x.ev === 'hello'));

@@ -413,3 +413,11 @@ test('user 줄로 끼어든 알림은 내 메시지가 아니고, 붙여 넣은 
   assert.equal(norm.stats.prompts, 1);
 });
 
+test('말에 든 마크다운 표는 짧은 목록으로 (구분 줄·머리 줄은 빼고)', () => {
+  const say = text => feed(new Normalizer(), assistant([{ type: 'text', text }]))[0].text;
+  assert.equal(say('비교해 볼게요.\n\n| 방 | 하는 일 |\n|---|---|\n| 📚 자료실 | 읽기·검색 |\n| 💻 개발실 | 코드 수정 |\n\n이렇게요.'),
+    '비교해 볼게요. · 📚 자료실: 읽기·검색 · 💻 개발실: 코드 수정 이렇게요.');
+  assert.equal(say('| 회차 | 고친 것 | 커밋 |\n|:--|:--|--:|\n| #1 | **알림** | c92845f |'), '· #1, 알림, c92845f');
+  assert.equal(say('a | b 처럼 그냥 들어간 파이프는 그대로'), 'a | b 처럼 그냥 들어간 파이프는 그대로');
+});
+

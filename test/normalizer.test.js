@@ -421,3 +421,11 @@ test('말에 든 마크다운 표는 짧은 목록으로 (구분 줄·머리 줄
   assert.equal(say('a | b 처럼 그냥 들어간 파이프는 그대로'), 'a | b 처럼 그냥 들어간 파이프는 그대로');
 });
 
+test('실패 내용은 무슨 일인지 알 수 있는 줄로: 파이썬은 맨 끝 줄, 자바스크립트는 at 줄 빼고, 색 코드도 빼고', () => {
+  const err = content => feed(new Normalizer(), toolUse('t1', 'Bash', { command: 'x' }), toolResult('t1', content, true))[1].error;
+  assert.equal(err('Exit code 1\nTraceback (most recent call last):\n  File "a.py", line 3, in <module>\n    open("x")\nFileNotFoundError: [Errno 2] No such file: "x"'),
+    'Exit code 1 · FileNotFoundError: [Errno 2] No such file: "x"');
+  assert.equal(err('TypeError: Cannot read properties of null\n    at <anonymous>:7:6\n    at async run'), 'TypeError: Cannot read properties of null');
+  assert.equal(err('Exit code 127\n\u001b[31mcommand not found: timeout\u001b[0m'), 'Exit code 127 · command not found: timeout');
+});
+

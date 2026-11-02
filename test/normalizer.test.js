@@ -385,7 +385,17 @@ test('Claude가 일하는 동안 보낸 내 메시지(queued_command 첨부)도 
     att({ prompt: [{ type: 'text', text: '이것도 봐 줘' }, { type: 'image' }], commandMode: 'prompt' }), // origin이 없는 옛 기록
     line({ type: 'attachment', attachment: { type: 'total_tokens_reminder', text: '...' } }),
   );
-  assert.deepEqual(evs.map(e => [e.k, e.text, e.queued]), [['user', '배포는 vercel로만 해 줘', true], ['user', '이것도 봐 줘 [이미지]', true]]);
+  assert.deepEqual(evs.filter(e => e.k === 'user').map(e => [e.text, e.queued]), [['배포는 vercel로만 해 줘', true], ['이것도 봐 줘 [이미지]', true]]);
   assert.equal(norm.stats.prompts, 2);
+  // 백그라운드 작업 알림·다른 세션이 보낸 말은 내 메시지가 아니라 활동 기록 한 줄(note)로
+  assert.deepEqual(evs.filter(e => e.k === 'note').map(e => e.kind), ['task', 'peer']);
+});
+
+test('백그라운드 작업 알림을 쉬운 말로 바꾼다', () => {
+  const note = (summary, status = 'completed') => feed(new Normalizer(), line({ type: 'attachment', attachment: { type: 'queued_command', commandMode: 'task-notification', prompt: `<task-notification>\n<status>${status}</status>\n<summary>${summary}</summary>\n</task-notification>` } }))[0];
+  assert.deepEqual((({ text, ok }) => ({ text, ok }))(note('Background command "npm test" completed (exit code 0)')), { text: '백그라운드 명령 끝남: npm test', ok: true });
+  assert.deepEqual((({ text, ok }) => ({ text, ok }))(note('Background command "build" failed with exit code 1', 'failed')), { text: '백그라운드 명령 실패(1): build', ok: false });
+  assert.equal(note('Monitor "CI 보기" stream ended').text, '지켜보기 끝남: CI 보기');
+  assert.equal(note('Something new happened').text, 'Something new happened'); // 모르는 꼴은 그대로
 });
 

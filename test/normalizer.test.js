@@ -399,3 +399,17 @@ test('백그라운드 작업 알림을 쉬운 말로 바꾼다', () => {
   assert.equal(note('Something new happened').text, 'Something new happened'); // 모르는 꼴은 그대로
 });
 
+test('user 줄로 끼어든 알림은 내 메시지가 아니고, 붙여 넣은 글은 몇 줄인지만 보여 준다', () => {
+  const norm = new Normalizer();
+  const longPath = '/private/tmp/' + 'x'.repeat(200) + '/out.txt';
+  const evs = feed(norm,
+    user(`<task-notification>\n<task-id>b1</task-id>\n<output-file>${longPath}</output-file>\n<status>completed</status>\n<summary>Background command "npm test" completed (exit code 0)</summary>\n</task-notification>`),
+    user('<side-sessions-event>None of the sessions you started is working now.</side-sessions-event>'),
+    user('<pasted_content id="837c">\n첫 줄\n둘째 줄\n셋째 줄\n</pasted_content id="837c">\n\n우리 회사 어디 갔어?'),
+  );
+  assert.deepEqual(evs.map(e => e.k), ['note', 'note', 'user']);
+  assert.equal(evs[0].text, '백그라운드 명령 끝남: npm test'); // 긴 경로 뒤의 요약도 잘리지 않는다
+  assert.equal(evs[2].text, '[붙여 넣은 글 3줄] 우리 회사 어디 갔어?');
+  assert.equal(norm.stats.prompts, 1);
+});
+

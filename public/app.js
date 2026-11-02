@@ -1,6 +1,7 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
 import { $, esc, clip, ago, resumeCommand, ctxOf } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
+import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -11,7 +12,6 @@ import { createReplay } from './js/replay.js';
 import { firstFloor, nextFloor, floorLabel } from './js/floors.js';
 
 const COLORS = ['#D97757', '#4C8BF5', '#2FA36B', '#9B6CE8', '#E0607E', '#D49A1F', '#1FA3A3', '#7C8799'];
-const STATUS_ORDER = { wait: 0, ask: 1 };
 const emptyStats = () => ({ library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0, tools: 0, errors: 0, prompts: 0 });
 const shortName = info => clip(info.title || info.project || '세션', 18);
 // 컨텍스트가 얼마나 찼는지: 비율과 색 단계
@@ -470,30 +470,9 @@ function renderFloorbar() {
   if (html !== floorbarHtml) $('floorTabs').innerHTML = floorbarHtml = html;
 }
 
-const ctxBar = c => (c ? `<i class="ctx ${c.level}" style="--p:${c.p}%" title="컨텍스트 ${c.p}% · ${esc(c.text)}"></i>` : '');
 let lobbyHtml = '';
 function renderLobby() {
-  const rows = [];
-  [...floors.values()].forEach((f, i) => {
-    for (const sid of f.sids) {
-      const s = sessions.get(sid);
-      if (!s) continue;
-      for (const a of [s.main, ...s.interns.values()]) {
-        if (a.leaving) continue;
-        const st = a.status;
-        rows.push({
-          rank: STATUS_ORDER[st] ?? 2, floor: i,
-          html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${s.color}">`
-            + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${!a.intern && s.info.queue && s.info.queue.length ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : ''}</span>`
-            + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(a.now.time || (st === 'limit' && a.halt.resets ? `~${a.halt.resets}` : '') || (st === 'idle' || st === 'sleep' || st === 'stopped') && a.lastEventTs && ago(a.lastEventTs) || '')}</time>`
-            + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
-        });
-      }
-    }
-  });
-  // 나를 기다리는 직원이 맨 위, 나머지는 층 순서대로
-  rows.sort((x, y) => x.rank - y.rank || x.floor - y.floor);
-  const html = rows.map(r => r.html).join('') || '<li class="lb none">아직 아무도 출근하지 않았어요</li>';
+  const html = buildLobby([...floors.values()], sessions, current);
   if (html !== lobbyHtml) {
     // 다시 그려도 키보드로 고르던 줄은 그대로 고른 채로
     const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('#lobby [data-actor]');

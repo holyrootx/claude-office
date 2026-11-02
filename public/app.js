@@ -76,6 +76,22 @@ const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: 
 const signs = {}, statRows = {};
 const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1 });
 const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
+// 나를 기다리거나 일이 끝났을 때: 브라우저 알림(켜 두었으면) + 화면 읽기 프로그램에 읽어 주기.
+// 탭 제목이 바뀌는 건 화면 읽기 프로그램이 읽어 주지 않아서 따로 알린다 (데모·다시 보기 중에는 조용히).
+function announce(text) {
+  if (viewMode === 'demo' || viewMode === 'replay') return;
+  const el = $('announce');
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 60); // 같은 말이 또 와도 다시 읽게 비웠다가 넣는다
+}
+function tell(s, title, body) {
+  alerts.notify(s, title, body);
+  announce(`${s.main.name}: ${title.replace(/^\S+\s/, '')}. ${clip(body || '', 100)}`);
+}
+function tellWait(s, w) {
+  alerts.notifyWait(s, w);
+  announce(`${s.main.name}: ${w.kind === 'input' ? '내 입력을 기다려요' : '실행 허락을 기다려요'}. ${w.tool ? `${w.tool} ${w.label || ''}` : w.text || ''}`);
+}
 const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => replay.start(file), copy: text => copyText(text) });
 const replay = createReplay({
   pickFile: () => {
@@ -303,11 +319,11 @@ function applyUpdate(u) {
     }
     if (!u.stats) countLocal(s, ev);
     feed.add(s, a, ev);
-    if (ev.k === 'tool' && ev.ask) alerts.notify(s, '❓ 물어볼 게 있어요', ev.ask);
-    if (ev.k === 'say' && ev.final && !ev.agent) alerts.notify(s, '✅ 응답 완료', ev.text);
+    if (ev.k === 'tool' && ev.ask) tell(s, '❓ 물어볼 게 있어요', ev.ask);
+    if (ev.k === 'say' && ev.final && !ev.agent) tell(s, '✅ 응답 완료', ev.text);
     // 사용 한도나 오류로 끝내 멈췄을 때도 알린다 (응답 완료가 오지 않으니까)
     if (ev.k === 'apierr' && ev.stop && !ev.agent) {
-      alerts.notify(s, ev.kind === 'limit' ? '⏳ 사용 한도에 걸렸어요' : '⚠ 오류로 일이 멈췄어요', ev.kind === 'limit' ? (ev.resets ? `${ev.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요') : ev.text);
+      tell(s, ev.kind === 'limit' ? '⏳ 사용 한도에 걸렸어요' : '⚠ 오류로 일이 멈췄어요', ev.kind === 'limit' ? (ev.resets ? `${ev.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요') : ev.text);
     }
     if (!batches.has(a)) batches.set(a, []);
     batches.get(a).push(ev);
@@ -328,7 +344,7 @@ function setWait(s, w) {
   if (w && !seenWaits.has(waitId(s.sid, w))) {
     seenWaits.add(waitId(s.sid, w));
     feed.add(s, target, { ...w, k: 'wait' });
-    alerts.notifyWait(s, w);
+    tellWait(s, w);
     if (floorAuto && s.floor !== current) goFloor(s.floor);
   }
 }
@@ -649,7 +665,7 @@ function onJoin(snap) {
   if (!current) current = s.floor;
   if (s.wait) {
     // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우
-    if (Date.now() - s.wait.ts < 60000) alerts.notifyWait(s, s.wait);
+    if (Date.now() - s.wait.ts < 60000) tellWait(s, s.wait);
     if (floorAuto && s.floor !== current) goFloor(s.floor);
   }
   refreshBoard();
@@ -844,7 +860,7 @@ function tellFreed() {
     h.told = true;
     if (Date.now() - h.resetAt > 10 * 60 * 1000) continue;
     feed.add(s, s.main, { k: 'freed', ts: h.resetAt });
-    alerts.notify(s, '✅ 사용 한도가 풀렸어요', '다시 일을 시킬 수 있어요');
+    tell(s, '✅ 사용 한도가 풀렸어요', '다시 일을 시킬 수 있어요');
   }
 }
 setInterval(() => { autoFloor(); render(); }, 250);

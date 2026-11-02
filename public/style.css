@@ -67,6 +67,8 @@
 }
 
 * { box-sizing: border-box; }
+/* 화면에는 안 보이고 화면 읽기 프로그램만 읽는 글 */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg);

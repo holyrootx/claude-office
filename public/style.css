@@ -4,8 +4,8 @@
   --panel-2: #1b2232;
   --line: #273046;
   --text: #e7eaf3;
-  --muted: #8d97ad;
-  --faint: #5b6680;
+  --muted: #9fa7ba;
+  --faint: #808ba5; /* 작은 글자도 읽히게 배경과 4.5:1 넘게 (WCAG AA) */
   --claude: #d97757;
   --ok: #34d399;
   --bad: #f2555a;
@@ -44,10 +44,10 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #eeeae1; --panel: #fbfaf7; --panel-2: #f0ece3; --line: #dcd5c7;
-    --text: #1f2430; --muted: #5b6474; --faint: #8a92a1;
+    --text: #1f2430; --muted: #4a525f; --faint: #606877;
     --text-strong: #11151d; --text-soft: #2c3341; --text-think: #5e6878;
-    --text-good: #0f7a52; --text-warn: #9a5b00; --text-bad: #c0262d;
-    --text-violet: #6d4bd8; --text-link: #2563eb; --text-orange: #c2570c; --text-amber: #8a5a00;
+    --text-good: #0e754f; --text-warn: #9a5b00; --text-bad: #c0262d;
+    --text-violet: #6d4bd8; --text-link: #1c5cea; --text-orange: #aa4c0b; --text-amber: #8a5a00;
     --amber-line: #d9a234; --chip: #e4dfd3; --chip-busy: #c9ecd9;
     --float: rgba(255, 255, 255, .97); --float-shadow: 0 14px 34px rgba(40, 32, 20, .18);
     --scrim: rgba(40, 34, 24, .35);
@@ -56,10 +56,10 @@
 }
 :root[data-theme="light"] {
   --bg: #eeeae1; --panel: #fbfaf7; --panel-2: #f0ece3; --line: #dcd5c7;
-  --text: #1f2430; --muted: #5b6474; --faint: #8a92a1;
+  --text: #1f2430; --muted: #4a525f; --faint: #606877;
   --text-strong: #11151d; --text-soft: #2c3341; --text-think: #5e6878;
-  --text-good: #0f7a52; --text-warn: #9a5b00; --text-bad: #c0262d;
-  --text-violet: #6d4bd8; --text-link: #2563eb; --text-orange: #c2570c; --text-amber: #8a5a00;
+  --text-good: #0e754f; --text-warn: #9a5b00; --text-bad: #c0262d;
+  --text-violet: #6d4bd8; --text-link: #1c5cea; --text-orange: #aa4c0b; --text-amber: #8a5a00;
   --amber-line: #d9a234; --chip: #e4dfd3; --chip-busy: #c9ecd9;
   --float: rgba(255, 255, 255, .97); --float-shadow: 0 14px 34px rgba(40, 32, 20, .18);
   --scrim: rgba(40, 34, 24, .35);

@@ -18,6 +18,7 @@ export class Actor {
     this.wrap.style.setProperty('--claude', intern ? `color-mix(in srgb, ${color} 62%, #fff)` : color);
     this.el = document.getElementById('charTpl').content.firstElementChild.cloneNode(true);
     this.tag = this.el.querySelector('.name-tag');
+    this.pile = this.el.querySelector('.pile');
     this.bubble = Object.assign(document.createElement('div'), { className: 'bubble' });
     this.sign = Object.assign(document.createElement('div'), { className: 'tool-sign' });
     this.pop = Object.assign(document.createElement('div'), { className: 'check-pop', textContent: '✓' });
@@ -67,6 +68,23 @@ export class Actor {
     clearTimeout(this.sweatTimer);
     clearTimeout(this.popTimer);
     this.wrap.remove();
+  }
+
+  // 컨텍스트가 찬 만큼 발치에 서류가 쌓인다 (20%마다 한 장, 60%부터 노랑, 85%부터 빨강).
+  // 대화를 압축해서 줄어들면 정리하는 모습을 한 번 보여 준다. 값이 바뀔 때만 DOM을 고친다.
+  setPile(p) {
+    const n = p ? Math.min(5, Math.ceil(p / 20)) : 0;
+    const level = p >= 85 ? 'high' : p >= 60 ? 'mid' : 'low';
+    const key = n + level;
+    if (key === this.pileKey) return;
+    const shrank = this.pileN > n && n > 0;
+    this.pileKey = key;
+    this.pileN = n;
+    this.pile.hidden = !n;
+    this.pile.className = `pile ${level}${shrank ? ' filed' : ''}`;
+    this.pile.innerHTML = '<i></i>'.repeat(n);
+    this.pile.style.setProperty('--n', n); // 포스트잇을 맨 위 종이에 붙이려고
+    this.pile.title = n ? `컨텍스트 ${p}%` : '';
   }
 
   setTag(text) {

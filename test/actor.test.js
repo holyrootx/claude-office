@@ -166,3 +166,21 @@ test('사용 한도가 풀리는 때가 지나면 더는 쉬는 중이 아니고
   assert.match(a.now.sub, /사용 한도가 풀렸어요/);
 });
 
+test('컨텍스트가 찬 만큼 발치에 서류가 쌓이고, 압축되면 정리된다', () => {
+  const a = actor(office());
+  a.setPile(68);
+  assert.equal(a.pile.hidden, false);
+  assert.equal(a.pile.className, 'pile mid'); // 4장, 노란 포스트잇
+  assert.equal(a.pile.innerHTML, '<i></i>'.repeat(4));
+  const before = a.pile.innerHTML;
+  a.setPile(70); // 같은 장 수·같은 색이면 건드리지 않는다
+  assert.equal(a.pile.innerHTML, before);
+  a.setPile(91);
+  assert.equal(a.pile.className, 'pile high');
+  a.setPile(18); // 압축: 줄어들면 정리하는 모습
+  assert.equal(a.pile.className, 'pile low filed');
+  assert.equal(a.pile.innerHTML, '<i></i>');
+  a.setPile(0);
+  assert.equal(a.pile.hidden, true);
+});
+

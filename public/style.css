@@ -478,6 +478,21 @@ button, select { font: inherit; color: inherit; }
 .actor.intern .tool-sign { max-width: 170px; font-size: 11px; padding: 3px 8px 3px 6px; }
 .actor.intern .bubble.think { font-size: 16px; }
 .claude svg { width: 100%; height: 100%; overflow: visible; display: block; }
+/* 컨텍스트 서류 더미: 발치 오른쪽에 종이가 쌓인다 (가만히 있다가 압축되면 한 번 정리) */
+.claude .pile { position: absolute; left: 49px; bottom: 3px; width: 18px; height: 24px; pointer-events: none; }
+.claude .pile[hidden] { display: none; }
+.claude .pile i { position: absolute; left: 0; width: 19px; height: 4px; border-radius: 1px; background: #fbfaf6; border: 1px solid #9c968a; box-shadow: 0 1px 0 rgba(0, 0, 0, .18); }
+.claude .pile i:nth-child(1) { bottom: 0; }
+.claude .pile i:nth-child(2) { bottom: 4px; left: 1px; transform: rotate(-4deg); }
+.claude .pile i:nth-child(3) { bottom: 8px; left: -1px; transform: rotate(3deg); }
+.claude .pile i:nth-child(4) { bottom: 12px; left: 1px; transform: rotate(-2deg); }
+.claude .pile i:nth-child(5) { bottom: 16px; transform: rotate(5deg); }
+/* 종이는 늘 하얗고, 많이 찼으면 맨 위에 포스트잇 (60% 노랑, 85% 빨강) */
+.claude .pile.mid::after, .claude .pile.high::after { content: ''; position: absolute; left: 11px; bottom: calc(var(--n, 1) * 4px - 1px); width: 7px; height: 7px; border-radius: 1px; transform: rotate(8deg); box-shadow: 0 1px 1px rgba(0, 0, 0, .25); }
+.claude .pile.mid::after { background: #facc15; }
+.claude .pile.high::after { background: #ef4444; }
+.claude .pile.filed { animation: filed .7s ease-out; }
+@keyframes filed { 0% { transform: translateY(-8px) scale(1.2); opacity: .3; } 100% { transform: none; opacity: 1; } }
 .claude .shadow { fill: rgba(0, 0, 0, .22); }
 .claude .flip { transform-box: view-box; transform-origin: 30px 40px; } /* 방향은 바로 바꾼다: 천천히 돌면 중간에 막대처럼 얇아 보인다 */
 .claude.left .flip { transform: scaleX(-1); }

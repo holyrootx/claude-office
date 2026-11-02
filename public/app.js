@@ -535,7 +535,10 @@ function renderHeader(focus) {
 
 function render() {
   const here = [...actors].filter(a => a.floor === current);
-  for (const a of actors) a.wrap.hidden = a.floor !== current;
+  for (const a of actors) {
+    a.wrap.hidden = a.floor !== current;
+    if (!a.wrap.hidden) a.setPile(a.intern ? 0 : (ctxOf(sessions.get(a.sid)) || {}).p); // 컨텍스트 서류 더미
+  }
   // 이름표: 인턴은 늘, 직원은 같은 층에 둘 이상일 때
   const mains = here.filter(a => !a.intern).length;
   for (const a of here) a.setTag(a.intern ? a.name : mains > 1 ? a.name : '');

@@ -16,7 +16,8 @@
     "server.js",
     "public/",
     "lib/",
-    "hooks/"
+    "hooks/",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18"

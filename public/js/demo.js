@@ -5,12 +5,13 @@ const shop = 'demo-shop', blog = 'demo-blog';
 export const DEMO_SESSIONS = [
   {
     sid: shop,
-    session: { id: shop, project: '쇼핑몰-api', title: '로그인 401 고치기', cwd: '/demo/shop-api', model: 'claude-opus-5-5', branch: 'fix/auth' },
+    // ctx: 컨텍스트가 얼마나 찼는지 (발치의 서류 더미·위쪽 막대로 보인다)
+    session: { id: shop, project: '쇼핑몰-api', title: '로그인 401 고치기', cwd: '/demo/shop-api', model: 'claude-opus-5-5', branch: 'fix/auth', ctx: { tokens: 136000, window: 200000 } },
     history: [], plan: null, wait: null, agents: [],
   },
   {
     sid: blog,
-    session: { id: blog, project: '기술-블로그', title: '새 글: SSE 실시간 대시보드', cwd: '/demo/blog', model: 'claude-sonnet-5-5', branch: 'main' },
+    session: { id: blog, project: '기술-블로그', title: '새 글: SSE 실시간 대시보드', cwd: '/demo/blog', model: 'claude-sonnet-5-5', branch: 'main', ctx: { tokens: 52000, window: 200000 } },
     history: [], plan: null, wait: null, agents: [],
   },
 ];

@@ -153,6 +153,8 @@ function fit() {
   // 정보 카드는 무대와 같이 줄어들면 못 읽으니까, 무대가 작을 때는 그만큼 다시 키운다 (화면에서 300px 가까이)
   cardK = Math.max(1, 0.85 / scale);
   if (cardActor) renderCard();
+  // 처음 화면의 안내 상자도 같은 만큼 키우되 무대 너비(1280) 안에 들어오게
+  $('empty').style.setProperty('--k', Math.min(cardK, (W - 40) / 520).toFixed(3));
 }
 let cardK = 1;
 
@@ -860,6 +862,7 @@ sel.addEventListener('change', () => {
   connect();
 });
 $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo()));
+$('emptyDemo').addEventListener('click', () => startDemo());
 $('card').addEventListener('click', e => {
   e.stopPropagation();
   const act = e.target.closest('[data-act]');

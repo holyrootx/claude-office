@@ -669,7 +669,8 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 
 /* ───────── 빈 상태 ───────── */
 .empty {
-  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%); z-index: 250;
+  /* 무대와 같이 줄어들면 못 읽으니까 작은 무대에서는 다시 키운다 (--k, 정보 카드와 같은 방법) */
+  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%) scale(var(--k, 1)); z-index: 250;
   background: var(--float); color: var(--text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float-shadow);
   padding: 18px 22px; display: flex; flex-direction: column; gap: 6px; width: 520px; text-align: center; font-size: 15px;
 }
@@ -677,6 +678,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 .empty span { color: var(--muted); font-size: 13px; }
 .empty code { font-family: var(--mono); background: var(--panel-2); padding: 1px 6px; border-radius: 4px; }
 #emptyRoot { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.empty .btn { align-self: center; margin-top: 6px; }
 
 @media (max-width: 1100px) {
   body { overflow: auto; }

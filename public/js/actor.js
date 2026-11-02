@@ -138,9 +138,13 @@ export class Actor {
     let top = this.y - top0 - h - (think ? 30 : 14);
     let below = false;
     if (top < 6) { top = this.y + (this.signTool ? 40 + (this.slot % 3) * 22 : 14) + (think ? 22 : 8); below = true; }
+    const tail = clamp(this.x - left, 20, w - 20);
+    const key = `${left}|${top}|${tail}|${below}`;
+    if (key === this.bubbleAtKey) return; // 그대로면 고쳐 쓰지 않는다
+    this.bubbleAtKey = key;
     b.style.left = left + 'px';
     b.style.top = top + 'px';
-    b.style.setProperty('--tail-x', clamp(this.x - left, 20, w - 20) + 'px');
+    b.style.setProperty('--tail-x', tail + 'px');
     b.classList.toggle('below', below);
   }
 
@@ -201,6 +205,7 @@ export class Actor {
       this.target = room;
       this.resolve = resolve;
       this.reject = reject;
+      if (this.office.wake) this.office.wake(); // 걷는 동안은 매 프레임 그린다
     });
   }
   teleport(room) {
@@ -268,13 +273,19 @@ export class Actor {
         if (r) r();
       }
     }
-    this.el.style.transform = `translate(${(this.x - 32).toFixed(1)}px, ${(this.y - 78).toFixed(1)}px)`;
-    this.el.style.zIndex = 20 + Math.round(this.y / 10); // 앞(아래)에 선 사람이 위에 보이게
-    // 표지판은 이름표 아래에, 옆자리 사람과 겹치지 않게 자리 번호마다 조금씩 내려 단다
-    const signY = this.y + (this.tag.hidden ? 8 : 24) + (this.slot % 3) * 22;
-    this.sign.style.transform = `translate(calc(-50% + ${this.x.toFixed(1)}px), ${signY.toFixed(1)}px)`;
-    this.pop.style.left = (this.x + 18).toFixed(1) + 'px';
-    this.pop.style.top = (this.y - (this.intern ? 70 : 92)).toFixed(1) + 'px';
+    // 매 프레임 부르지만, 자리가 그대로면 아무것도 고쳐 쓰지 않는다
+    // (안 움직이는데도 스타일을 쓰고 크기를 다시 재면 브라우저가 매 프레임 다시 계산해서 CPU를 꽤 먹는다)
+    const key = `${this.x.toFixed(1)}|${this.y.toFixed(1)}|${this.tag.hidden}|${this.slot}`;
+    if (key !== this.drawnKey) {
+      this.drawnKey = key;
+      this.el.style.transform = `translate(${(this.x - 32).toFixed(1)}px, ${(this.y - 78).toFixed(1)}px)`;
+      this.el.style.zIndex = 20 + Math.round(this.y / 10); // 앞(아래)에 선 사람이 위에 보이게
+      // 표지판은 이름표 아래에, 옆자리 사람과 겹치지 않게 자리 번호마다 조금씩 내려 단다
+      const signY = this.y + (this.tag.hidden ? 8 : 24) + (this.slot % 3) * 22;
+      this.sign.style.transform = `translate(calc(-50% + ${this.x.toFixed(1)}px), ${signY.toFixed(1)}px)`;
+      this.pop.style.left = (this.x + 18).toFixed(1) + 'px';
+      this.pop.style.top = (this.y - (this.intern ? 70 : 92)).toFixed(1) + 'px';
+    }
     this.placeBubble();
   }
 

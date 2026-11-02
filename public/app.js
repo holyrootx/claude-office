@@ -653,6 +653,13 @@ function onJoin(snap) {
   render();
 }
 
+// 연결 표시의 초록 점: 새 일이 들어오면 한 번 두근 (1.6초에 한 번까지)
+let beatTimer = 0;
+function beat() {
+  if (beatTimer) return;
+  $('conn').classList.add('beat');
+  beatTimer = setTimeout(() => { $('conn').classList.remove('beat'); beatTimer = 0; }, 1600);
+}
 function setConn(state, text) {
   $('conn').dataset.state = state;
   $('conn').querySelector('span').textContent = text;
@@ -669,7 +676,7 @@ function connect() {
   es.addEventListener('hello', e => { setConn('live', '실시간 · 0.25초 간격'); onHello(JSON.parse(e.data)); });
   es.addEventListener('join', e => onJoin(JSON.parse(e.data)));
   es.addEventListener('leave', e => retireSession(JSON.parse(e.data).sid));
-  es.addEventListener('events', e => { for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
+  es.addEventListener('events', e => { beat(); for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
 }
 
 // ───────────────────────── 세션 목록 ─────────────────────────
@@ -796,9 +803,27 @@ function step() {
   lastT = t;
   for (const a of actors) a.step(dt);
 }
-(function frame() { step(); requestAnimationFrame(frame); })();
+// 걸어가는 사람이 있을 때만 매 프레임 돈다. 다들 서 있으면 쉬면서 0.1초마다 한 번씩만 본다
+// (안 움직이는데 초당 60번 도는 건 CPU 낭비라서)
+let framing = false;
+const moving = () => { for (const a of actors) if (a.path.length) return true; return false; };
+function frame() {
+  step();
+  if (moving()) requestAnimationFrame(frame);
+  else framing = false;
+}
+office.wake = () => {
+  if (framing || document.hidden) return; // 가려진 탭은 아래 타이머가 진행시킨다
+  framing = true;
+  lastT = performance.now();
+  requestAnimationFrame(frame);
+};
 // 탭이 가려져 rAF가 멈춰도 걸음이 멈추지 않게 타이머로도 한 번씩 진행시킨다
-setInterval(() => { if (performance.now() - lastT > 150) step(); }, 100);
+// 0.1초마다: 누가 걷기 시작했는데 프레임이 쉬고 있으면 깨우고, 아니면(가려진 탭 등) 직접 한 걸음
+setInterval(() => {
+  if (moving() && !framing && !document.hidden) office.wake();
+  else if (performance.now() - lastT > 150) step();
+}, 100);
 setInterval(() => { for (const a of actors) if (!a.running) a.rest(); retireInterns(); tellFreed(); }, 500);
 
 // 사용 한도가 풀리는 때가 되면 알려 준다 (활동 기록 한 줄 + 알림). 10분 넘게 지난 건 조용히 넘어간다.

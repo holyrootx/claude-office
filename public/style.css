@@ -99,11 +99,16 @@ button, select { font: inherit; color: inherit; }
   font-size: 12px; color: var(--muted); white-space: nowrap;
 }
 .conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
-.conn[data-state="live"] i { background: var(--ok); box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); animation: live 1.6s infinite; }
+.conn i { position: relative; }
+.conn[data-state="live"] i { background: var(--ok); }
+/* 퍼지는 고리: box-shadow를 움직이면 매 프레임 다시 그리니까, 크기·투명도만 바꿔서 GPU가 혼자 그리게 한다 */
+.conn[data-state="live"] i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--ok); opacity: 0; }
+/* 새 일이 들어올 때마다 한 번 두근 (쉬는 동안엔 가만히) */
+.conn[data-state="live"].beat i::after { animation: live 1.6s ease-out; }
 .conn[data-state="live"] { color: var(--text-good); }
 .conn[data-state="off"] i { background: var(--bad); }
 .conn[data-state="demo"] i { background: #fbbf24; }
-@keyframes live { 70% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); } }
+@keyframes live { 0% { transform: scale(1); opacity: .6; } 70% { transform: scale(2.75); opacity: 0; } 100% { transform: scale(2.75); opacity: 0; } }
 
 .sess { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; }
 .sess b { font-weight: 600; white-space: nowrap; }
@@ -373,19 +378,20 @@ button, select { font: inherit; color: inherit; }
 /* ───────── 바닥 SVG ───────── */
 .room-glow { opacity: 0; transition: opacity .35s; }
 .room.active .room-glow { opacity: 1; }
-.led { animation: led 2.4s steps(2, jump-none) infinite; }
-.room-server.active .led { animation-duration: .5s; }
+/* 방 꾸밈(LED·지구본·레이더·김)은 그 방에 누가 일할 때만 움직인다.
+   큰 바닥 그림(SVG) 안에서 뭔가 움직이면 브라우저가 매 프레임 바닥 전체를 다시 그려서, 조용할 때는 멈춰 둔다 */
+.room-server.active .led { animation: led .5s steps(2, jump-none) infinite; }
 @keyframes led { 50% { opacity: .25; } }
 .code-line { transform-box: fill-box; transform-origin: left center; }
 .room-dev.active .code-line { animation: code 1.4s ease-in-out infinite; }
 @keyframes code { 0% { transform: scaleX(.2); } 60%, 100% { transform: scaleX(1); } }
-.globe-land { animation: spin 18s linear infinite; }
-.room-search.active .globe-land { animation-duration: 3s; }
+.room-search.active .globe-land { animation: spin 3s linear infinite; }
 @keyframes spin { from { transform: translateX(0); } to { transform: translateX(-120px); } }
-.radar { transform-box: fill-box; transform-origin: center; animation: radar 2.6s ease-out infinite; opacity: 0; }
-.room-search.active .radar { opacity: 1; }
+.radar { transform-box: fill-box; transform-origin: center; opacity: 0; }
+.room-search.active .radar { animation: radar 2.6s ease-out infinite; }
 @keyframes radar { from { transform: scale(.3); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
-.steam { animation: steam 2.8s ease-in-out infinite; transform-box: fill-box; }
+.steam { transform-box: fill-box; opacity: .35; }
+.room-desk.active .steam { animation: steam 2.8s ease-in-out infinite; }
 @keyframes steam { 0% { opacity: 0; transform: translateY(4px); } 40% { opacity: .7; } 100% { opacity: 0; transform: translateY(-8px); } }
 .screen-glow { transition: opacity .3s; opacity: .0; }
 .active .screen-glow { opacity: .9; }

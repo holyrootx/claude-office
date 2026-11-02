@@ -317,6 +317,13 @@ async function printJournal() {
   if (!j.projects.length) return console.log(j.today ? '  오늘은 아직 일한 기록이 없어요\n' : '  이날은 일한 기록이 없어요\n');
   const tok = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString()); // 화면과 같은 꼴 (12.3만)
   console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns} · 출력 토큰 ${tok(t.tokens)}\n`);
+  // 시간대별 도구 사용을 막대 글자로 (· 는 그 시간에 한 일이 없다는 뜻)
+  const max = Math.max(1, ...j.hours);
+  const bars = j.hours.map(n => (n ? '▁▂▃▄▅▆▇█'[Math.min(7, Math.floor((n / max) * 7.999))] : '·')).join('');
+  const axis = Array(24).fill(' ');
+  for (const h of [0, 6, 12, 18]) String(h).split('').forEach((c, i) => { axis[h + i] = c; });
+  console.log(`  시간대  ${bars}`);
+  console.log(`          ${axis.join('').trimEnd()}시\n`);
   for (const p of j.projects) {
     console.log(`  ${p.project}  ${hm(p.first)}~${hm(p.last)} · ${worked(p.workedMs)}`);
     console.log(`    메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${tok(p.tokens)}` : ''}`);

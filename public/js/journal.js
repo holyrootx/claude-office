@@ -25,6 +25,13 @@ export function createJournal({ toast, onPick }) {
       ['일한 시간', fmtWorked(t.workedMs)], ['프로젝트', t.projects], ['세션', t.sessions],
       ['내 메시지', t.prompts], ['도구', t.tools], ['실패', t.errors], ['인턴', t.interns], ['출력 토큰', fmtTokens(t.tokens || 0)],
     ].map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join('');
+    // 시간대별 도구 사용: 하루 리듬을 막대 24개로 (지금 시각은 진하게)
+    const hours = j.hours || [];
+    const maxH = Math.max(1, ...hours);
+    const nowH = j.today ? new Date().getHours() : -1;
+    $('journalHours').hidden = !hours.some(Boolean);
+    $('journalHours').innerHTML = hours.map((n, h) => `<i class="${h === nowH ? 'now' : ''}" style="--h:${Math.round((n / maxH) * 100)}%" title="${h}시 · 도구 ${n}번"></i>`).join('')
+      + [0, 6, 12, 18].map(h => `<span style="--c:${h + 1}">${h}시</span>`).join('');
     $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
       const max = Math.max(1, ...ROOM_IDS.map(r => p.rooms[r]));
       const rooms = ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round((p.rooms[r] / max) * 100)}%" title="${ROOMS[r].name} ${p.rooms[r]}번">${ROOMS[r].icon}<i></i><b>${p.rooms[r]}</b></span>`).join('');

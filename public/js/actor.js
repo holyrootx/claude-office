@@ -330,6 +330,10 @@ export class Actor {
 
   bookkeep(ev) {
     if (ev.ts) this.lastEventTs = Math.max(this.lastEventTs, ev.ts);
+    // 정보 카드에 쓸 숫자: 쓴 도구 수, 처음 일을 시작한 때 (인턴 카드에 보인다)
+    if (ev.ts && (!this.firstTs || ev.ts < this.firstTs)) this.firstTs = ev.ts;
+    if (ev.k === 'tool') this.toolCount = (this.toolCount || 0) + 1;
+    if (ev.k === 'say' && ev.final) this.doneTs = ev.ts;
     switch (ev.k) {
       case 'user': case 'agent': this.turnOpen = true; break;
       case 'think': if (ev.text) this.lastThought = ev.text; this.turnOpen = true; break;

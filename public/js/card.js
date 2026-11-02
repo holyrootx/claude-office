@@ -1,6 +1,6 @@
 // 캐릭터 정보 카드에 들어갈 내용(HTML). 어디에 띄울지는 app.js가 정한다.
 // 화면(DOM) 없이 글자만 만들어서 테스트할 수 있다.
-import { esc, clip, resumeCommand } from './util.js';
+import { esc, clip, resumeCommand, secs } from './util.js';
 
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
@@ -9,6 +9,14 @@ const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용',
 // s: 세션 { sid, info, color, stats, interns, main }
 // ctx: ctxOf(s) 결과 (인턴은 null)
 // live: 실제 세션을 보는 중(데모·다시 보기가 아님), pinned: 이 세션만 보는 중, win: 이어 하기 명령을 PowerShell 꼴로
+// 인턴은 맡은 일을 얼마나 했는지: 쓴 도구 수와 일한 시간 (끝났으면 '3분 일했어요', 하는 중이면 '3분 20초째')
+function internNums(a, now = Date.now()) {
+  if (!a.firstTs) return '';
+  const sec = Math.max(0, Math.round(((a.doneTs || now) - a.firstTs) / 1000));
+  const time = a.doneTs ? `${sec >= 60 ? Math.round(sec / 60) + '분' : sec + '초'} 일했어요` : secs(sec);
+  return `<div class="card-nums">도구 ${a.toolCount || 0}번 · ${time}</div>`;
+}
+
 export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win = false } = {}) {
   const info = s.info;
   // 지금 하위 폴더에 있으면 그 폴더도 (📂 frontend), 워크트리면 그 이름 (🌿 fix-login)
@@ -32,7 +40,7 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
   const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 내 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
-  const nums = a.intern ? '' : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
+  const nums = a.intern ? internNums(a) : `<div class="card-nums">도구 ${s.stats.tools} · 실패 ${s.stats.errors} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const acts = !a.intern && live
     ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>${pinned ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`

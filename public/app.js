@@ -261,6 +261,9 @@ function pickColor(sid) {
 function addIntern(s, a) {
   const it = new Actor(office, { key: `${s.sid}:${a.id}`, sid: s.sid, agent: a.id, intern: true, name: a.type || '인턴', color: s.color, floor: s.floor });
   it.desc = a.desc || '';
+  // 정보 카드의 '도구 n번 · n분째': 화면이 받지 못한 앞부분까지 (서버가 알려 준다)
+  if (a.startTs) it.firstTs = a.startTs;
+  it.toolCount = a.toolsBefore || 0;
   s.interns.set(a.id, it);
   actors.add(it);
   return it;
@@ -316,7 +319,7 @@ function applyUpdate(u) {
       a = s.interns.get(ev.agent);
       if (!a || a.leaving) {
         // 새 인턴은 복도에서 걸어 들어온다
-        a = addIntern(s, { id: ev.agent, type: ev.k === 'agent' ? ev.type : '', desc: ev.desc });
+        a = addIntern(s, { id: ev.agent, type: ev.k === 'agent' ? ev.type : '', desc: ev.desc, startTs: ev.startTs, toolsBefore: ev.toolsBefore });
         a.appearInHall(ROOMS.meeting.door);
       }
     }

@@ -59,11 +59,15 @@ test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에
   assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true, win: true }), /cd &quot;C:\\code\\shop&quot;; claude --resume sid-1/);
 });
 
-test('인턴 카드: 누구의 인턴인지만, 숫자·버튼·비용은 없다', () => {
-  const html = cardHtml({ intern: true, name: 'Explore', desc: '원인 찾기', now }, session({ cost: { usd: 3 } }), { live: true });
+test('인턴 카드: 누구의 인턴인지와 얼마나 일했는지, 버튼·비용은 없다', () => {
+  const intern = { intern: true, name: 'Explore', desc: '원인 찾기', now, firstTs: Date.now() - 200000, toolCount: 12 };
+  const html = cardHtml(intern, session({ cost: { usd: 3 } }), { live: true });
   assert.match(html, /<em>인턴<\/em> Explore/);
   assert.match(html, /원인 찾기 · 로그인 401 고치기의 인턴/);
-  assert.doesNotMatch(html, /card-nums|card-acts|💵/);
+  assert.match(html, /도구 12번 · 3분 20초째/);
+  assert.doesNotMatch(html, /card-acts|💵/);
+  // 일을 마쳤으면 걸린 시간으로
+  assert.match(cardHtml({ ...intern, doneTs: intern.firstTs + 300000 }, session(), { live: true }), /도구 12번 · 5분 일했어요/);
 });
 
 test('PR 주소가 http(s)가 아니면 링크로 만들지 않는다', () => {

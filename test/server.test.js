@@ -174,6 +174,7 @@ test('새 인턴이 생기면 소개 이벤트 뒤에 그 인턴이 한 일을 �
   assert.ok(intro, '소개 이벤트');
   assert.equal(intro.type, 'general-purpose');
   assert.equal(intro.parent, 's9');
+  assert.ok(intro.startTs > 0 && typeof intro.toolsBefore === 'number'); // 정보 카드의 '도구 n번 · n분째'용
   toolResult(f, 'n1', false, { isSidechain: true, agentId: 'new2' });
   finalSay(f, '문서는 최신이에요', { isSidechain: true, agentId: 'new2' });
   const fin = await until(() => s.updates(SHOP).flatMap(x => x.events).find(e => e.agent === 'new2' && e.k === 'say' && e.final));

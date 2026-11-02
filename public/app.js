@@ -101,7 +101,7 @@ const replay = createReplay({
   },
   beforeStart: () => {
     stopDemo(false);
-    if (es) { es.close(); es = null; }
+    disconnect();
     floorAuto = true;
   },
   hello: d => onHello(d),
@@ -662,16 +662,30 @@ function beat() {
 function setConn(state, text) {
   $('conn').dataset.state = state;
   $('conn').querySelector('span').textContent = text;
+  $('conn').title = state === 'off' ? '터미널에서 npx claude-office (또는 node server.js)로 다시 켜 주세요' : '';
 }
 
+// 서버가 꺼졌으면(--stop, 컴퓨터를 껐다 켬 등) 브라우저가 1.5초마다 다시 붙으려는 걸 멈추고
+// 점점 뜸하게(최대 30초) 다시 해 본다. 서버를 다시 켜면 알아서 이어진다.
+let retryTimer = 0, fails = 0;
+function disconnect() {
+  clearTimeout(retryTimer);
+  if (es) { es.close(); es = null; }
+}
 function connect() {
-  if (es) es.close();
+  disconnect();
   const want = $('sessionSelect').value || 'all';
   viewMode = want === 'all' || want === 'auto' ? want : 'file';
   es = new EventSource('/api/stream?file=' + encodeURIComponent(want));
-  setConn('wait', '연결 중…');
-  es.onopen = () => setConn('live', '실시간 · 0.25초 간격');
-  es.onerror = () => setConn('off', '재연결 중…');
+  if (fails < 3) setConn('wait', '연결 중…'); // 꺼져 있다고 알린 뒤로는 다시 해 보는 동안에도 그 말을 그대로 둔다
+  es.onopen = () => { fails = 0; setConn('live', '실시간 · 0.25초 간격'); };
+  es.onerror = () => {
+    fails++;
+    if (fails < 3) return setConn('off', '재연결 중…');
+    disconnect();
+    setConn('off', '사무실 서버가 꺼져 있어요 · 다시 켜면 이어져요');
+    retryTimer = setTimeout(connect, Math.min(30000, 2000 * 2 ** (fails - 3)));
+  };
   es.addEventListener('hello', e => { setConn('live', '실시간 · 0.25초 간격'); onHello(JSON.parse(e.data)); });
   es.addEventListener('join', e => onJoin(JSON.parse(e.data)));
   es.addEventListener('leave', e => retireSession(JSON.parse(e.data).sid));
@@ -717,7 +731,7 @@ async function loadSessions(keepFile) {
 function startDemo() {
   stopDemo(false);
   replay.stop(false);
-  if (es) { es.close(); es = null; }
+  disconnect();
   floorAuto = true;
   onHello({ mode: 'demo', root: '', sessions: DEMO_SESSIONS.map(s => ({ ...s, session: { ...s.session, mtime: Date.now() }, stats: emptyStats() })) });
   setConn('demo', '데모 재생 중');
@@ -919,7 +933,7 @@ loadSessions(saved).then(() => {
   if (new URLSearchParams(location.search).has('demo')) startDemo();
   else connect();
 });
-setInterval(loadSessions, 15000);
+setInterval(() => { if ($('conn').dataset.state !== 'off') loadSessions(); }, 15000); // 서버가 꺼져 있으면 쉰다
 
 // 콘솔에서 이벤트를 직접 넣어 볼 수 있게 (예: officeDebug.ingest([{k:'think', text:'테스트'}]))
 window.officeDebug = {

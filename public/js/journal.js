@@ -2,8 +2,8 @@
 import { $, esc, clip, hhmmss, fmtTokens } from './util.js';
 import { ROOMS, ROOM_IDS } from './scene.js';
 
-// toast: 짧은 안내, onPick(file): 세션을 골랐을 때 (다시 보기 시작)
-export function createJournal({ toast, onPick }) {
+// toast: 짧은 안내, onPick(file): 세션을 골랐을 때 (다시 보기 시작), copy(text): 클립보드에 넣기 (되면 true)
+export function createJournal({ toast, onPick, copy }) {
   const fmtWorked = ms => {
     const m = Math.round(ms / 60000);
     return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
@@ -16,6 +16,7 @@ export function createJournal({ toast, onPick }) {
     try { j = await (await fetch('/api/journal?day=' + want)).json(); } catch { return toast('업무 일지를 읽지 못했어요'); }
     if (ask !== asked) return;
     day = want;
+    fetch(`/api/journal?day=${want}&format=md`).then(r => r.text()).then(text => { if (day === want) md = { day: want, text }; }, () => {});
     const d = new Date(j.since);
     const rel = j.today ? '오늘' : day === -1 ? '어제' : `${-day}일 전`;
     $('journalTitle').innerHTML = `📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지<small>${rel}</small>`;
@@ -48,7 +49,18 @@ export function createJournal({ toast, onPick }) {
 
   const prev = () => openJournal(day - 1);
   const next = () => day < 0 && openJournal(day + 1);
+  // 보고 있는 날의 일지를 마크다운으로 복사 (하루 보고·스탠드업에 붙여 넣기)
+  // 마크다운은 일지를 열 때 미리 받아 둔다: 누른 순간 바로 복사해야 Safari도 클립보드를 허락한다
+  let md = null;
+  async function copyMarkdown() {
+    let text = md && md.day === day ? md.text : null;
+    if (text == null) {
+      try { text = await (await fetch(`/api/journal?day=${day}&format=md`)).text(); } catch { return toast('업무 일지를 읽지 못했어요'); }
+    }
+    toast((await copy(text)) ? '📋 일지를 마크다운으로 복사했어요' : '복사하지 못했어요');
+  }
   $('journalBtn').addEventListener('click', () => openJournal(0));
+  $('journalCopy').addEventListener('click', copyMarkdown);
   $('journalPrev').addEventListener('click', prev);
   $('journalNext').addEventListener('click', next);
   $('journalClose').addEventListener('click', closeJournal);

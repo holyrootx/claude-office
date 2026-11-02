@@ -21,6 +21,7 @@ const {
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
+const { journalText, journalMarkdown } = require('./lib/report');
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줍니다.
@@ -36,6 +37,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
                     날은 비우면 오늘, 어제·-2(그저께)·2026-10-31처럼 고를 수 있어요
+                    --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
     -h, --help      이 도움말
 `);
   process.exit(0);
@@ -118,7 +120,13 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/journal') {
     // ?day=-1 (어제) 또는 ?day=2026-10-31. 없으면 오늘
-    journal(url.searchParams.get('day') || 0).then(j => json(res, j), e => {
+    // ?format=md면 슬랙·노션에 붙여 넣을 마크다운 글로
+    const md = url.searchParams.get('format') === 'md';
+    journal(url.searchParams.get('day') || 0).then(j => {
+      if (!md) return json(res, j);
+      res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(journalMarkdown(j));
+    }, e => {
       console.error('[journal]', e.message);
       res.writeHead(500);
       res.end();
@@ -300,7 +308,7 @@ function printHooks() {
 // --journal 뒤에 어제·yesterday·-2·2026-10-31을 붙이면 그날 일지
 function journalDay() {
   const v = args[args.indexOf('--journal') + 1];
-  if (!v || v.startsWith('--')) return 0;
+  if (!v || v.startsWith('--')) return 0; // --journal --md 처럼 바로 다른 옵션이면 오늘
   if (v === '어제' || v === 'yesterday') return -1;
   if (v === '오늘' || v === 'today') return 0;
   return v;
@@ -308,30 +316,7 @@ function journalDay() {
 
 async function printJournal() {
   const j = await journal(journalDay());
-  const worked = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
-  const hm = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-  const icons = { library: '📚', dev: '💻', server: '🖥️', search: '🌐', meeting: '🗂️', desk: '🙋' };
-  const d = new Date(j.since);
-  const t = j.totals;
-  console.log(`\n  📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지`);
-  if (!j.projects.length) return console.log(j.today ? '  오늘은 아직 일한 기록이 없어요\n' : '  이날은 일한 기록이 없어요\n');
-  const tok = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString()); // 화면과 같은 꼴 (12.3만)
-  console.log(`  일한 시간 ${worked(t.workedMs)} · 프로젝트 ${t.projects} · 세션 ${t.sessions} · 내 메시지 ${t.prompts} · 도구 ${t.tools} · 실패 ${t.errors} · 인턴 ${t.interns} · 출력 토큰 ${tok(t.tokens)}\n`);
-  // 시간대별 도구 사용을 막대 글자로 (· 는 그 시간에 한 일이 없다는 뜻)
-  const max = Math.max(1, ...j.hours);
-  const bars = j.hours.map(n => (n ? '▁▂▃▄▅▆▇█'[Math.min(7, Math.floor((n / max) * 7.999))] : '·')).join('');
-  const axis = Array(24).fill(' ');
-  for (const h of [0, 6, 12, 18]) String(h).split('').forEach((c, i) => { axis[h + i] = c; });
-  console.log(`  시간대  ${bars}`);
-  console.log(`          ${axis.join('').trimEnd()}시\n`);
-  for (const p of j.projects) {
-    console.log(`  ${p.project}  ${hm(p.first)}~${hm(p.last)} · ${worked(p.workedMs)}`);
-    console.log(`    메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${tok(p.tokens)}` : ''}`);
-    console.log('    ' + Object.entries(icons).map(([r, i]) => `${i} ${p.rooms[r]}`).join('  '));
-    for (const s of p.sessions) console.log(`    - ${s.title} (${worked(s.workedMs)})`);
-    console.log('');
-  }
-  console.log('  (일한 시간은 기록 사이 간격이 5분보다 짧은 것만 더해요)\n');
+  console.log(args.includes('--md') ? journalMarkdown(j) : journalText(j));
 }
 
 if (require.main === module) {

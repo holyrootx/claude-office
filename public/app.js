@@ -76,7 +76,7 @@ const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: 
 const signs = {}, statRows = {};
 const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1 });
 const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
-const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => replay.start(file) });
+const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => replay.start(file), copy: text => copyText(text) });
 const replay = createReplay({
   pickFile: () => {
     const focus = focusActor([...actors].filter(a => a.floor === current));

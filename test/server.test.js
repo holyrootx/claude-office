@@ -212,6 +212,9 @@ test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', a
   assert.equal(j.hours.length, 24); // 시간대별 도구 사용
   assert.equal(j.hours.reduce((a, b) => a + b, 0), j.totals.tools);
   assert.ok(j.hours[new Date().getHours()] >= 2); // 방금 쓴 도구는 지금 시간대에
+  const md = await get('/api/journal?format=md');
+  assert.match(md.headers['content-type'], /text\/markdown/);
+  assert.match(md.body, /### shop/);
   assert.ok(!j.projects.some(p => p.sessions.some(s => s.id === OLD)) || fs.statSync(old).mtimeMs >= j.since); // 오늘 안 움직인 세션은 빠진다
   assert.equal(j.totals.projects, j.projects.length);
 });
@@ -238,6 +241,7 @@ test('업무 일지를 터미널에도 출력한다 (--journal)', () => {
   assert.match(out, /\bshop\b/);
   assert.match(out, /일한 시간/);
   assert.match(out, /시간대  [·▁▂▃▄▅▆▇█]{24}/);
+  assert.match(server('--journal', '--md'), /^## \d+월 \d+일 업무 일지/m); // 슬랙·노션에 붙여 넣을 마크다운
 });
 
 test('일한 시간은 5분보다 짧은 간격만 더한다', () => {

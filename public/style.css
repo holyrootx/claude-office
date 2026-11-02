@@ -290,6 +290,8 @@ button, select { font: inherit; color: inherit; }
 }
 .lb:hover { filter: brightness(1.15); }
 .lb:focus-visible { outline: 2px solid var(--claude); outline-offset: 1px; }
+/* 키보드로 옮겨 다닐 때 지금 어디 있는지 또렷하게 (마우스로 누를 때는 안 보인다) */
+button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
 .lb b { grid-area: f; font: 700 11px var(--mono); color: var(--muted); align-self: center; }
 .lb .nm { grid-area: nm; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb .ctx { grid-area: ctx; height: 3px; margin-top: 4px; background: var(--panel); }
@@ -704,6 +706,7 @@ button, select { font: inherit; color: inherit; }
   .panel { padding: 12px; }
   .rs { grid-template-columns: 88px 1fr 34px; }
 }
+/* 움직임 줄이기를 켠 사람에게는 반복·장식 애니메이션을 다 끈다 (걸어가는 것은 자리 옮김이라 그대로) */
 @media (prefers-reduced-motion: reduce) {
-  .claude *, .led, .globe-land, .steam, .radar, .bubble.permit, .now-icon, .fl.wait, .stage.arrive * { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

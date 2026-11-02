@@ -36,15 +36,23 @@ export function createJournal({ toast, onPick, copy }) {
     $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
       const max = Math.max(1, ...ROOM_IDS.map(r => p.rooms[r]));
       const rooms = ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round((p.rooms[r] / max) * 100)}%" title="${ROOMS[r].name} ${p.rooms[r]}번">${ROOMS[r].icon}<i></i><b>${p.rooms[r]}</b></span>`).join('');
-      const list = p.sessions.map(s => `<li data-file="${esc(s.file)}" title="누르면 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`).join('');
+      const list = p.sessions.map(s => `<li data-file="${esc(s.file)}" tabindex="0" role="button" title="누르면 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`).join('');
       return `<section class="jp"><h3>${esc(p.project)} <small>${hhmmss(p.first).slice(0, 5)} ~ ${hhmmss(p.last).slice(0, 5)} · ${fmtWorked(p.workedMs)}</small></h3>`
         + `<div class="jp-nums">메시지 ${p.prompts} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${fmtTokens(p.tokens)}` : ''}</div>`
         + `<div class="jp-rooms">${rooms}</div><ul>${list}</ul></section>`;
     }).join('') : `<p class="jp-empty">${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`;
-    $('journal').hidden = false;
+    if ($('journal').hidden) {
+      // 창을 열면 키보드 초점을 창 안으로 옮기고, 닫을 때 원래 자리(📓 버튼 등)로 돌려준다
+      returnFocus = document.activeElement;
+      $('journal').hidden = false;
+      $('journalClose').focus();
+    }
   }
+  let returnFocus = null;
   function closeJournal() {
     $('journal').hidden = true;
+    if (returnFocus && returnFocus.isConnected) returnFocus.focus();
+    returnFocus = null;
   }
 
   const prev = () => openJournal(day - 1);
@@ -64,13 +72,21 @@ export function createJournal({ toast, onPick, copy }) {
   $('journalPrev').addEventListener('click', prev);
   $('journalNext').addEventListener('click', next);
   $('journalClose').addEventListener('click', closeJournal);
+  const pick = li => {
+    closeJournal();
+    onPick(li.dataset.file);
+  };
   $('journal').addEventListener('click', e => {
     if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기
     const li = e.target.closest('li[data-file]');
-    if (li) {
-      closeJournal();
-      onPick(li.dataset.file);
-    }
+    if (li) pick(li);
+  });
+  // 키보드로 세션 줄을 고르고 Enter·Space로 다시 보기
+  $('journal').addEventListener('keydown', e => {
+    const li = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('li[data-file]');
+    if (!li) return;
+    e.preventDefault();
+    pick(li);
   });
   return { open: openJournal, close: closeJournal, prev, next, isOpen: () => !$('journal').hidden };
 }

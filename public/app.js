@@ -785,12 +785,18 @@ function buildHelp() {
       ['<kbd>?</kbd> · <kbd>Esc</kbd>', '이 도움말 · 창 닫기'],
     ])}</dl>`;
 }
+// 도움말 창도 열면 초점을 창 안으로, 닫으면 원래 자리로
+let helpReturn = null;
 function openHelp() {
   if (!$('helpBody').innerHTML) buildHelp();
+  helpReturn = document.activeElement;
   $('help').hidden = false;
+  $('helpClose').focus();
 }
 function closeHelp() {
   $('help').hidden = true;
+  if (helpReturn && helpReturn.isConnected) helpReturn.focus();
+  helpReturn = null;
 }
 
 // ───────────────────────── 시작 ─────────────────────────

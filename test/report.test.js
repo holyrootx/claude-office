@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { journalText, journalMarkdown } = require('../lib/report');
+const { journalText, journalMarkdown, parseDay } = require('../lib/report');
 
 const since = new Date(2026, 10, 2).getTime();
 const at = (h, m) => new Date(2026, 10, 2, h, m).getTime();
@@ -33,4 +33,19 @@ test('터미널: 시간대 막대와 방별 사용량도 나온다', () => {
   assert.match(t, /📓 11월 2일 업무 일지/);
   assert.match(t, /시간대  ·········▄····█·········/);
   assert.match(t, /📚 6  💻 4  🖥️ 3/);
+});
+
+test('--journal 뒤에 적은 날: 오늘·어제·그저께, -3·3일 전, 10/31·10월 31일, 2026-10-31', () => {
+  const now = new Date(2026, 10, 3, 23, 0); // 11월 3일
+  for (const [v, want] of [['', 0], ['오늘', 0], ['today', 0], ['어제', -1], ['Yesterday', -1], ['그저께', -2], ['그제', -2], ['-3', -3], ['3일 전', -3], ['3일전', -3]]) {
+    assert.equal(parseDay(v, now), want, v);
+  }
+  assert.equal(parseDay('2026-10-31', now), '2026-10-31');
+  assert.equal(parseDay('2026-1-5', now), '2026-01-05');
+  assert.equal(parseDay('10/31', now), '2026-10-31');
+  assert.equal(parseDay('10.31', now), '2026-10-31');
+  assert.equal(parseDay('10월 31일', now), '2026-10-31');
+  assert.equal(parseDay('12월 25일', now), '2025-12-25'); // 아직 안 온 날은 작년
+  // 모르는 말·없는 날은 오늘로 넘기지 않고 null (터미널에 무엇이 틀렸는지 알려 준다)
+  for (const v of ['abc', '2026-13-45', '2/30', '내일']) assert.equal(parseDay(v, now), null, v);
 });

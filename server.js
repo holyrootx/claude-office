@@ -21,7 +21,7 @@ const {
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
-const { journalText, journalMarkdown } = require('./lib/report');
+const { journalText, journalMarkdown, parseDay } = require('./lib/report');
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 ${VERSION} — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줘요.
@@ -36,7 +36,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --active <분>   빌딩에 머무는 시간 (기본 30분: 그동안 움직임이 없으면 퇴근, 다시 움직이면 출근)
     --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
-                    날은 비우면 오늘, 어제·-2(그저께)·2026-10-31처럼 고를 수 있어요
+                    날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요
                     --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
     -v, --version   버전
     -h, --help      이 도움말
@@ -322,17 +322,23 @@ function printHooks() {
 }
 
 // 오늘의 업무 일지를 터미널에 (브라우저의 📓과 같은 내용)
-// --journal 뒤에 어제·yesterday·-2·2026-10-31을 붙이면 그날 일지
+// --journal 뒤에 어제·그저께·-3·3일 전·10월 31일·2026-10-31을 붙이면 그날 일지 (lib/report.js parseDay)
+// '10월 31일'처럼 띄어 쓴 날도 받으려고, 다음 --옵션 전까지를 이어 붙인다
 function journalDay() {
-  const v = args[args.indexOf('--journal') + 1];
-  if (!v || v.startsWith('--')) return 0; // --journal --md 처럼 바로 다른 옵션이면 오늘
-  if (v === '어제' || v === 'yesterday') return -1;
-  if (v === '오늘' || v === 'today') return 0;
-  return v;
+  const rest = args.slice(args.indexOf('--journal') + 1);
+  const end = rest.findIndex(a => a.startsWith('--'));
+  return (end < 0 ? rest : rest.slice(0, end)).join(' ');
 }
 
 async function printJournal() {
-  const j = await journal(journalDay());
+  const v = journalDay();
+  const day = parseDay(v);
+  if (day === null) {
+    console.log(`\n  ⚠ 어느 날인지 모르겠어요: ${v}\n    오늘·어제·그저께, -3이나 3일 전, 10/31이나 10월 31일, 2026-10-31처럼 적어 주세요.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const j = await journal(day);
   console.log(args.includes('--md') ? journalMarkdown(j) : journalText(j));
 }
 

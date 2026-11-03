@@ -901,7 +901,9 @@ el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 �
 $('helpBtn').addEventListener('click', openHelp);
 $('helpClose').addEventListener('click', closeHelp);
 $('help').addEventListener('click', e => { if (e.target === e.currentTarget) closeHelp(); });
-// 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동
+// 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동, J 업무 일지
+// (J는 한글 자판(ㅓ)에서도 되게 자리(code)로도 본다)
+const isJ = e => e.key === 'j' || e.key === 'J' || e.code === 'KeyJ';
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
   if (cardActor && e.key === 'Escape') return closeCard();
@@ -910,12 +912,13 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (journal.isOpen()) {
-    if (e.key === 'Escape') journal.close();
+    if (e.key === 'Escape' || isJ(e)) journal.close();
     if (e.key === 'ArrowLeft') journal.prev();
     if (e.key === 'ArrowRight') journal.next();
     return;
   }
   if (e.key === '?') return openHelp();
+  if (isJ(e)) return journal.open(0);
   if (replay.isOn() && e.key === ' ') {
     e.preventDefault();
     replay.togglePause();

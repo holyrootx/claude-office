@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
+  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
 } = require('./lib/config');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
@@ -24,7 +24,7 @@ const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayO
 const { journalText, journalMarkdown } = require('./lib/report');
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
-  Claude 사무실 — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줍니다.
+  Claude 사무실 ${VERSION} — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줘요.
 
   사용법: claude-office [옵션]   (또는 node server.js [옵션])
 
@@ -38,8 +38,13 @@ if (args.includes('--help') || args.includes('-h')) {
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
                     날은 비우면 오늘, 어제·-2(그저께)·2026-10-31처럼 고를 수 있어요
                     --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
+    -v, --version   버전
     -h, --help      이 도움말
 `);
+  process.exit(0);
+}
+if (args.includes('--version') || args.includes('-v')) {
+  console.log(`claude-office ${VERSION}`);
   process.exit(0);
 }
 
@@ -332,6 +337,11 @@ async function printJournal() {
 }
 
 if (require.main === module) {
+  const problem = argProblem();
+  if (problem) {
+    console.log(`\n  ⚠ ${problem}\n    쓸 수 있는 옵션은 claude-office --help 로 볼 수 있어요.\n`);
+    process.exit(1);
+  }
   if (args.includes('--journal')) printJournal();
   else if (args.includes('--print-hooks')) printHooks();
   else if (args.includes('--stop')) stopServer();

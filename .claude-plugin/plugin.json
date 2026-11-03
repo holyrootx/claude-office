@@ -1,7 +1,7 @@
 {
   "name": "office",
   "displayName": "Claude 사무실",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Claude Code가 지금 하는 일을 사무실 캐릭터로 보여 주는 실시간 화면. 권한 확인 창이 뜨면 캐릭터가 내 자리로 와서 기다려요.",
   "author": { "name": "holyrootx" },
   "homepage": "https://github.com/holyrootx/claude-office#readme",

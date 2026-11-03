@@ -18,7 +18,10 @@ test('인턴이 20분 동안 일하는 사이 메인 기록이 조용해도 그 
   const dir = path.join(CFG, 'projects', '-tmp-shop');
   const sid = '33333333-0000-0000-0000-000000000000';
   fs.mkdirSync(path.join(dir, sid, 'subagents'), { recursive: true });
-  const t0 = Date.now() - 30 * 60000;
+  // 30분 전에 시작한 일. 다만 자정 직후에 돌리면 어제로 넘어가니 오늘 0시 1분보다 앞으로는 가지 않는다
+  // (일지는 그날 뒤에 생긴 파일은 보지 않아서 어제 날짜로 옮길 수는 없다)
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  const t0 = Math.max(midnight + 60000, Date.now() - 30 * 60000);
   const at = m => new Date(t0 + m * 60000).toISOString();
   const lines = list => list.map(o => JSON.stringify({ cwd: '/tmp/shop', ...o })).join('\n') + '\n';
   // 메인: 0분에 인턴에게 맡기고, 20분에 결과를 받는다 (그 사이 기록 없음)

@@ -190,6 +190,8 @@ button, select { font: inherit; color: inherit; }
 .card-ctx { display: flex; margin-bottom: 6px; flex-wrap: wrap; row-gap: 2px; }
 .card-ctx small { flex-basis: 100%; color: var(--faint); font: 11px var(--mono); }
 .card-nums { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.card-fails { font: inherit; color: var(--text-bad); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.card-fails:hover { text-decoration-style: solid; }
 .card-extra { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .card-extra i { font-style: normal; margin: 0 6px; color: var(--faint); }
 .card-extra a { color: var(--text-link); text-decoration: none; }

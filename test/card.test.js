@@ -27,7 +27,7 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
   }), { ctx: { p: 72, level: 'mid', text: '14.4만 / 20만 토큰' }, live: true });
   assert.match(html, /<b>로그인 401 고치기<\/b><small>shop · opus-5-5 · ⎇ fix\/auth<\/small>/);
   assert.match(html, /12초째/);
-  assert.match(html, /도구 7 · 실패 1 · 내 메시지 2 · 인턴 1명/);
+  assert.match(html, /도구 7 · <button[^>]*data-act="fails"[^>]*>실패 1<\/button> · 내 메시지 2 · 인턴 1명/);
   assert.match(html, /href="https:\/\/github.com\/o\/r\/pull\/86"/);
   assert.match(html, /\$1\.23 · \+10 −2줄/);
   assert.match(html, /🛡 계획 모드/);
@@ -68,6 +68,15 @@ test('인턴 카드: 누구의 인턴인지와 얼마나 일했는지, 버튼·�
   assert.doesNotMatch(html, /card-acts|💵/);
   // 일을 마쳤으면 걸린 시간으로
   assert.match(cardHtml({ ...intern, doneTs: intern.firstTs + 300000 }, session(), { live: true }), /도구 12번 · 5분 일했어요/);
+});
+
+test("실패가 있으면 '실패 N'을 누르면 활동 기록의 실패만 보기로 간다 (0이면 그냥 글자)", () => {
+  const none = session();
+  none.stats = { tools: 3, errors: 0, prompts: 1 };
+  assert.match(cardHtml(main, none, { live: true }), /도구 3 · 실패 0 · 내 메시지 1/);
+  assert.doesNotMatch(cardHtml(main, none, { live: true }), /data-act="fails"/);
+  // 데모·다시 보기에서도 활동 기록은 있으니 누를 수 있다
+  assert.match(cardHtml(main, session(), { live: false }), /data-act="fails"/);
 });
 
 test('PR 주소가 http(s)가 아니면 링크로 만들지 않는다', () => {

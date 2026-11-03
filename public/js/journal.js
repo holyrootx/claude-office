@@ -10,11 +10,18 @@ export function createJournal({ toast, onPick, copy }) {
   };
   let day = 0; // 0 = 오늘, -1 = 어제 …
   let asked = 0; // ◀를 빨리 여러 번 눌렀을 때 마지막 것만 그린다
+  let loading = false; // 받아 오는 중 (창은 아직 안 떴지만 Esc·J로 그만둘 수 있게 열린 셈 친다)
   async function openJournal(want = 0) {
     const ask = ++asked;
+    loading = true;
     let j;
-    try { j = await (await fetch('/api/journal?day=' + want)).json(); } catch { return toast('업무 일지를 읽지 못했어요'); }
+    try { j = await (await fetch('/api/journal?day=' + want)).json(); } catch {
+      if (ask !== asked) return;
+      loading = false;
+      return toast('업무 일지를 읽지 못했어요');
+    }
     if (ask !== asked) return;
+    loading = false;
     day = want;
     fetch(`/api/journal?day=${want}&format=md`).then(r => r.text()).then(text => { if (day === want) md = { day: want, text }; }, () => {});
     const d = new Date(j.since);
@@ -50,6 +57,8 @@ export function createJournal({ toast, onPick, copy }) {
   }
   let returnFocus = null;
   function closeJournal() {
+    asked++; // 아직 받는 중인 일지는 버린다 (누르자마자 Esc를 누르면 닫힌 뒤에 뜨지 않게)
+    loading = false;
     $('journal').hidden = true;
     if (returnFocus && returnFocus.isConnected) returnFocus.focus();
     returnFocus = null;
@@ -88,5 +97,5 @@ export function createJournal({ toast, onPick, copy }) {
     e.preventDefault();
     pick(li);
   });
-  return { open: openJournal, close: closeJournal, prev, next, isOpen: () => !$('journal').hidden };
+  return { open: openJournal, close: closeJournal, prev, next, isOpen: () => !$('journal').hidden || loading };
 }

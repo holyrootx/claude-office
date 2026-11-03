@@ -17,8 +17,10 @@ const KNOWN_TYPES = new Set([
   'user', 'assistant', 'system', 'summary', 'custom-title', 'ai-title', 'agent-name', 'last-prompt',
   'queue-operation', 'pr-link', 'cost-state', 'mode', 'attachment', 'file-history-snapshot', 'file-history-delta',
   'atis-latch', 'bridge-session', 'frame-link', 'artifact-comment-monitor', 'artifact-autoreact-ledger',
+  'api-request', 'api-request-blob', 'api-request-shape', // 디버그용 API 요청 기록 (화면에 보일 게 없다)
 ]);
-const KNOWN_SYSTEM = new Set(['compact_boundary', 'stop_hook_summary', 'turn_duration', 'api_error']);
+// informational: '자리 비운 동안 쓴 요약으로 압축했어요' 같은 안내. 압축은 compact_boundary(precomputed)로 이미 안다
+const KNOWN_SYSTEM = new Set(['compact_boundary', 'stop_hook_summary', 'turn_duration', 'api_error', 'informational']);
 
 const fmt = n => n.toLocaleString();
 

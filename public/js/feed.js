@@ -1,5 +1,5 @@
 // 오른쪽 활동 기록: 이벤트 하나를 한 줄로 쌓는다. 도구 줄에는 나중에 성공(✓)·실패(✗)를 붙인다.
-import { esc, clip, stamp, fmtTokens } from './util.js';
+import { esc, clip, stamp, fmtTokens, compactHow } from './util.js';
 import { ROOMS } from './scene.js';
 
 const MAX_LINES = 200;
@@ -44,7 +44,7 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         tx = `<b>${ev.kind === 'input' ? '입력 대기' : '권한 확인 대기'}</b> ${ev.tool ? `${esc(ev.tool)} ${esc(ev.label || '')}` : esc(ev.text || '')}`;
         break;
       case 'interrupt': ic = '✋'; cls = 'err'; tx = '사용자가 작업을 중단했어요'; break;
-      case 'compact': ic = '🗜'; tx = `<b>대화 압축</b>${ev.pre && ev.post ? ` ${fmtTokens(ev.pre)} → ${fmtTokens(ev.post)} 토큰${ev.trigger === 'manual' ? ' (내가 요청)' : ' (자동)'}` : ''}`; break;
+      case 'compact': ic = '🗜'; tx = `<b>대화 압축</b>${ev.pre && ev.post ? ` ${fmtTokens(ev.pre)} → ${fmtTokens(ev.post)} 토큰` : ''} (${compactHow(ev)})`; break;
       case 'note': // 백그라운드 작업이 끝났다는 알림, 다른 세션이 보낸 말
         ic = ev.kind === 'peer' ? '📨' : ev.ok ? '🔔' : '⚠';
         cls = ev.ok ? '' : 'err';

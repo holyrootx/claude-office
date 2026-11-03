@@ -16,6 +16,13 @@ export const stamp = (ts, withDate) => {
 };
 // 548123 → '54.8만'
 export const fmtTokens = n => (n >= 10000 ? `${(n / 10000).toFixed(1).replace(/\.0$/, '')}만` : Number(n || 0).toLocaleString());
+// 대화 압축을 어떻게 했는지: '자동 · 57초 걸림', '내가 요청 · 1분 3초 걸림', '쉬는 동안 미리 써 둔 요약'
+export function compactHow(ev) {
+  if (ev.idle) return '쉬는 동안 미리 써 둔 요약';
+  const s = Math.round((ev.ms || 0) / 1000);
+  const took = s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
+  return `${ev.trigger === 'manual' ? '내가 요청' : '자동'}${s ? ` · ${took} 걸림` : ''}`;
+}
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
 export function ago(ms) {
   const s = Math.round((Date.now() - ms) / 1000);

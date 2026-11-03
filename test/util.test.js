@@ -4,9 +4,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-let resumeCommand, fmtTokens;
+let resumeCommand, fmtTokens, compactHow;
 test.before(async () => {
-  ({ resumeCommand, fmtTokens } = await import('../public/js/util.js'));
+  ({ resumeCommand, fmtTokens, compactHow } = await import('../public/js/util.js'));
 });
 
 test('이어 하기 명령: 그 폴더로 가서 claude --resume', () => {
@@ -21,4 +21,11 @@ test('토큰 숫자는 만 단위로 줄인다', () => {
   assert.equal(fmtTokens(9876), '9,876');
   assert.equal(fmtTokens(548123), '54.8만');
   assert.equal(fmtTokens(1000000), '100만');
+});
+
+test('대화 압축: 자동·내가 요청과 걸린 시간, 쉬는 동안 미리 써 둔 요약', () => {
+  assert.equal(compactHow({ trigger: 'auto', ms: 56750 }), '자동 · 57초 걸림');
+  assert.equal(compactHow({ trigger: 'manual', ms: 63200 }), '내가 요청 · 1분 3초 걸림');
+  assert.equal(compactHow({ trigger: 'auto', ms: 37, idle: true }), '쉬는 동안 미리 써 둔 요약');
+  assert.equal(compactHow({ trigger: 'auto' }), '자동'); // 걸린 시간이 없는 옛 기록
 });

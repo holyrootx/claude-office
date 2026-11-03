@@ -239,11 +239,14 @@ test('압축 전후 토큰을 읽고, 같은 압축은 한 번만 알린다', ()
   const norm = new Normalizer();
   norm.ctx = 960000;
   const evs = feed(norm,
-    line({ type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'auto', preTokens: 968026, postTokens: 19254 } }),
+    line({ type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'auto', preTokens: 968026, postTokens: 19254, durationMs: 56750 } }),
     line({ type: 'user', isCompactSummary: true, message: { role: 'user', content: '요약' } }),
   );
   assert.equal(evs.length, 1);
-  assert.deepEqual([evs[0].k, evs[0].trigger, evs[0].pre, evs[0].post], ['compact', 'auto', 968026, 19254]);
+  assert.deepEqual([evs[0].k, evs[0].trigger, evs[0].pre, evs[0].post, evs[0].ms, evs[0].idle], ['compact', 'auto', 968026, 19254, 56750, false]);
+  // 자리를 비운 동안 미리 써 둔 요약으로 바꾼 압축
+  const [idle] = feed(new Normalizer(), line({ type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'auto', preTokens: 828361, postTokens: 19111, durationMs: 37, precomputed: true } }));
+  assert.equal(idle.idle, true);
   assert.equal(norm.ctx, 19254); // 다음 답을 기다리지 않고 바로 줄어든다
 });
 

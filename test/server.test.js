@@ -517,6 +517,30 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
   }
 });
 
+test('localhost가 [::1]로 가도 사무실이 받고, 다른 프로그램이 [::1]의 그 포트를 쓰면 127.0.0.1 주소를 알려 준다', async t => {
+  // 맥은 AirPlay 수신 모드가 모든 주소의 5000번을 잡고 있어서, 127.0.0.1에만 열면 localhost:5000이 403이 났다
+  const other = http.createServer((q, r) => r.end('다른 프로그램'));
+  const v6 = await new Promise(resolve => other.once('error', () => resolve(false)).listen(0, '::1', () => resolve(true)));
+  if (!v6) return t.skip('이 컴퓨터는 IPv6가 없어요');
+  const health = host => new Promise(resolve => http.get({ host, port: PORT, path: '/api/health' }, res => {
+    let d = '';
+    res.on('data', c => { d += c; });
+    res.on('end', () => resolve(d));
+  }).on('error', () => resolve('')));
+  const P = other.address().port;
+  const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(P)], { env: { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-v6.json') } });
+  let out = '';
+  child.stdout.on('data', c => { out += c; });
+  try {
+    assert.match(await health('::1'), /claude-office/);
+    assert.ok(await until(() => /열렸어요/.test(out), 4000), out);
+    assert.match(out, new RegExp(`http://127\\.0\\.0\\.1:${P}`));
+  } finally {
+    child.kill();
+    other.close();
+  }
+});
+
 test('하위 폴더로 옮겨 다닌 세션도 시작한 폴더의 층·프로젝트로 묶는다', async () => {
   const f = path.join(PROJ, 'eeeeeeee-5555-0000-0000-000000000001.jsonl');
   try {

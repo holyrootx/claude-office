@@ -3,7 +3,7 @@
 // 브라우저(SSE)로 정규화된 활동 이벤트를 보내는 작은 서버. 의존성 없음 (Node 18+).
 //
 //   node server.js               → http://localhost:4777 (브라우저 자동으로 열림)
-//   node server.js --port 5000   → 다른 포트
+//   node server.js --port 4800   → 다른 포트
 //   node server.js --no-open     → 브라우저 자동 열기 끄기
 //   node server.js --background  → 터미널 없이 뒤에서 켜기 (끌 때는 --stop)
 'use strict';
@@ -188,6 +188,18 @@ function openBrowser(url) {
 
 // ───────────────────────── 실행 방법 ─────────────────────────
 let closing = false;
+
+// 같은 포트를 [::1]에도 연다. 브라우저는 localhost를 [::1]로 먼저 찾아가는데, 맥은 AirPlay 수신 모드가
+// 모든 주소의 5000·7000번을 잡고 있어서 127.0.0.1에만 열면 localhost:5000이 AirPlay로 가서 403이 난다.
+// IPv6가 없으면 localhost가 127.0.0.1로만 가니 그대로 괜찮다. 다른 프로그램이 [::1]의 그 포트를 쓰고 있으면
+// false → 주소를 127.0.0.1로 알려 준다.
+function alsoOnV6(port) {
+  return new Promise(resolve => {
+    const v6 = http.createServer(server.listeners('request')[0]);
+    v6.on('error', e => resolve(e.code !== 'EADDRINUSE'));
+    v6.listen(port, '::1', () => resolve(true));
+  });
+}
 function serve() {
   let port = PORT;
   server.on('error', async e => {
@@ -202,14 +214,14 @@ function serve() {
       if (!PORT_GIVEN && port < PORT + PORT_TRIES - 1) return server.listen(++port, '127.0.0.1');
       console.log(PORT_GIVEN
         ? `\n  ⚠ ${port}번 포트를 다른 프로그램이 쓰고 있어요.\n    다른 포트로 실행하려면: claude-office --port ${port + 1}\n`
-        : `\n  ⚠ ${PORT}~${port}번 포트를 모두 다른 프로그램이 쓰고 있어요.\n    비어 있는 포트를 직접 정해 주세요: claude-office --port 5000\n`);
+        : `\n  ⚠ ${PORT}~${port}번 포트를 모두 다른 프로그램이 쓰고 있어요.\n    비어 있는 포트를 직접 정해 주세요: claude-office --port 4800\n`);
     } else {
       console.error(e);
     }
     process.exit(1);
   });
-  server.listen(port, '127.0.0.1', () => {
-    const url = `http://localhost:${port}`;
+  server.listen(port, '127.0.0.1', async () => {
+    const url = `http://${(await alsoOnV6(port)) ? 'localhost' : '127.0.0.1'}:${port}`;
     if (port !== PORT) console.log(`\n  ℹ ${PORT}번 포트를 다른 프로그램이 쓰고 있어서 ${port}번으로 열었어요.`);
     const info = { pid: process.pid, port, token: TOKEN, version: VERSION };
     try {

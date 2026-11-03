@@ -75,7 +75,7 @@ const office = {
 // ───────────────────────── 화면 뼈대 ─────────────────────────
 const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: $('feed'), board: $('board') };
 const signs = {}, statRows = {};
-const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1 });
+const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1, onFails: n => renderFeedFails(n) });
 const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
 // 나를 기다리거나 일이 끝났을 때: 브라우저 알림(켜 두었으면) + 화면 읽기 프로그램에 읽어 주기.
 // 탭 제목이 바뀌는 건 화면 읽기 프로그램이 읽어 주지 않아서 따로 알린다 (데모·다시 보기 중에는 조용히).
@@ -571,6 +571,21 @@ $('feedScope').addEventListener('click', () => {
   feedThisFloor = !feedThisFloor;
   try { localStorage.setItem(FEED_KEY, feedThisFloor ? '1' : '0'); } catch { /* 저장소 없음 */ }
   renderFeedScope();
+});
+
+// 활동 기록 '실패만': 실패·API 오류·중단 줄만 모아 본다. 그런 줄이 있거나 켜 둔 동안만 버튼이 보인다.
+let feedFails = false;
+function renderFeedFails(n = feed.failCount()) {
+  const btn = $('feedFails');
+  btn.hidden = !n && !feedFails;
+  btn.textContent = n ? `실패만 ${n}` : '실패만';
+  btn.classList.toggle('on', feedFails);
+  btn.setAttribute('aria-pressed', String(feedFails));
+}
+$('feedFails').addEventListener('click', () => {
+  feedFails = !feedFails;
+  feed.failsOnly(feedFails);
+  renderFeedFails();
 });
 
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────

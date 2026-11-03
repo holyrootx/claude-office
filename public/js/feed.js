@@ -6,10 +6,12 @@ const MAX_LINES = 200;
 
 // manyPeople(): 여러 세션이 있어서 줄마다 누가 한 일인지 이름표를 붙여야 할 때 true
 // only(층): 그 층에서 한 일만 보여 준다 (null이면 모든 층). 가린 줄도 지우지 않고 남겨 둔다.
-export function createFeed(list, { manyPeople }) {
+// failsOnly(true): 실패·오류·중단 줄(err)만 보여 준다. onFails(n): 남아 있는 그런 줄 수가 바뀔 때
+export function createFeed(list, { manyPeople, onFails = () => {} }) {
   const items = new Map();
   const known = new Map();
   let onlyFloor = null;
+  let fails = 0;
   function add(s, a, ev) {
     let ic = '', cls = '', tx = '', room = '';
     switch (ev.k) {
@@ -69,21 +71,29 @@ export function createFeed(list, { manyPeople }) {
     li.innerHTML = `<time>${stamp(ev.at || ev.ts || Date.now(), ev.atDate)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
     if (ev.k === 'tool') items.set(ev.id, li);
     list.prepend(li);
+    const before = fails;
+    if (cls === 'err') fails++;
     while (list.children.length > MAX_LINES) {
       const last = list.lastElementChild;
       for (const [k, v] of items) if (v === last) items.delete(k);
+      if (last.classList.contains('err')) fails--;
       last.remove();
     }
+    if (fails !== before) onFails(fails);
   }
   function clear() {
     items.clear();
     known.clear();
     list.innerHTML = '';
+    if (fails) onFails((fails = 0));
   }
   function only(floor) {
     onlyFloor = floor || null;
     list.classList.toggle('only', !!onlyFloor);
     for (const li of list.children) li.classList.toggle('away', !!onlyFloor && li.dataset.floor !== onlyFloor);
   }
-  return { add, clear, only };
+  function failsOnly(on) {
+    list.classList.toggle('fails', !!on);
+  }
+  return { add, clear, only, failsOnly, failCount: () => fails };
 }

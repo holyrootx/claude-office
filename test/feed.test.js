@@ -81,3 +81,30 @@ test('줄이 200개를 넘으면 가장 오래된 줄부터 지운다', () => {
   assert.match(list.lastElementChild.innerHTML, /줄 5</);
   assert.match(list.children[0].innerHTML, /줄 204</);
 });
+
+test("'실패만': 실패·오류·중단 줄 수를 알려 주고, 켜면 그 줄만 남긴다", () => {
+  const list = fakeList();
+  const counts = [];
+  const feed = createFeed(list, { manyPeople: () => false, onFails: n => counts.push(n) });
+  const A = person('A');
+  feed.add(A.s, A.a, { k: 'tool', id: 't1', tool: 'Bash', room: 'server', label: 'npm test', ts: Date.now() });
+  feed.add(A.s, A.a, { k: 'result', id: 't1', ok: false, error: 'exit 1', ts: Date.now() });
+  feed.add(A.s, A.a, say('고쳐 볼게요'));
+  feed.add(A.s, A.a, { k: 'interrupt', ts: Date.now() });
+  assert.deepEqual(counts, [1, 2]);
+  assert.equal(feed.failCount(), 2);
+  // 실패한 도구 줄은 ✗만 붙고, 따로 쌓인 '실패' 줄이 err다
+  assert.deepEqual(list.children.map(li => li.classList.contains('err')), [true, false, true, false]);
+
+  feed.failsOnly(true);
+  assert.ok(list.classList.contains('fails'));
+  feed.failsOnly(false);
+  assert.ok(!list.classList.contains('fails'));
+
+  // 오래된 실패 줄이 밀려 지워지면 수도 줄고, 다 지우면 0
+  for (let i = 0; i < 199; i++) feed.add(A.s, A.a, say('줄 ' + i));
+  assert.equal(feed.failCount(), 1);
+  feed.clear();
+  assert.equal(feed.failCount(), 0);
+  assert.deepEqual(counts, [1, 2, 1, 0]);
+});

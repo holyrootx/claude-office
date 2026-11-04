@@ -41,3 +41,47 @@ test('명령 한 줄로 적은 hook도 알아보고, 가리키는 파일이 없�
   const plug = printed(WANT, '${CLAUDE_PLUGIN_ROOT}/hooks/notify.js');
   assert.equal(hooksStatus({ settings: plug, want: WANT, exists: () => false }).state, 'on');
 });
+
+test('--install-hooks: 다른 hook은 두고, 예전 사무실 hook은 바꾸고, 전 내용은 남긴다', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const { execFileSync } = require('child_process');
+  const ROOT = path.join(__dirname, '..');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-hooks-'));
+  const file = path.join(dir, 'settings.json');
+  const run = () => execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--install-hooks'], { env: { ...process.env, CLAUDE_CONFIG_DIR: dir } }).toString();
+  try {
+    // 다른 hook 하나와, 옮기기 전 폴더를 가리키는 예전 사무실 hook (PreCompact 없음)
+    const old = { type: 'command', command: 'node', args: ['/Users/me/old/claude-office/hooks/notify.js'], async: true };
+    const before = {
+      model: 'opus',
+      hooks: {
+        Stop: [{ hooks: [{ type: 'command', command: 'say done' }] }],
+        PermissionRequest: [{ hooks: [old, { type: 'command', command: 'echo also-here' }] }],
+        SessionEnd: [{ hooks: [old] }],
+      },
+    };
+    fs.writeFileSync(file, JSON.stringify(before));
+    assert.match(run(), /넣었어요/);
+    const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(after.model, 'opus');
+    assert.deepEqual(after.hooks.Stop, before.hooks.Stop);
+    const want = Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8')).hooks);
+    assert.equal(hooksStatus({ settings: after, want }).state, 'on');
+    const mine = JSON.stringify(after).split(path.join(ROOT, 'hooks', 'notify.js').replace(/\\/g, '\\\\')).length - 1;
+    assert.equal(mine, want.length, '사무실 hook은 이름마다 하나씩');
+    assert.ok(!JSON.stringify(after).includes('/old/'), '예전 경로는 빠진다');
+    assert.ok(JSON.stringify(after.hooks.PermissionRequest).includes('echo also-here'), '같은 묶음의 다른 hook은 남는다');
+    assert.deepEqual(JSON.parse(fs.readFileSync(file + '.before-claude-office', 'utf8')), before);
+    // 다시 넣어도 같은 모습 (두 번 들어가지 않는다)
+    run();
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), after);
+    // 읽을 수 없는 설정은 건드리지 않는다
+    fs.writeFileSync(file, '{ 망가진');
+    assert.throws(run);
+    assert.equal(fs.readFileSync(file, 'utf8'), '{ 망가진');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

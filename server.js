@@ -18,7 +18,7 @@ const runtime = require('./lib/runtime');
 const {
   args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
 } = require('./lib/config');
-const { hooksHint } = require('./lib/hookcheck');
+const { hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
@@ -35,7 +35,9 @@ if (args.includes('--help') || args.includes('-h')) {
     --background    터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기)
     --stop          뒤에서 켜 둔 사무실 끄기
     --active <분>   빌딩에 머무는 시간 (기본 30분: 그동안 움직임이 없으면 퇴근, 다시 움직이면 출근)
-    --print-hooks   권한 확인 대기를 알려 줄 Claude Code hooks 설정 출력
+    --install-hooks 권한 확인 대기·대화 압축 중을 알려 줄 hooks를 ~/.claude/settings.json에 넣기
+                    (다른 hooks는 그대로 두고, 전 내용은 settings.json.before-claude-office로 남겨요)
+    --print-hooks   위 hooks 설정을 출력만 하기 (직접 합치고 싶을 때)
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
                     날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요
                     --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
@@ -318,10 +320,9 @@ async function stopServer() {
 
 // 플러그인 없이 hooks만 쓰고 싶을 때: 이 폴더의 hooks/notify.js를 가리키는 설정을 출력한다
 function printHooks() {
-  const text = fs.readFileSync(path.join(__dirname, 'hooks', 'hooks.json'), 'utf8')
-    .split('${CLAUDE_PLUGIN_ROOT}').join(JSON.stringify(__dirname).slice(1, -1));
-  console.error('  아래 "hooks" 내용을 ~/.claude/settings.json 에 합쳐 넣으세요. (이 폴더를 옮기면 다시 출력해야 해요)\n');
-  console.log(JSON.stringify({ hooks: JSON.parse(text).hooks }, null, 2));
+  console.error('  아래 "hooks" 내용을 ~/.claude/settings.json 에 합쳐 넣으세요. (이 폴더를 옮기면 다시 출력해야 해요)');
+  console.error('  알아서 넣어 주길 바라면 --install-hooks를 쓰세요.\n');
+  console.log(JSON.stringify({ hooks: ourHooks(__dirname) }, null, 2));
 }
 
 // 오늘의 업무 일지를 터미널에 (브라우저의 📓과 같은 내용)
@@ -353,7 +354,11 @@ if (require.main === module) {
   }
   if (args.includes('--journal')) printJournal();
   else if (args.includes('--print-hooks')) printHooks();
-  else if (args.includes('--stop')) stopServer();
+  else if (args.includes('--install-hooks')) {
+    const r = installHooks(CLAUDE_DIR, __dirname);
+    console.log(`\n${r.text}\n`);
+    if (!r.ok) process.exitCode = 1;
+  } else if (args.includes('--stop')) stopServer();
   else if (args.includes('--background')) startBackground();
   else serve();
 }

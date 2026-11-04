@@ -188,7 +188,8 @@ Claude가 파일을 읽으면 자료실로, 코드를 고치면 개발실로 캐
 | `--background` | 터미널 창 없이 뒤에서 켜요. 이미 켜져 있으면 화면만 열어요. 켜지 못하면 이유를 보여 주고, 뒤에서 켠 사무실이 하는 말은 임시 폴더의 `claude-office-*.log`에 남아요. |
 | `--stop` | 뒤에서 켜 둔 사무실을 꺼요. |
 | `--journal` | 오늘의 업무 일지를 터미널에 출력해요. 서버는 켜지 않아요. 뒤에 `어제`, `그저께`, `3일 전`(`-3`), `10월 31일`(`10/31`), `2026-10-31`을 붙이면 그날 일지예요. 모르는 말이면 오늘 것을 보여 주지 않고 알려 줘요. `--md`를 같이 붙이면 마크다운으로 나와요. |
-| `--print-hooks` | 권한 대기를 알려 줄 hooks 설정을 출력해요. ([아래](#권한-확인-대기까지-보기-hooks) 참고) |
+| `--install-hooks` | 권한 대기·대화 압축 중을 알려 줄 hooks를 `~/.claude/settings.json`에 넣어요. 다른 hooks는 그대로 두고, 전 내용은 `settings.json.before-claude-office`로 남겨요. ([아래](#권한-확인-대기까지-보기-hooks) 참고) |
+| `--print-hooks` | 같은 hooks 설정을 출력만 해요. 직접 합치고 싶을 때 써요. |
 | `--version` | 버전을 보여 줘요. |
 | `--help` | 도움말을 보여 줘요. 모르는 옵션이나 숫자가 아닌 포트(`--prot 5000`, `--port=5000`)를 쓰면 켜지 않고 무엇이 틀렸는지 알려 줘요. |
 
@@ -227,15 +228,17 @@ Claude Code [hooks](https://code.claude.com/docs/en/hooks)를 켜 두면, 권한
 - 서브에이전트가 권한을 기다릴 때도 보여 줘요.
 - 대화 압축을 시작하면 끝날 때까지 '대화를 압축하는 중 · N초째'가 떠요. 압축도 끝나야 기록에 남거든요.
 
-**플러그인으로 설치했다면(방법 D) 따로 할 일이 없어요.** ZIP이나 git으로 받았다면, 받은 폴더에서 아래 명령을 실행해 나온 내용을 `~/.claude/settings.json`의 `"hooks"`에 합쳐 넣으세요.
+**플러그인으로 설치했다면(방법 D) 따로 할 일이 없어요.** ZIP이나 git으로 받았다면, 받은 폴더에서 아래 명령을 한 번 실행하고 Claude Code를 다시 켜세요.
 
 ```bash
-node server.js --print-hooks
+node server.js --install-hooks
 ```
+
+`~/.claude/settings.json`에 사무실 hooks만 넣고 다른 설정과 hooks는 그대로 둬요. 전 내용은 `settings.json.before-claude-office`로 남기고, 예전에 넣은 사무실 hooks는 새것으로 바꿔요(폴더를 옮겼거나 새 hook이 생겼을 때 다시 실행하면 돼요). 직접 합치고 싶으면 `node server.js --print-hooks`로 나온 내용을 `"hooks"`에 넣으세요.
 
 > npx로 실행하는 경우는 내려받은 위치가 매번 바뀌어서 이 방법을 쓸 수 없어요. 플러그인을 쓰거나 ZIP·git으로 받아 주세요.
 
-사무실을 켤 때 `~/.claude/settings.json`을 보고, hooks가 없거나 예전에 합친 설정이라 새로 생긴 hook이 빠졌거나 가리키는 폴더가 없으면 터미널에 한 줄로 알려 줘요.
+사무실을 켤 때 `~/.claude/settings.json`을 보고, hooks가 없거나 예전에 넣은 설정이라 새로 생긴 hook이 빠졌거나 가리키는 폴더가 없으면 터미널에 한 줄로 알려 줘요.
 
 hooks는 권한 확인 창이 뜨거나 압축을 시작할 때만 아주 작은 스크립트(`hooks/notify.js`)를 백그라운드로 실행해요. 도구를 쓸 때마다 실행되지 않고, Claude Code를 기다리게 하지도 않아요. 사무실이 꺼져 있으면 아무것도 보내지 않고 바로 끝나요.
 
@@ -295,7 +298,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `lib/report.js` | 업무 일지를 터미널 글·마크다운으로 쓰기 |
 | `lib/config.js` | 실행 옵션과 설정값 |
 | `lib/runtime.js` | 켜져 있는 서버의 포트·토큰을 임시 파일로 주고받기 (`--stop`·hooks가 사용) |
-| `lib/hookcheck.js` | 켤 때 hooks가 켜져 있는지·빠진 hook은 없는지 보기 |
+| `lib/hookcheck.js` | 켤 때 hooks가 켜져 있는지·빠진 hook은 없는지 보기, `--install-hooks`로 넣기 |
 | `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨면 서버에 알리는 Claude Code hook |
 | `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop` 명령 |
 | `public/index.html` | 화면 뼈대 |

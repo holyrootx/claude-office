@@ -398,12 +398,19 @@ export class Actor {
         await this.dwell(800);
         break;
       case 'note':
-        // 예약해 둔 작업(크론·/loop)이 시간이 돼서 시작됐다
-        if (ev.kind !== 'schedule' || this.intern) break;
-        this.setMode('idle');
-        this.showBubble('say', `⏰ 예약해 둔 작업을 시작해요<br><small>${esc(clip(ev.text, 60))}</small>`);
-        this.setNow('⏰', '예약된 작업을 시작해요', ev.text, this.room || this.home);
-        await this.dwell(1400);
+        if (this.intern) break;
+        if (ev.kind === 'schedule') {
+          // 예약해 둔 작업(크론·/loop)이 시간이 돼서 시작됐다
+          this.setMode('idle');
+          this.showBubble('say', `⏰ 예약해 둔 작업을 시작해요<br><small>${esc(clip(ev.text, 60))}</small>`);
+          this.setNow('⏰', '예약된 작업을 시작해요', ev.text, this.room || this.home);
+          await this.dwell(1400);
+        } else if (ev.kind === 'peer') {
+          // 다른 세션이 말을 걸었다 (그 말로 일을 시작하기도 한다)
+          this.showBubble('say', `📨 <b>${esc(clip(ev.from, 30))}</b>에서 말이 왔어요<br><small>${esc(clip(ev.text, 60))}</small>`);
+          this.setNow('📨', `${ev.from}에서 온 말`, ev.text, this.room || this.home);
+          await this.dwell(1400);
+        }
         break;
       case 'think':
         if (!ev.text) { if (!this.queue.length) { this.setMode('think'); this.thinkCloud(''); } await this.dwell(200); break; }

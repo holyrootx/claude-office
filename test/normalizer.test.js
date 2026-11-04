@@ -437,6 +437,20 @@ test('예약해 둔 작업(크론·/loop)이 시작한 차례는 내 메시지�
   assert.equal(norm.stats.prompts, 0);
 });
 
+test('다른 세션이 보내서 이 세션을 깨운 말(숨김 줄)도 📨 한 줄로', () => {
+  const norm = new Normalizer();
+  const msg = 'Another Claude session sent a message:\n<cross-session-message from="uds:/tmp/cc-socks/1.sock" from-name="블로그 운영" from-mode="prompting">\n엔티티 설계 담당 세션입니다. 인계 문서 받았어요.\n\n## 갱신할 것\n</cross-session-message>';
+  const evs = feed(norm,
+    line({ type: 'user', isMeta: true, promptSource: 'sdk', origin: { kind: 'peer', name: '블로그 운영' }, message: { role: 'user', content: msg } }),
+    user(msg), // 숨김 줄이 아니어도 앞에 붙은 영어 한 줄은 뺀다
+  );
+  assert.deepEqual(evs.map(e => [e.k, e.kind, e.from, e.text]), [
+    ['note', 'peer', '블로그 운영', '엔티티 설계 담당 세션입니다. 인계 문서 받았어요.'],
+    ['note', 'peer', '블로그 운영', '엔티티 설계 담당 세션입니다. 인계 문서 받았어요.'],
+  ]);
+  assert.equal(norm.stats.prompts, 0);
+});
+
 test('말에 든 마크다운 표는 짧은 목록으로 (구분 줄·머리 줄은 빼고)', () => {
   const say = text => feed(new Normalizer(), assistant([{ type: 'text', text }]))[0].text;
   assert.equal(say('비교해 볼게요.\n\n| 방 | 하는 일 |\n|---|---|\n| 📚 자료실 | 읽기·검색 |\n| 💻 개발실 | 코드 수정 |\n\n이렇게요.'),

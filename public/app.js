@@ -236,6 +236,7 @@ function addSession(snap) {
   actors.add(s.main);
   s.main.load(snap.history || [], w && !(w.on && internIds.has(w.on)) ? w : null);
   for (const a of snap.agents || []) addIntern(s, a).load(a.history || [], w && w.on === a.id ? w : null);
+  if (snap.compacting) s.main.setCompacting(snap.compacting);
   if (w) seenWaits.add(waitId(s.sid, w));
   return s;
 }
@@ -336,6 +337,7 @@ function applyUpdate(u) {
   }
   for (const [a, evs] of batches) a.ingest(evs);
   if ('wait' in u) setWait(s, u.wait);
+  if ('compacting' in u) s.main.setCompacting(u.compacting);
 }
 
 const waitId = (sid, w) => `${sid}|${w.ts}`;

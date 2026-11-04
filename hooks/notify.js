@@ -5,7 +5,7 @@
 
 const runtime = require('../lib/runtime');
 
-const KEEP = ['session_id', 'transcript_path', 'hook_event_name', 'tool_name', 'agent_id', 'notification_type', 'message', 'reason'];
+const KEEP = ['session_id', 'transcript_path', 'hook_event_name', 'tool_name', 'agent_id', 'notification_type', 'message', 'reason', 'trigger'];
 const done = () => process.exit(0);
 const guard = setTimeout(done, 3000);
 

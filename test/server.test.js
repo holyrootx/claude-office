@@ -62,6 +62,7 @@ function stream(want = 'all') {
     log,
     updates,
     lastWait: sid => { const us = updates(sid).filter(x => 'wait' in x); return us.length ? us[us.length - 1].wait : undefined; },
+    lastCompact: sid => { const us = updates(sid).filter(x => 'compacting' in x); return us.length ? us[us.length - 1].compacting : undefined; },
     close: () => req.destroy(),
   };
 }
@@ -316,6 +317,29 @@ test('인턴의 권한 대기는 그 인턴에게 붙고, 인턴의 결과로 �
   assert.notEqual(s.lastWait(SHOP), null);
   toolResult(busy, 'k2', false, { isSidechain: true, agentId: 'busy1' });
   assert.equal(await until(() => s.lastWait(SHOP) === null), true);
+  s.close();
+});
+
+test('대화 압축: PreCompact hook을 받으면 압축 중이라고 알리고, 압축이 기록되면 푼다', async () => {
+  const s = stream('all');
+  await until(() => s.log.find(x => x.ev === 'hello'));
+  hook({ session_id: SHOP, transcript_path: shop, hook_event_name: 'PreCompact', trigger: 'manual', custom_instructions: '' });
+  const c = await until(() => s.lastCompact(SHOP));
+  assert.equal(c.trigger, 'manual');
+  // 압축하는 동안 보낸 내 메시지·백그라운드 작업 알림으로는 끝내지 않는다
+  put(shop, { type: 'attachment', attachment: { type: 'queued_command', prompt: '압축하는 동안 보낸 말', origin: { kind: 'human' } } });
+  put(shop, { type: 'attachment', attachment: { type: 'queued_command', prompt: '<task-notification><status>completed</status><summary>빌드 끝</summary></task-notification>' } });
+  await sleep(600);
+  assert.ok(s.lastCompact(SHOP));
+  put(shop, { type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'manual', preTokens: 150000, postTokens: 30000, durationMs: 900 } });
+  assert.equal(await until(() => s.lastCompact(SHOP) === null), true);
+  // 쉬는 동안 미리 써 둔 요약으로 바꾸면 압축이 hook보다 먼저 기록된다: 그때는 압축 중으로 남지 않는다
+  put(shop, { type: 'system', subtype: 'compact_boundary', compactMetadata: { trigger: 'auto', preTokens: 150000, postTokens: 30000, durationMs: 20, precomputed: true } });
+  await sleep(400);
+  const before = s.updates(SHOP).length;
+  hook({ session_id: SHOP, transcript_path: shop, hook_event_name: 'PreCompact', trigger: 'auto' });
+  await sleep(600);
+  assert.ok(!s.updates(SHOP).slice(before).some(u => u.compacting));
   s.close();
 });
 

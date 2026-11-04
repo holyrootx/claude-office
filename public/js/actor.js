@@ -596,7 +596,14 @@ export class Actor {
     this.rest();
   }
 
-  // 큐가 비었을 때: 지금 상태(권한 대기 / 도구 실행 중 / 생각 중 / 질문 대기 / 쉬는 중)에 맞는 자세로
+  // 대화 압축 중 (PreCompact hook이 알려 준다. 끝나면 null)
+  setCompacting(c) {
+    if ((this.compacting && this.compacting.ts) === (c && c.ts)) return;
+    this.compacting = c || null;
+    this.rest();
+  }
+
+  // 큐가 비었을 때: 지금 상태(권한 대기 / 압축 중 / 도구 실행 중 / 생각 중 / 질문 대기 / 쉬는 중)에 맞는 자세로
   rest() {
     if (this.running || this.path.length || this.leaving) return;
     const p = this.lastPending();
@@ -614,6 +621,17 @@ export class Actor {
         this.permitBubble(w);
         this.shownWait = w.ts;
       }
+      return;
+    }
+    if (this.compacting) {
+      // 대화가 길어져서 지난 대화를 요약하는 중: 1~2분쯤 아무 기록도 없어서 멈춘 것처럼 보이지 않게
+      const c = this.compacting;
+      if (!this.room) { this.stroll(this.home); return; }
+      if (this.mode !== 'think') this.setMode('think');
+      this.hideSign();
+      if (this.bubbleKind !== 'think' || this.shownCompact !== c.ts) { this.thinkCloud('지난 대화를 요약하는 중…'); this.shownCompact = c.ts; }
+      this.setNow('🗜', '대화를 압축하는 중', c.trigger === 'manual' ? '내가 요청한 압축 · 지난 대화를 요약하고 있어요' : '대화가 길어져서 지난 대화를 요약하고 있어요', this.room, 'think');
+      this.now.time = secs(Math.round((Date.now() - c.ts) / 1000));
       return;
     }
     if (this.stale()) {
@@ -695,6 +713,7 @@ export class Actor {
   }
   get status() {
     if (this.waitState) return 'wait';
+    if (this.compacting) return 'think';
     const p = this.lastPending();
     if (p && p.ask) return 'ask';
     const h = !p && !this.running && !this.turnOpen && this.activeHalt();

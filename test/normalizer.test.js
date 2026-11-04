@@ -317,9 +317,19 @@ test('망가진 JSON으로 남은 도구 입력도 질문·파일 이름은 건�
 
 test('표지판 글자가 비던 도구들: 브라우저 묶음, 창 크기, Jira, 크론, 메시지', () => {
   const batch = { actions: [{ name: 'navigate', input: { url: 'http://x' } }, { name: 'computer', input: { action: 'wait' } }, { name: 'computer', input: { action: 'wait' } }, { name: 'computer', input: { action: 'screenshot' } }] };
-  assert.equal(labelOf('mcp__Claude_Browser__browser_batch', batch), '4단계 · navigate → wait ×2 → screenshot');
+  assert.equal(labelOf('mcp__Claude_Browser__browser_batch', batch), '4단계 · 페이지 이동 → 기다리기 ×2 → 화면 보기');
   assert.equal(labelOf('mcp__Claude_Browser__resize_window', { width: 1280, height: 850 }), '1280×850');
   assert.equal(labelOf('mcp__Claude_Browser__resize_window', { preset: 'mobile' }), 'mobile');
+  // 입력에 쓸 말이 없는 브라우저 도구·동작은 무엇을 하는지 우리말로
+  assert.equal(labelOf('mcp__Claude_Browser__tabs_close', { tabId: 't1' }), '탭 닫기');
+  assert.equal(labelOf('mcp__claude-in-chrome__tabs_context_mcp', {}), '열린 탭 확인');
+  assert.equal(labelOf('mcp__Claude_Browser__read_console_messages', { limit: 20 }), '콘솔 메시지 보기');
+  assert.equal(labelOf('mcp__Claude_Browser__computer', { action: 'screenshot' }), '화면 보기');
+  assert.equal(labelOf('mcp__Claude_Browser__computer', { action: 'left_click', action_summary: 'Opens the menu' }), 'Opens the menu');
+  assert.equal(labelOf('mcp__Claude_Browser__javascript_tool', { action: 'javascript_exec', text: 'x' }), '스크립트 실행');
+  assert.equal(labelOf('mcp__Claude_Browser__preview_logs', { serverId: 's', search: 'ERROR' }), 'ERROR');
+  assert.equal(labelOf('CronList', {}), '예약 목록');
+  assert.equal(labelOf('mcp__some_server__do_thing', { id: 3 }), '');
   const jira = 'mcp__9be74c07-6424-43bb-ba00-725d536ca1b7__';
   assert.equal(labelOf(jira + 'addCommentToJiraIssue', { cloudId: 'c', issueIdOrKey: 'QA-1', commentBody: '긴 글' }), 'QA-1');
   assert.equal(labelOf(jira + 'searchJiraIssuesUsingJql', { cloudId: 'c', jql: 'project = KAN' }), 'project = KAN');

@@ -1,12 +1,13 @@
 // 데모: 두 층에서 직원 둘과 인턴 둘이 동시에 일하는 장면.
-// script 항목은 [앞 항목과의 간격(ms), 세션 id, 이벤트]. 이벤트에 agent가 있으면 인턴, { wait }는 hook이 알려 주는 권한 대기 흉내.
+// script 항목은 [앞 항목과의 간격(ms), 세션 id, 이벤트]. 이벤트에 agent가 있으면 인턴, { wait }는 hook이 알려 주는 권한 대기,
+// { compacting }은 hook이 알려 주는 대화 압축 중 흉내. 이벤트에 ctx를 붙이면 컨텍스트 크기도 바뀐다.
 const shop = 'demo-shop', blog = 'demo-blog';
 
 export const DEMO_SESSIONS = [
   {
     sid: shop,
     // ctx: 컨텍스트가 얼마나 찼는지 (발치의 서류 더미·위쪽 막대로 보인다)
-    session: { id: shop, project: '쇼핑몰-api', title: '로그인 401 고치기', cwd: '/demo/shop-api', model: 'claude-opus-5-5', branch: 'fix/auth', ctx: { tokens: 136000, window: 200000 } },
+    session: { id: shop, project: '쇼핑몰-api', title: '로그인 401 고치기', cwd: '/demo/shop-api', model: 'claude-opus-5-5', branch: 'fix/auth', ctx: { tokens: 176000, window: 200000 } },
     history: [], plan: null, wait: null, agents: [],
   },
   {
@@ -53,7 +54,11 @@ export const DEMO_SCRIPT = [
   [800, blog, { k: 'tool', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' }],
   [1300, blog, { wait: { kind: 'permission', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' } }],
   [900, shop, { k: 'result', id: 's4', ok: false, error: 'Exit code 1 · FAIL auth.spec.ts › refresh: expected 200, received 401' }],
-  [2600, shop, { k: 'think', text: '테스트의 시계 고정값도 같이 바꿔야 하네' }],
+  // 컨텍스트가 꽉 차서(88%) 자동 압축: 요약하는 동안 구름을 띄우고, 끝나면 서류 더미가 줄어든다
+  [2400, shop, { compacting: { trigger: 'auto' } }],
+  [4800, shop, { k: 'compact', trigger: 'auto', pre: 176000, post: 31000, ms: 4800, ctx: { tokens: 31000, window: 200000 } }],
+  [0, shop, { compacting: null }],
+  [1200, shop, { k: 'think', text: '테스트의 시계 고정값도 같이 바꿔야 하네' }],
   [2400, shop, { k: 'tool', id: 's5', name: 'Edit', tool: 'Edit', room: 'dev', label: 'auth.spec.ts' }],
   [500, blog, { wait: null }],
   [900, shop, { k: 'result', id: 's5', ok: true }],

@@ -764,9 +764,13 @@ function startDemo() {
     demo.push(setTimeout(() => {
       const s = sessions.get(sid);
       if (!s) return;
-      // { wait } 항목은 hook이 알려 주는 권한 확인 대기를 흉내 낸다
+      // { wait }·{ compacting } 항목은 hook이 알려 주는 권한 확인 대기·대화 압축 중을 흉내 낸다
       if ('wait' in ev) setWait(s, ev.wait && { ...ev.wait, ts: Date.now() });
-      else applyUpdate({ sid, events: [{ ...ev, ts: Date.now() }] });
+      else if ('compacting' in ev) s.main.setCompacting(ev.compacting && { ...ev.compacting, ts: Date.now() });
+      else {
+        const { ctx, ...e } = ev;
+        applyUpdate({ sid, events: [{ ...e, ts: Date.now() }], ...(ctx && { meta: { ctx } }) });
+      }
     }, t));
   }
   demo.push(setTimeout(() => stopDemo(true), t + 9000));

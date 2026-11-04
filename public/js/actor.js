@@ -336,6 +336,7 @@ export class Actor {
     if (ev.k === 'say' && ev.final) this.doneTs = ev.ts;
     switch (ev.k) {
       case 'user': case 'agent': this.turnOpen = true; break;
+      case 'note': if (ev.kind === 'schedule') this.turnOpen = true; break;
       case 'think': if (ev.text) this.lastThought = ev.text; this.turnOpen = true; break;
       case 'tool':
         this.turnOpen = true;
@@ -395,6 +396,14 @@ export class Actor {
         this.setMode('idle');
         this.setNow('🙋', '새 요청이 들어왔어요', ev.text, 'desk');
         await this.dwell(800);
+        break;
+      case 'note':
+        // 예약해 둔 작업(크론·/loop)이 시간이 돼서 시작됐다
+        if (ev.kind !== 'schedule' || this.intern) break;
+        this.setMode('idle');
+        this.showBubble('say', `⏰ 예약해 둔 작업을 시작해요<br><small>${esc(clip(ev.text, 60))}</small>`);
+        this.setNow('⏰', '예약된 작업을 시작해요', ev.text, this.room || this.home);
+        await this.dwell(1400);
         break;
       case 'think':
         if (!ev.text) { if (!this.queue.length) { this.setMode('think'); this.thinkCloud(''); } await this.dwell(200); break; }

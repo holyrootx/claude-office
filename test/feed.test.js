@@ -108,3 +108,12 @@ test("'실패만': 실패·오류·중단 줄 수를 알려 주고, 켜면 그 �
   assert.equal(feed.failCount(), 0);
   assert.deepEqual(counts, [1, 2, 1, 0]);
 });
+
+test('예약해 둔 작업이 시작되면 ⏰ 예약된 작업 줄로', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  feed.add(A.s, A.a, { k: 'note', ts: Date.now(), kind: 'schedule', ok: true, text: '자동 개선 1회' });
+  assert.match(list.children[0].innerHTML, /⏰[\s\S]*<b>예약된 작업<\/b> 자동 개선 1회/);
+  assert.ok(!list.children[0].classList.contains('err'));
+});

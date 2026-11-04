@@ -426,6 +426,17 @@ test('user 줄로 끼어든 알림은 내 메시지가 아니고, 붙여 넣은 
   assert.equal(norm.stats.prompts, 1);
 });
 
+test('예약해 둔 작업(크론·/loop)이 시작한 차례는 내 메시지가 아니라 ⏰ 한 줄로', () => {
+  const norm = new Normalizer();
+  const prompt = 'claude-office 자동 개선 1회: 아쉬운 점 하나를 고르고 고친다';
+  const evs = feed(norm,
+    line({ type: 'user', isMeta: true, promptSource: 'system', turnOrigin: 'scheduled', wakeupSource: 'schedule_wakeup', message: { role: 'user', content: prompt } }),
+    line({ type: 'user', isMeta: true, message: { role: 'user', content: 'Your response above was cut off' } }), // 다른 isMeta 줄은 여전히 숨긴다
+  );
+  assert.deepEqual(evs, [{ k: 'note', ts: evs[0].ts, kind: 'schedule', ok: true, text: prompt }]);
+  assert.equal(norm.stats.prompts, 0);
+});
+
 test('말에 든 마크다운 표는 짧은 목록으로 (구분 줄·머리 줄은 빼고)', () => {
   const say = text => feed(new Normalizer(), assistant([{ type: 'text', text }]))[0].text;
   assert.equal(say('비교해 볼게요.\n\n| 방 | 하는 일 |\n|---|---|\n| 📚 자료실 | 읽기·검색 |\n| 💻 개발실 | 코드 수정 |\n\n이렇게요.'),

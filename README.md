@@ -235,6 +235,8 @@ node server.js --print-hooks
 
 > npx로 실행하는 경우는 내려받은 위치가 매번 바뀌어서 이 방법을 쓸 수 없어요. 플러그인을 쓰거나 ZIP·git으로 받아 주세요.
 
+사무실을 켤 때 `~/.claude/settings.json`을 보고, hooks가 없거나 예전에 합친 설정이라 새로 생긴 hook이 빠졌거나 가리키는 폴더가 없으면 터미널에 한 줄로 알려 줘요.
+
 hooks는 권한 확인 창이 뜨거나 압축을 시작할 때만 아주 작은 스크립트(`hooks/notify.js`)를 백그라운드로 실행해요. 도구를 쓸 때마다 실행되지 않고, Claude Code를 기다리게 하지도 않아요. 사무실이 꺼져 있으면 아무것도 보내지 않고 바로 끝나요.
 
 ---
@@ -293,6 +295,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `lib/report.js` | 업무 일지를 터미널 글·마크다운으로 쓰기 |
 | `lib/config.js` | 실행 옵션과 설정값 |
 | `lib/runtime.js` | 켜져 있는 서버의 포트·토큰을 임시 파일로 주고받기 (`--stop`·hooks가 사용) |
+| `lib/hookcheck.js` | 켤 때 hooks가 켜져 있는지·빠진 hook은 없는지 보기 |
 | `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨면 서버에 알리는 Claude Code hook |
 | `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop` 명령 |
 | `public/index.html` | 화면 뼈대 |

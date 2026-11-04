@@ -16,8 +16,9 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
+  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
 } = require('./lib/config');
+const { hooksHint } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
@@ -246,6 +247,8 @@ function serve() {
     console.log(`  📂 세션 기록 폴더: ${PROJECTS}${fs.existsSync(PROJECTS) ? '' : '  (아직 없음 — claude를 한 번 실행하면 생겨요)'}`);
     const rules = roomRules.get(true);
     if (rules.length) console.log(`  🗂  내 방 설정 ${rules.length}개를 읽었어요 (${ROOM_CONFIG})`);
+    const hint = hooksHint(CLAUDE_DIR, __dirname);
+    if (hint) console.log(hint);
     console.log(`  ⏱  ${POLL_MS}ms마다 최신 세션을 따라 읽는 중… (끄려면 Ctrl+C)\n`);
     if (OPEN_BROWSER) openBrowser(url);
   });

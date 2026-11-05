@@ -965,6 +965,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape' || isJ(e)) journal.close();
     if (e.key === 'ArrowLeft') journal.prev();
     if (e.key === 'ArrowRight') journal.next();
+    if (e.key === 'w' || e.key === 'W' || e.code === 'KeyW') journal.toggleWeek();
     return;
   }
   if (e.key === '?') return openHelp();

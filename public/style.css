@@ -224,6 +224,12 @@ button, select { font: inherit; color: inherit; }
 /* 시간대별 도구 사용: 막대 24개 + 아래에 0·6·12·18시 */
 .journal-hours { display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: 42px auto; column-gap: 2px; margin: -4px 0 14px; }
 .journal-hours[hidden] { display: none; }
+.journal-hours.week { grid-template-columns: repeat(7, 1fr); column-gap: 8px; grid-template-rows: 52px auto; }
+.journal-hours.week span { grid-column: var(--c) / span 1; text-align: center; line-height: 1.35; }
+.journal-hours.week span b { display: block; font: 600 11.5px var(--ui); color: var(--muted); }
+.journal-box.busy .journal-totals, .journal-box.busy .journal-hours, .journal-box.busy .journal-list { opacity: .45; transition: opacity .2s; }
+.jp li.more { color: var(--faint); font-size: 12px; cursor: default; }
+.btn-icon.wide { width: auto; padding: 0 9px; font: 600 12.5px var(--ui); white-space: nowrap; }
 .journal-hours i { grid-row: 1; align-self: end; height: max(2px, var(--h)); border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--claude) 55%, var(--panel-2)); }
 .journal-hours i.now { background: var(--claude); }
 .journal-hours span { grid-row: 2; grid-column: var(--c) / span 3; font: 10.5px var(--mono); color: var(--faint); padding-top: 3px; }

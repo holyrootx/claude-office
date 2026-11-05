@@ -260,6 +260,18 @@ test('업무 일지: 지난 날도 볼 수 있다 (?day=-1, YYYY-MM-DD)', async 
   assert.match(server('--journal', '어제'), /이날은 일한 기록이 없어요/);
 });
 
+test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까지)', async () => {
+  const w = JSON.parse((await get('/api/journal?week=0')).body);
+  assert.match(w.title, /주간 업무 일지$/);
+  assert.equal(w.days.length, (new Date().getDay() + 6) % 7 + 1);
+  assert.equal(w.today, true);
+  const shop = w.projects.find(p => p.project === 'shop');
+  assert.ok(shop && shop.days >= 1 && shop.sessions[0].file, '오늘 일한 프로젝트와 다시 볼 세션 파일이 들어 있다');
+  assert.ok(w.totals.tools >= shop.tools);
+  const md = await get('/api/journal?week=-1&format=md');
+  assert.match(md.body, /^## .+~.+ 주간 업무 일지\n/);
+});
+
 test('업무 일지를 터미널에도 출력한다 (--journal)', () => {
   const out = server('--journal');
   assert.match(out, /업무 일지/);

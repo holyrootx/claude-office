@@ -22,7 +22,13 @@ const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookchec
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
-const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown } = require('./lib/report');
+const { journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown } = require('./lib/report');
+// 한 주의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
+async function weekDays({ from, to }) {
+  const days = [];
+  for (let d = from; d <= to; d++) days.push(await journal(d));
+  return days;
+}
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 ${VERSION} — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줘요.
@@ -150,15 +156,29 @@ const server = http.createServer((req, res) => {
     // ?day=-1 (어제) 또는 ?day=2026-10-31. 없으면 오늘
     // ?format=md면 슬랙·노션에 붙여 넣을 마크다운 글로
     const md = url.searchParams.get('format') === 'md';
+    const fail = e => {
+      console.error('[journal]', e.message);
+      res.writeHead(500);
+      res.end();
+    };
+    // ?week=0 (이번 주) · -1 (지난 주) …: 한 주를 날마다·프로젝트마다 모아서
+    if (url.searchParams.has('week')) {
+      const week = Math.min(0, Math.trunc(Number(url.searchParams.get('week'))) || 0);
+      weekDays(weekRange(week)).then(days => {
+        if (!md) {
+          const daysOut = days.map(j => ({ since: j.since, workedMs: (j.totals && j.totals.workedMs) || 0, tools: (j.totals && j.totals.tools) || 0 }));
+          return json(res, { week, today: week === 0, title: weekTitle(days), days: daysOut, ...weekSummary(days) });
+        }
+        res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(weekMarkdown(days));
+      }, fail);
+      return;
+    }
     journal(url.searchParams.get('day') || 0).then(j => {
       if (!md) return json(res, j);
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(journalMarkdown(j));
-    }, e => {
-      console.error('[journal]', e.message);
-      res.writeHead(500);
-      res.end();
-    });
+    }, fail);
     return;
   }
 
@@ -385,8 +405,7 @@ async function printJournal() {
   // 이번 주·지난 주: 그 주의 날마다 일지를 모아 주간 일지로
   const week = parseWeek(v);
   if (week) {
-    const days = [];
-    for (let d = week.from; d <= week.to; d++) days.push(await journal(d));
+    const days = await weekDays(week);
     console.log(args.includes('--md') ? weekMarkdown(days) : weekText(days));
     return;
   }

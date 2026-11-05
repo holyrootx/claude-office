@@ -343,6 +343,25 @@ test('권한 창을 띄운 채 Claude Code가 꺼지면(SessionEnd 없이) 기�
   s.close();
 });
 
+test('보고 있는 화면이 없어도, 권한을 기다리던 Claude Code가 꺼지면 세션 목록의 🔐를 지운다', { skip: process.platform === 'win32' }, async () => {
+  const GONE = 'eeeeeeee-5555-0000-0000-000000000005';
+  const file = path.join(PROJ, GONE + '.jsonl');
+  userMsg(file, '옛날 일');
+  const old = new Date(Date.now() - 3 * 3600 * 1000);
+  fs.utimesSync(file, old, old); // 빌딩에도 안 들어오는 오래된 세션 (따라 읽는 화면이 없다)
+  const fake = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 1500)'], { stdio: 'ignore' });
+  const rt = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+  const body = JSON.stringify({ session_id: GONE, hook_event_name: 'Notification', notification_type: 'permission_prompt', message: '허락해 주세요', ppid: fake.pid });
+  await new Promise(resolve => {
+    const req = http.request({ host: '127.0.0.1', port: PORT, method: 'POST', path: '/hook', headers: { 'X-Office-Token': rt.token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => { res.resume(); res.on('end', resolve); });
+    req.end(body);
+  });
+  const waiting = async () => JSON.parse((await get('/api/sessions')).body).sessions.find(x => x.id === GONE).waiting;
+  assert.equal(await waiting(), true);
+  await new Promise(r => fake.on('exit', r));
+  assert.equal(await waiting(), false);
+});
+
 test('인턴의 권한 대기는 그 인턴에게 붙고, 인턴의 결과로 풀린다', async () => {
   const s = stream('all');
   await until(() => s.log.find(x => x.ev === 'hello'));

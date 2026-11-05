@@ -161,7 +161,7 @@ test('켜 둔 사이에 서버 쪽 파일이 바뀌면 세션 목록에 다시 �
 test('hooks 상태: 설정에 없으면 꺼져 있다며 넣는 명령을 알려 준다', async () => {
   const h = JSON.parse((await get('/api/hooks')).body);
   assert.equal(h.state, 'off');
-  assert.equal(h.cmd, 'node server.js --install-hooks');
+  assert.equal(h.cmd, `node ${JSON.stringify(path.join(ROOT, 'server.js'))} --install-hooks`, '화면에서는 어느 폴더에서 쳐도 되게 전체 경로로');
 });
 
 test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함께 보낸다', async () => {

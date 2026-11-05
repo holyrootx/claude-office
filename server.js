@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
+  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd,
 } = require('./lib/config');
 const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
@@ -35,7 +35,7 @@ if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 ${VERSION} — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줘요.
 
-  사용법: claude-office [옵션]   (또는 node server.js [옵션])
+  사용법: ${runCmd('[옵션]')}   (플러그인이면 Claude Code에서 /office:open)
 
     --port <번호>   사용할 포트 (기본 4777, 다른 프로그램이 쓰고 있으면 4778·4779… 차례로.
                     직접 정하면 그 포트만 써요. 환경 변수 PORT로도 지정 가능)
@@ -138,7 +138,7 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
   // hooks가 켜져 있는지 (도움말 창 맨 위에 보여 준다)
-  if (url.pathname === '/api/hooks') return json(res, hooksInfo(CLAUDE_DIR, __dirname, hookHeard));
+  if (url.pathname === '/api/hooks') return json(res, hooksInfo(CLAUDE_DIR, __dirname, hookHeard, true));
 
   if (url.pathname === '/api/sessions') {
     const all = scanSessions();
@@ -269,8 +269,8 @@ function serve() {
       // 포트를 직접 정하지 않았으면 다음 번호로 다시 해 본다
       if (!PORT_GIVEN && port < PORT + PORT_TRIES - 1) return server.listen(++port, '127.0.0.1');
       console.log(PORT_GIVEN
-        ? `\n  ⚠ ${port}번 포트를 다른 프로그램이 쓰고 있어요.\n    다른 포트로 실행하려면: claude-office --port ${port + 1}\n`
-        : `\n  ⚠ ${PORT}~${port}번 포트를 모두 다른 프로그램이 쓰고 있어요.\n    비어 있는 포트를 직접 정해 주세요: claude-office --port 4800\n`);
+        ? `\n  ⚠ ${port}번 포트를 다른 프로그램이 쓰고 있어요.\n    다른 포트로 실행하려면: ${runCmd(`--port ${port + 1}`)}\n`
+        : `\n  ⚠ ${PORT}~${port}번 포트를 모두 다른 프로그램이 쓰고 있어요.\n    비어 있는 포트를 직접 정해 주세요: ${runCmd('--port 4800')}\n`);
     } else {
       console.error(e);
     }
@@ -425,7 +425,7 @@ async function printJournal() {
 if (require.main === module) {
   const problem = argProblem();
   if (problem) {
-    console.log(`\n  ⚠ ${problem}\n    쓸 수 있는 옵션은 claude-office --help 로 볼 수 있어요.\n`);
+    console.log(`\n  ⚠ ${problem}\n    쓸 수 있는 옵션은 ${runCmd('--help')} 로 볼 수 있어요.\n`);
     process.exit(1);
   }
   if (args.includes('--journal')) printJournal();

@@ -79,6 +79,8 @@ npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz
 
 처음 한 번만 "Ok to proceed? (y)"라고 물으면 `y`를 누르세요.
 
+> npm에 있는 `claude-office` 패키지는 다른 사람이 만든 다른 프로그램이에요. `npx claude-office`가 아니라 위 주소를 그대로 써 주세요. 옵션은 주소 뒤에 붙이면 돼요(`npx …/main.tar.gz --port 4800`).
+
 #### 방법 B. ZIP으로 내려받아 실행
 
 1. 이 페이지 위쪽 초록색 **Code** 버튼 → **Download ZIP**을 눌러 내려받고 압축을 풀어요.

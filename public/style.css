@@ -227,6 +227,9 @@ button, select { font: inherit; color: inherit; }
 .journal-hours.week { grid-template-columns: repeat(7, 1fr); column-gap: 8px; grid-template-rows: 52px auto; }
 .journal-hours.week span { grid-column: var(--c) / span 1; text-align: center; line-height: 1.35; }
 .journal-hours.week span b { display: block; font: 600 11.5px var(--ui); color: var(--muted); }
+.journal-hours.week [data-day] { cursor: pointer; }
+.journal-hours.week i[data-day]:hover { filter: brightness(1.25); }
+.journal-hours.week span[data-day]:hover b, .journal-hours.week span[data-day]:focus-visible b { color: var(--text); }
 .journal-box.busy .journal-totals, .journal-box.busy .journal-hours, .journal-box.busy .journal-list { opacity: .45; transition: opacity .2s; }
 .jp li.more { color: var(--faint); font-size: 12px; cursor: default; }
 .btn-icon.wide { width: auto; padding: 0 9px; font: 600 12.5px var(--ui); white-space: nowrap; }

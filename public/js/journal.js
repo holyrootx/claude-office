@@ -11,6 +11,7 @@ export function createJournal({ toast, onPick, copy }) {
   };
   let day = 0; // 0 = 오늘, -1 = 어제 …
   let week = null; // 한 주 모아 보기면 0 = 이번 주, -1 = 지난 주 …, 하루 일지면 null
+  let lastWeek = 0; // 마지막으로 본 주 (요일 막대를 눌러 하루로 갔다가 '주간'을 누르면 그 주로 돌아간다)
   const query = () => (week == null ? `day=${day}` : `week=${week}`);
   let asked = 0; // ◀를 빨리 여러 번 눌렀을 때 마지막 것만 그린다
   let loading = false; // 받아 오는 중 (창은 아직 안 떴지만 Esc·J로 그만둘 수 있게 열린 셈 친다)
@@ -34,7 +35,10 @@ export function createJournal({ toast, onPick, copy }) {
     $('journalBox').classList.remove('busy');
     fetch(`/api/journal?${q}&format=md`).then(r => r.text()).then(text => { if (query() === q) md = { q, text }; }, () => {});
     if (week == null) drawDay(j);
-    else drawWeek(j);
+    else {
+      lastWeek = week;
+      drawWeek(j);
+    }
     $('journalWeek').classList.toggle('on', week != null);
     $('journalWeek').setAttribute('aria-pressed', String(week != null));
     $('journalPrev').title = week == null ? '전날 (←)' : '지난 주 (←)';
@@ -95,11 +99,13 @@ export function createJournal({ toast, onPick, copy }) {
     const maxD = Math.max(1, ...j.days.map(d => d.workedMs));
     const today = new Date().setHours(0, 0, 0, 0);
     const label = d => { const x = new Date(d.since); return `${x.getMonth() + 1}/${x.getDate()} (${WEEKDAY[x.getDay()]})`; };
+    // 요일 막대·글자를 누르면 그날 일지로 (오늘이 0, 어제가 -1)
+    const off = d => Math.round((d.since - today) / 86400000);
     $('journalHours').classList.add('week');
     $('journalHours').setAttribute('aria-label', '날마다 일한 시간');
     $('journalHours').hidden = false;
-    $('journalHours').innerHTML = j.days.map(d => `<i class="${d.since === today ? 'now' : ''}" style="--h:${Math.round((d.workedMs / maxD) * 100)}%" title="${label(d)} · ${d.workedMs ? `${fmtWorked(d.workedMs)} · 도구 ${d.tools}번` : '쉼'}"></i>`).join('')
-      + j.days.map((d, i) => `<span style="--c:${i + 1}"><b>${WEEKDAY[new Date(d.since).getDay()]}</b>${d.workedMs ? fmtWorked(d.workedMs) : '·'}</span>`).join('');
+    $('journalHours').innerHTML = j.days.map(d => `<i class="${d.since === today ? 'now' : ''}" data-day="${off(d)}" style="--h:${Math.round((d.workedMs / maxD) * 100)}%" title="${label(d)} · ${d.workedMs ? `${fmtWorked(d.workedMs)} · 도구 ${d.tools}번` : '쉼'} · 누르면 그날 일지"></i>`).join('')
+      + j.days.map((d, i) => `<span style="--c:${i + 1}" data-day="${off(d)}" role="button" tabindex="0" aria-label="${label(d)} 일지 보기"><b>${WEEKDAY[new Date(d.since).getDay()]}</b>${d.workedMs ? fmtWorked(d.workedMs) : '·'}</span>`).join('');
     $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
       const more = p.sessions.length > 8 ? `<li class="more">그 밖에 세션 ${p.sessions.length - 8}개</li>` : '';
       return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small></h3>`
@@ -119,7 +125,7 @@ export function createJournal({ toast, onPick, copy }) {
   const prev = () => (week == null ? openJournal(day - 1) : openJournal(0, week - 1));
   const next = () => (week == null ? day < 0 && openJournal(day + 1) : week < 0 && openJournal(0, week + 1));
   // 하루 ↔ 한 주 (W)
-  const toggleWeek = () => (week == null ? openJournal(0, 0) : openJournal(0));
+  const toggleWeek = () => (week == null ? openJournal(0, lastWeek) : openJournal(0));
   // 보고 있는 날의 일지를 마크다운으로 복사 (하루 보고·스탠드업에 붙여 넣기)
   // 마크다운은 일지를 열 때 미리 받아 둔다: 누른 순간 바로 복사해야 Safari도 클립보드를 허락한다
   let md = null;
@@ -130,7 +136,12 @@ export function createJournal({ toast, onPick, copy }) {
     }
     toast((await copy(text)) ? '📋 일지를 마크다운으로 복사했어요' : '복사하지 못했어요');
   }
-  $('journalBtn').addEventListener('click', () => openJournal(0));
+  // 📓·J로 새로 열면 오늘부터 (주간도 이번 주부터)
+  const openFresh = (d = 0) => {
+    lastWeek = 0;
+    return openJournal(d);
+  };
+  $('journalBtn').addEventListener('click', () => openFresh(0));
   $('journalCopy').addEventListener('click', copyMarkdown);
   $('journalWeek').addEventListener('click', toggleWeek);
   $('journalPrev').addEventListener('click', prev);
@@ -143,14 +154,19 @@ export function createJournal({ toast, onPick, copy }) {
   $('journal').addEventListener('click', e => {
     if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기
     const li = e.target.closest('li[data-file]');
-    if (li) pick(li);
+    if (li) return pick(li);
+    const dd = week != null && e.target.closest('[data-day]');
+    if (dd) openJournal(Number(dd.dataset.day));
   });
-  // 키보드로 세션 줄을 고르고 Enter·Space로 다시 보기
+  // 키보드로 세션 줄을 고르고 Enter·Space로 다시 보기 (주간의 요일은 그날 일지로)
   $('journal').addEventListener('keydown', e => {
-    const li = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('li[data-file]');
-    if (!li) return;
+    if ((e.key !== 'Enter' && e.key !== ' ') || !e.target.closest) return;
+    const li = e.target.closest('li[data-file]');
+    const dd = !li && week != null && e.target.closest('[data-day]');
+    if (!li && !dd) return;
     e.preventDefault();
-    pick(li);
+    if (li) pick(li);
+    else openJournal(Number(dd.dataset.day));
   });
-  return { open: openJournal, close: closeJournal, prev, next, toggleWeek, isOpen: () => !$('journal').hidden || loading };
+  return { open: openFresh, close: closeJournal, prev, next, toggleWeek, isOpen: () => !$('journal').hidden || loading };
 }

@@ -1,6 +1,6 @@
 {
   "name": "claude-office",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Claude Code 세션 기록을 따라 캐릭터가 사무실을 돌아다니며 지금 하는 일을 보여 주는 실시간 시각화",
   "bin": {
     "claude-office": "server.js"

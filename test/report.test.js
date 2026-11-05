@@ -64,7 +64,11 @@ test('주간 일지: 이번 주는 월요일부터 오늘까지, 지난 주는 �
   assert.deepEqual(parseWeek('지난 주', thu), { from: -10, to: -4 });
   const sun = new Date(2026, 10, 8, 12); // 일요일이면 이번 주는 월~일 7일
   assert.deepEqual(parseWeek('week', sun), { from: -6, to: 0 });
+  assert.deepEqual(parseWeek('2주 전', thu), { from: -17, to: -11 });
+  assert.deepEqual(parseWeek('-2주', thu), parseWeek('2주 전', thu));
+  assert.deepEqual(parseWeek('1주 전', thu), parseWeek('지난 주', thu));
   assert.equal(parseWeek('어제', thu), null);
+  assert.equal(parseWeek('3일 전', thu), null);
 });
 
 test('주간 일지: 날마다 막대와 합계, 프로젝트는 여러 날을 합치고 세션도 합친다', () => {

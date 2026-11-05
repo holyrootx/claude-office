@@ -188,7 +188,7 @@ Claude가 파일을 읽으면 자료실로, 코드를 고치면 개발실로 캐
 | `--active 60` | 빌딩에 머무는 시간(분)이에요. 기본은 30분이고, 그동안 움직임이 없으면 퇴근해요. 보기 메뉴의 '최근 30분' 글자도 따라 바뀌어요. |
 | `--background` | 터미널 창 없이 뒤에서 켜요. 이미 켜져 있으면 화면만 열고, 켜져 있는 게 예전 버전이면 끄고 같은 포트로 새 버전을 켜요. 켜지 못하면 이유를 보여 주고, 뒤에서 켠 사무실이 하는 말은 임시 폴더의 `claude-office-*.log`에 남아요. |
 | `--stop` | 뒤에서 켜 둔 사무실을 꺼요. |
-| `--journal` | 오늘의 업무 일지를 터미널에 출력해요. 서버는 켜지 않아요. 뒤에 `어제`, `그저께`, `3일 전`(`-3`), `10월 31일`(`10/31`), `2026-10-31`을 붙이면 그날 일지예요. 모르는 말이면 오늘 것을 보여 주지 않고 알려 줘요. `이번 주`·`지난 주`를 붙이면 한 주를 날마다·프로젝트마다 모은 주간 일지가 나와요. `--md`를 같이 붙이면 마크다운으로 나와요(주간 보고용). |
+| `--journal` | 오늘의 업무 일지를 터미널에 출력해요. 서버는 켜지 않아요. 뒤에 `어제`, `그저께`, `3일 전`(`-3`), `10월 31일`(`10/31`), `2026-10-31`을 붙이면 그날 일지예요. 모르는 말이면 오늘 것을 보여 주지 않고 알려 줘요. `이번 주`·`지난 주`·`2주 전`을 붙이면 한 주를 날마다·프로젝트마다 모은 주간 일지가 나와요. `--md`를 같이 붙이면 마크다운으로 나와요(주간 보고용). |
 | `--install-hooks` | 권한 대기·대화 압축 중을 알려 줄 hooks를 `~/.claude/settings.json`에 넣어요. 다른 hooks는 그대로 두고, 전 내용은 `settings.json.before-claude-office`로 남겨요. ([아래](#권한-확인-대기까지-보기-hooks) 참고) |
 | `--print-hooks` | 같은 hooks 설정을 출력만 해요. 직접 합치고 싶을 때 써요. |
 | `--version` | 버전을 보여 줘요. |
@@ -290,8 +290,8 @@ Windows와 macOS에서 테스트했어요. 운영체제와 상관없이 홈 폴�
 Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.jsonl
      │                        (서브에이전트: <세션>/subagents/agent-*.jsonl)
      │                        │  0.25초마다 새로 추가된 줄만 읽기
-     │ (권한 확인 창이 뜨면)    ▼
-     └──(hook)──────▶  server.js  ── 도구 이름 → 방, 실패 여부, 계획 목록, 권한 대기로 정리
+     │ (권한 확인 창·압축 시작) ▼
+     └──(hook)──────▶  server.js  ── 도구 이름 → 방, 실패 여부, 계획 목록, 권한 대기·압축 중으로 정리
                               │  Server-Sent Events
                               ▼
                        브라우저 (public/)  ── 캐릭터 이동·말풍선·화이트보드
@@ -302,12 +302,12 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `server.js` | 서버 시작, HTTP, `--background`·`--stop` 같은 실행 방법 (의존성 없음) |
 | `lib/normalize.js` | 세션 기록 한 줄을 화면용 이벤트로 바꾸기, 도구 → 방 규칙 |
 | `lib/sessions.js` | 세션 파일 찾기·따라 읽기, 화면마다 보내기, 권한 대기, 다시 보기 |
-| `lib/report.js` | 업무 일지를 터미널 글·마크다운으로 쓰기 |
+| `lib/report.js` | 업무 일지(하루·한 주)를 터미널 글·마크다운으로 쓰기, `--journal` 뒤에 적은 날·주 알아듣기 |
 | `lib/config.js` | 실행 옵션과 설정값 |
 | `lib/runtime.js` | 켜져 있는 서버의 포트·토큰을 임시 파일로 주고받기 (`--stop`·hooks가 사용) |
 | `lib/hookcheck.js` | 켤 때 hooks가 켜져 있는지·빠진 hook은 없는지 보기, `--install-hooks`로 넣기 |
-| `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨면 서버에 알리는 Claude Code hook |
-| `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop` 명령 |
+| `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨거나 대화 압축을 시작하면 서버에 알리는 Claude Code hook |
+| `.claude-plugin/`, `skills/` | Claude Code 플러그인 정보와 `/office:open`·`/office:stop`·`/office:journal` 명령 |
 | `public/index.html` | 화면 뼈대 |
 | `public/app.js` | 층·로비 안내판·화이트보드·정보 카드, 서버 연결, 데모 |
 | `public/js/actor.js` | 캐릭터 한 명(직원·인턴)의 이동·말풍선·표지판 |

@@ -22,7 +22,7 @@ const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookchec
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
-const { journalText, journalMarkdown, parseDay } = require('./lib/report');
+const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown } = require('./lib/report');
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Claude 사무실 ${VERSION} — Claude Code가 지금 뭘 하는지 캐릭터로 보여 줘요.
@@ -39,7 +39,8 @@ if (args.includes('--help') || args.includes('-h')) {
                     (다른 hooks는 그대로 두고, 전 내용은 settings.json.before-claude-office로 남겨요)
     --print-hooks   위 hooks 설정을 출력만 하기 (직접 합치고 싶을 때)
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
-                    날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요
+                    날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요.
+                    이번 주·지난 주를 적으면 한 주를 날마다·프로젝트마다 모아 보여 줘요
                     --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
     -v, --version   버전
     -h, --help      이 도움말
@@ -381,9 +382,17 @@ function journalDay() {
 
 async function printJournal() {
   const v = journalDay();
+  // 이번 주·지난 주: 그 주의 날마다 일지를 모아 주간 일지로
+  const week = parseWeek(v);
+  if (week) {
+    const days = [];
+    for (let d = week.from; d <= week.to; d++) days.push(await journal(d));
+    console.log(args.includes('--md') ? weekMarkdown(days) : weekText(days));
+    return;
+  }
   const day = parseDay(v);
   if (day === null) {
-    console.log(`\n  ⚠ 어느 날인지 모르겠어요: ${v}\n    오늘·어제·그저께, -3이나 3일 전, 10/31이나 10월 31일, 2026-10-31처럼 적어 주세요.\n`);
+    console.log(`\n  ⚠ 어느 날인지 모르겠어요: ${v}\n    오늘·어제·그저께, -3이나 3일 전, 10/31이나 10월 31일, 2026-10-31, 한 주는 이번 주·지난 주처럼 적어 주세요.\n`);
     process.exitCode = 1;
     return;
   }

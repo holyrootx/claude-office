@@ -6,7 +6,7 @@ import { ROOMS, ROOM_IDS } from './scene.js';
 export function createJournal({ toast, onPick, copy }) {
   const fmtWorked = ms => {
     const m = Math.round(ms / 60000);
-    return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+    return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
   };
   let day = 0; // 0 = 오늘, -1 = 어제 …
   let asked = 0; // ◀를 빨리 여러 번 눌렀을 때 마지막 것만 그린다

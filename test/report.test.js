@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { journalText, journalMarkdown, parseDay } = require('../lib/report');
+const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown } = require('../lib/report');
 
 const since = new Date(2026, 10, 2).getTime();
 const at = (h, m) => new Date(2026, 10, 2, h, m).getTime();
@@ -55,4 +55,29 @@ test('예약해 둔 작업이 시작한 차례는 내 메시지와 따로 센다
   assert.match(md, /내 메시지 5 · 예약 작업 12 · 도구 14/);
   assert.match(md, /메시지 5 · 예약 작업 12 · 도구 14/);
   assert.ok(!journalMarkdown(j).includes('예약 작업'));
+});
+
+test('주간 일지: 이번 주는 월요일부터 오늘까지, 지난 주는 월~일', () => {
+  const thu = new Date(2026, 10, 5, 12); // 목요일
+  assert.deepEqual(parseWeek('이번 주', thu), { from: -3, to: 0 });
+  assert.deepEqual(parseWeek('이번주', thu), { from: -3, to: 0 });
+  assert.deepEqual(parseWeek('지난 주', thu), { from: -10, to: -4 });
+  const sun = new Date(2026, 10, 8, 12); // 일요일이면 이번 주는 월~일 7일
+  assert.deepEqual(parseWeek('week', sun), { from: -6, to: 0 });
+  assert.equal(parseWeek('어제', thu), null);
+});
+
+test('주간 일지: 날마다 막대와 합계, 프로젝트는 여러 날을 합치고 세션도 합친다', () => {
+  const day = (d, p) => ({ since: new Date(2026, 10, d).getTime(), today: false, hours: Array(24).fill(0), totals: p ? { workedMs: p.workedMs, prompts: p.prompts, tools: p.tools, errors: 0, interns: 0, tokens: 0, scheduled: p.scheduled || 0 } : { workedMs: 0, tools: 0 }, projects: p ? [p] : [] });
+  const shop = (min, extra = {}) => ({ project: 'shop', cwd: '/w/shop', workedMs: min * 60000, prompts: 2, tools: 10, errors: 0, interns: 0, tokens: 0, sessions: [{ id: 's1', title: '로그인 고치기', workedMs: min * 60000 }], ...extra });
+  const days = [day(2, shop(60)), day(3, null), day(4, shop(30, { scheduled: 3 }))];
+  const md = weekMarkdown(days);
+  assert.match(md, /^## 11월 2일\(월\)~11월 4일\(수\) 주간 업무 일지\n/);
+  assert.match(md, /일한 시간 1시간 30분 · 일한 날 2\/3 · 내 메시지 4 · 예약 작업 3 · 도구 20/);
+  assert.match(md, /- 11\/2 \(월\): 1시간 · 도구 10\n- 11\/3 \(화\): 쉼\n- 11\/4 \(수\): 30분 · 도구 10/);
+  assert.match(md, /### shop\n1시간 30분 · 2일 · 메시지 4 · 예약 작업 3 · 도구 20\n\n- 로그인 고치기 \(1시간 30분\)/);
+  const text = weekText(days);
+  assert.match(text, /11\/2 \(월\)\s+█{12}\s+1시간 · 도구 10/);
+  assert.match(text, /11\/3 \(화\)\s+·\s+-/);
+  assert.match(weekText([day(3, null)]), /일한 기록이 없어요/);
 });

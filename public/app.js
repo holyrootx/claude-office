@@ -614,6 +614,7 @@ function renderCard() {
     live: viewMode !== 'demo' && viewMode !== 'replay' && !!s.info.file,
     pinned: viewMode === 'file',
     win: IS_WIN,
+    today: viewMode !== 'demo' && viewMode !== 'replay' ? todayBySession.get(a.sid) || 0 : 0,
   });
   const card = $('card');
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
@@ -754,12 +755,16 @@ async function loadSessions(keepFile) {
 }
 
 // 로비 안내판 위 '📓 오늘 3시간 34분': 일지를 열지 않아도 오늘 얼마나 일했는지 (1분마다, 화면을 볼 때만)
+// 세션마다 오늘 일한 시간도 들고 있다가 정보 카드에 보여 준다
+const todayBySession = new Map();
 async function refreshToday() {
   const chip = $('todayChip');
   if (document.hidden || viewMode === 'demo' || viewMode === 'replay') return;
   let j;
   try { j = await (await fetch('/api/journal?day=0')).json(); } catch { return; }
   const t = j && j.totals;
+  todayBySession.clear();
+  for (const p of (j && j.projects) || []) for (const s of p.sessions || []) todayBySession.set(s.id, s.workedMs || 0);
   chip.hidden = !(t && t.workedMs);
   if (!chip.hidden) chip.textContent = `📓 오늘 ${fmtWorked(t.workedMs)} · 도구 ${t.tools}`;
 }

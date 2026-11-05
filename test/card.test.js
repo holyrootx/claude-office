@@ -39,6 +39,12 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
   assert.match(html, /title="cd &#39;\/u\/shop&#39; &amp;&amp; claude --resume sid-1"/);
 });
 
+test('오늘 이 세션이 일한 시간(업무 일지와 같은 셈)을 숫자 줄 끝에 붙인다 (1분 안 되면 안 붙인다)', () => {
+  assert.match(cardHtml(main, session(), { today: 79 * 60000 }), /인턴 1명 · 오늘 1시간 19분<\/div>/);
+  assert.ok(!cardHtml(main, session(), { today: 30000 }).includes('오늘'));
+  assert.ok(!cardHtml(main, session()).includes('오늘'));
+});
+
 test('하위 폴더에서 일하는 중이면 머리에 📂 그 폴더를 붙이고, 이어 하기는 시작한 폴더로', () => {
   const html = cardHtml(main, session({ cwd: '/u/shop', here: '/u/shop/frontend/src' }), { live: true });
   assert.match(html, /⎇ fix\/auth · 📂 frontend\/src<\/small>/);

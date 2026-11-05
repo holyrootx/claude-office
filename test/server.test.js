@@ -661,3 +661,41 @@ test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하
   hook({ session_id: SHOP, hook_event_name: 'PermissionRequest', tool_name: 'Bash', tool_input: {} });
   assert.ok(Date.now() - t0 < 1500, '꺼져 있으면 hook은 바로 끝난다');
 });
+
+test('뒤에서 켤 때 예전 버전 사무실이 켜져 있으면 끄고 같은 포트로 새로 켠다 (새 버전이면 그대로 둔다)', async () => {
+  const runtime = require('../lib/runtime');
+  const token = 'old-office-token';
+  let version = '0.0.1', stopped = false;
+  // 예전 사무실 흉내: 상태 알려 주기와 끄기만 한다
+  const fake = http.createServer((req, res) => {
+    res.setHeader('Connection', 'close');
+    if (req.url === '/api/health') return res.end(JSON.stringify({ app: 'claude-office', version, pid: process.pid }));
+    if (req.method === 'POST' && req.url === '/api/shutdown' && req.headers['x-office-token'] === token) {
+      stopped = true;
+      res.end('bye');
+      return fake.close();
+    }
+    res.writeHead(404);
+    res.end();
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const port = fake.address().port;
+  const writeRt = () => fs.writeFileSync(ENV.CLAUDE_OFFICE_RUNTIME, JSON.stringify({ pid: process.pid, port, token, version }), { mode: 0o600 });
+  // 이 테스트 안에서 예전 사무실이 답해야 하니 기다리지 않고 실행한다
+  const run = (...a) => new Promise((resolve, reject) => execFile(process.execPath, [path.join(ROOT, 'server.js'), ...a], { env: ENV }, (e, out) => (e ? reject(e) : resolve(out))));
+  try {
+    version = '99.0.0'; // 더 새 버전이 켜져 있으면 건드리지 않는다
+    writeRt();
+    assert.match(await run('--background'), /이미 켜져/);
+    assert.equal(stopped, false);
+    version = '0.0.1';
+    const out = await run('--background');
+    assert.match(out, /예전 버전\(0\.0\.1\)이라 끄고 새 버전/);
+    assert.match(out, new RegExp(`뒤에서 켰어요 → http://localhost:${port}`));
+    assert.ok(stopped);
+    assert.equal((await runtime.health(port)).version, require('../package.json').version);
+  } finally {
+    if (fake.listening) fake.close();
+    await run('--stop').catch(() => {});
+  }
+});

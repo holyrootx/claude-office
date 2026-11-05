@@ -217,8 +217,13 @@ function serve() {
   server.on('error', async e => {
     if (e.code === 'EADDRINUSE') {
       const url = `http://localhost:${port}`;
-      if (await runtime.health(port)) {
-        console.log(`\n  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}\n`);
+      const running = await runtime.health(port);
+      if (running) {
+        console.log(`\n  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
+        if (runtime.older(running.version, VERSION)) {
+          console.log(`     켜져 있는 건 예전 버전(${running.version})이에요. 새 버전(${VERSION})으로 바꾸려면 그 사무실을 끄고(--stop이나 그 터미널에서 Ctrl+C) 다시 실행해 주세요.`);
+        }
+        console.log('');
         if (OPEN_BROWSER) openBrowser(url);
         process.exit(0);
       }
@@ -261,13 +266,26 @@ function serve() {
 }
 
 // 터미널 창 없이 뒤에서 켠다. 이미 켜져 있으면 화면만 연다. (플러그인의 /office:open이 쓰는 방법)
-// 켜져 있는 사무실의 포트. 실행 정보 파일을 먼저 보고, 없거나 맞지 않으면 쓸 수 있는 포트에 차례로 물어본다.
+// 켜져 있는 사무실 { port, version, pid }. 실행 정보 파일을 먼저 보고, 없거나 맞지 않으면 쓸 수 있는 포트에 차례로 물어본다.
 async function findRunning() {
   const rt = runtime.read();
-  if (rt && (await runtime.health(rt.port))) return rt.port;
+  const at = async p => { const h = await runtime.health(p); return h && { ...h, port: p }; };
+  const first = rt && (await at(rt.port));
+  if (first) return first;
   const ports = PORT_GIVEN ? [PORT] : Array.from({ length: PORT_TRIES }, (_, i) => PORT + i);
-  for (const p of ports) if (await runtime.health(p)) return p;
-  return 0;
+  for (const p of ports) { const h = await at(p); if (h) return h; }
+  return null;
+}
+
+// 켜져 있는 사무실이 이 사무실보다 예전 버전이면 끈다 (플러그인을 업데이트해도 예전 서버가 계속 돌던 것).
+// 끄면 그 포트를, 끄지 못하면(내가 켠 게 아니라 토큰을 모르면) 0을 준다.
+async function stopOlder(found) {
+  const rt = runtime.read();
+  const r = rt && rt.port === found.port && (await runtime.request(found.port, 'POST', '/api/shutdown', { token: rt.token }));
+  if (!r || r.status !== 200) return 0;
+  for (let i = 0; i < 20 && (await runtime.health(found.port)); i++) await new Promise(res => setTimeout(res, 150));
+  await new Promise(res => setTimeout(res, 150)); // 포트가 풀릴 틈
+  return found.port;
 }
 
 // 뒤에서 켠 서버가 남긴 출력의 마지막 몇 줄
@@ -281,13 +299,21 @@ function logTail(n = 6) {
 
 async function startBackground() {
   const found = await findRunning();
-  if (found) {
-    const url = `http://localhost:${found}`;
+  let samePort = 0;
+  if (found && runtime.older(found.version, VERSION)) {
+    samePort = await stopOlder(found);
+    if (samePort) console.log(`  🔄 켜져 있던 사무실이 예전 버전(${found.version})이라 끄고 새 버전(${VERSION})으로 다시 켤게요.`);
+  }
+  if (found && !samePort) {
+    const url = `http://localhost:${found.port}`;
     console.log(`  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
+    if (runtime.older(found.version, VERSION)) console.log(`     켜져 있는 건 예전 버전(${found.version})이에요. 새 버전(${VERSION})으로 바꾸려면 그 사무실을 끄고 다시 켜 주세요.`);
     if (OPEN_BROWSER) openBrowser(url);
     return;
   }
-  const childArgs = [__filename, ...args.filter(a => a !== '--background' && a !== '--no-open'), '--no-open'];
+  // 예전 사무실을 껐으면 같은 포트로 켠다 (열려 있던 화면이 그대로 다시 붙는다)
+  const portArgs = samePort && !PORT_GIVEN ? ['--port', String(samePort)] : [];
+  const childArgs = [__filename, ...args.filter(a => a !== '--background' && a !== '--no-open'), ...portArgs, '--no-open'];
   // 출력은 버리지 않고 기록 파일에 남긴다 (켜지 못했을 때 이유를 보여 주려고)
   let out = 'ignore';
   try { out = fs.openSync(runtime.LOG, 'w', 0o600); } catch { /* 기록 없이 켠다 */ }

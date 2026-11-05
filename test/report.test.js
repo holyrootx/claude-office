@@ -49,3 +49,10 @@ test('--journal 뒤에 적은 날: 오늘·어제·그저께, -3·3일 전, 10/3
   // 모르는 말·없는 날은 오늘로 넘기지 않고 null (터미널에 무엇이 틀렸는지 알려 준다)
   for (const v of ['abc', '2026-13-45', '2/30', '내일']) assert.equal(parseDay(v, now), null, v);
 });
+
+test('예약해 둔 작업이 시작한 차례는 내 메시지와 따로 센다 (없으면 안 보여 준다)', () => {
+  const md = journalMarkdown({ ...j, totals: { ...j.totals, scheduled: 12 }, projects: j.projects.map(p => ({ ...p, scheduled: 12 })) });
+  assert.match(md, /내 메시지 5 · 예약 작업 12 · 도구 14/);
+  assert.match(md, /메시지 5 · 예약 작업 12 · 도구 14/);
+  assert.ok(!journalMarkdown(j).includes('예약 작업'));
+});

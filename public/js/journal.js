@@ -1,14 +1,10 @@
 // 업무 일지: 그날(0시~24시) Claude가 한 일을 프로젝트별로 모아 보여 준다. ◀ ▶로 다른 날, 세션을 누르면 처음부터 다시 본다.
 // '주간'(W)을 누르면 한 주(월요일~)를 날마다, '월간'(M)을 누르면 한 달을 주마다 모아 본다. 막대를 누르면 그 주·그날로.
-import { $, esc, clip, hhmmss, fmtTokens } from './util.js';
+import { $, esc, clip, hhmmss, fmtTokens, fmtWorked } from './util.js';
 import { ROOMS, ROOM_IDS } from './scene.js';
 
 // toast: 짧은 안내, onPick(file): 세션을 골랐을 때 (다시 보기 시작), copy(text): 클립보드에 넣기 (되면 true)
 export function createJournal({ toast, onPick, copy }) {
-  const fmtWorked = ms => {
-    const m = Math.round(ms / 60000);
-    return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
-  };
   let day = 0; // 0 = 오늘, -1 = 어제 …
   let week = null; // 한 주 모아 보기면 0 = 이번 주, -1 = 지난 주 …, 하루 일지면 null
   let month = null; // 한 달 모아 보기면 0 = 이번 달, -1 = 지난 달 …

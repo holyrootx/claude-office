@@ -342,6 +342,10 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 .panel { padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .panel h2 { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: .02em; }
 .panel h2 small { color: var(--faint); font-weight: 400; margin-left: 4px; }
+.lobby-panel h2 { display: flex; align-items: baseline; gap: 2px; }
+.today-chip { margin-left: auto; font: 500 11px var(--ui); color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; cursor: pointer; white-space: nowrap; }
+.today-chip:hover { color: var(--text); }
+.today-chip[hidden] { display: none; }
 .feed-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; border-bottom: 0; }
 .feed-scope {
   float: right; margin: -3px 0 0; padding: 1px 8px; border-radius: 7px; cursor: pointer;

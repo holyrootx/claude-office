@@ -39,3 +39,11 @@ test('사무실 프로그램이 바뀌면: 서버 쪽은 다시 켜라고, 화�
   assert.match(r.text, /끄고 다시 켜야/);
   assert.equal(codeNotice({ restart: false, ui: 200 }, 0).kind, '', '처음 받은 값이 없으면 견줄 수 없다');
 });
+
+test('일한 시간: 분, 시간(0분은 빼고), 시간과 분', async () => {
+  const { fmtWorked } = await import('../public/js/util.js');
+  assert.equal(fmtWorked(45 * 60000), '45분');
+  assert.equal(fmtWorked(60 * 60000), '1시간');
+  assert.equal(fmtWorked(214 * 60000), '3시간 34분');
+  assert.equal(fmtWorked(0), '0분');
+});

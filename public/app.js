@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -642,6 +642,9 @@ function resetAll() {
 function onHello(d) {
   resetAll();
   viewMode = d.mode || viewMode;
+  // 데모·다시 보기에서는 실제 오늘 기록이 어울리지 않으니 '오늘' 칩을 숨긴다
+  if (viewMode === 'demo' || viewMode === 'replay') $('todayChip').hidden = true;
+  else refreshToday();
   $('emptyRoot').textContent = d.root ? `찾는 위치: ${d.root}` : '';
   for (const snap of d.sessions || []) addSession(snap);
   // 활동 기록: 모든 세션의 지난 기록을 시간 순으로 섞어서
@@ -749,6 +752,20 @@ async function loadSessions(keepFile) {
     }
   }
 }
+
+// 로비 안내판 위 '📓 오늘 3시간 34분': 일지를 열지 않아도 오늘 얼마나 일했는지 (1분마다, 화면을 볼 때만)
+async function refreshToday() {
+  const chip = $('todayChip');
+  if (document.hidden || viewMode === 'demo' || viewMode === 'replay') return;
+  let j;
+  try { j = await (await fetch('/api/journal?day=0')).json(); } catch { return; }
+  const t = j && j.totals;
+  chip.hidden = !(t && t.workedMs);
+  if (!chip.hidden) chip.textContent = `📓 오늘 ${fmtWorked(t.workedMs)} · 도구 ${t.tools}`;
+}
+$('todayChip').addEventListener('click', () => journal.open(0));
+setInterval(refreshToday, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshToday(); });
 
 // 켜 둔 사이에 사무실 프로그램이 바뀌었으면(git pull 등) 다시 켜거나 새로 고치라고 알려 준다. 닫으면 다음에 또 바뀔 때까지 숨긴다
 let firstUi = 0, codeShown = '', codeClosed = '';

@@ -23,6 +23,11 @@ export function compactHow(ev) {
   const took = s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
   return `${ev.trigger === 'manual' ? '내가 요청' : '자동'}${s ? ` · ${took} 걸림` : ''}`;
 }
+// 일한 시간: '45분', '1시간', '3시간 34분'
+export const fmtWorked = ms => {
+  const m = Math.round((ms || 0) / 60000);
+  return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
+};
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
 export function ago(ms) {
   const s = Math.round((Date.now() - ms) / 1000);

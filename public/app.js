@@ -836,6 +836,8 @@ function openHelp() {
     p.hidden = !p.innerHTML;
     p.classList.toggle('bad', h.state !== 'on');
   }).catch(() => {});
+  // 지금 켜져 있는 사무실의 버전 (새 버전과 견줘 볼 때)
+  fetch('/api/health').then(r => r.json()).then(h => { $('helpVersion').textContent = h.version ? `지금 쓰는 버전: Claude 사무실 ${h.version}` : ''; }).catch(() => {});
   helpReturn = document.activeElement;
   $('help').hidden = false;
   $('helpClose').focus();

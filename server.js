@@ -105,6 +105,21 @@ function handlePost(req, res, pathname) {
   });
 }
 
+// 켜 둔 사이에 사무실 프로그램 파일이 바뀌었는지 (git pull 등). 서버 쪽(server.js·lib·package.json)이 바뀌면 다시 켜야 하고,
+// 화면 쪽(public)만 바뀌면 새로 고치면 된다. 화면이 15초마다 세션 목록을 받을 때 같이 알려 준다.
+function newest(p) {
+  try {
+    const st = fs.statSync(p);
+    if (!st.isDirectory()) return st.mtimeMs;
+    return fs.readdirSync(p).reduce((m, f) => Math.max(m, newest(path.join(p, f))), 0);
+  } catch {
+    return 0;
+  }
+}
+const serverStamp = () => Math.max(newest(__filename), newest(path.join(__dirname, 'lib')), newest(path.join(__dirname, 'package.json')));
+const SERVER_STAMP = serverStamp();
+const codeInfo = () => ({ restart: serverStamp() > SERVER_STAMP, ui: newest(PUBLIC) });
+
 const server = http.createServer((req, res) => {
   // DNS 리바인딩 막기: 다른 사이트 주소로 들어온 요청은 받지 않는다
   if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden'); }
@@ -127,7 +142,7 @@ const server = http.createServer((req, res) => {
     }
     const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
     // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
-    return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list });
+    return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list, code: codeInfo() });
   }
 
   if (url.pathname === '/api/journal') {

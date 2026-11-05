@@ -141,6 +141,23 @@ test('보안: 화면에는 이 서버의 스크립트 파일만 돌게 하는 CS
   assert.doesNotMatch(r.body, /\son[a-z]+=/i); // onclick= 같은 것도 없다
 });
 
+test('켜 둔 사이에 서버 쪽 파일이 바뀌면 세션 목록에 다시 켜라고 실어 보낸다', async () => {
+  const code = () => get('/api/sessions').then(r => JSON.parse(r.body).code);
+  const before = await code();
+  assert.equal(before.restart, false);
+  assert.ok(before.ui > 0);
+  // 파일 내용은 그대로 두고 고친 시각만 잠깐 미래로 (git pull로 바뀐 것처럼)
+  const f = path.join(ROOT, 'lib', 'config.js');
+  const st = fs.statSync(f);
+  try {
+    fs.utimesSync(f, st.atime, new Date(Date.now() + 60000));
+    assert.equal((await code()).restart, true);
+  } finally {
+    fs.utimesSync(f, st.atime, st.mtime);
+  }
+  assert.equal((await code()).restart, false);
+});
+
 test('hooks 상태: 설정에 없으면 꺼져 있다며 넣는 명령을 알려 준다', async () => {
   const h = JSON.parse((await get('/api/hooks')).body);
   assert.equal(h.state, 'off');

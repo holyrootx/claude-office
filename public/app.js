@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -724,6 +724,7 @@ async function loadSessions(keepFile) {
   const keep = keepFile || sel.value;
   let d;
   try { d = await (await fetch('/api/sessions' + (isFile(keep) ? '?keep=' + encodeURIComponent(keep) : ''))).json(); } catch { return; }
+  showCodeNotice(d.code);
   const want = [
     ['all', `🏢 빌딩 · 최근 ${minutesText(d.activeMinutes || 30)} 세션 모두`],
     ['auto', '자동 · 가장 최근 세션 하나'],
@@ -748,6 +749,21 @@ async function loadSessions(keepFile) {
     }
   }
 }
+
+// 켜 둔 사이에 사무실 프로그램이 바뀌었으면(git pull 등) 다시 켜거나 새로 고치라고 알려 준다. 닫으면 다음에 또 바뀔 때까지 숨긴다
+let firstUi = 0, codeShown = '', codeClosed = '';
+function showCodeNotice(code) {
+  if (code && !firstUi) firstUi = code.ui;
+  const n = codeNotice(code, firstUi);
+  const key = n.kind && `${n.kind}|${code.ui}`;
+  if (key === codeShown) return;
+  codeShown = key;
+  $('codeBar').hidden = !n.kind || key === codeClosed;
+  $('codeText').textContent = n.text;
+  $('codeReload').hidden = n.kind !== 'reload';
+}
+$('codeReload').addEventListener('click', () => location.reload());
+$('codeClose').addEventListener('click', () => { codeClosed = codeShown; $('codeBar').hidden = true; });
 
 // ───────────────────────── 데모 ─────────────────────────
 function startDemo() {

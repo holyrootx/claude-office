@@ -41,6 +41,15 @@ export function resumeCommand(cwd, sid, win) {
 }
 
 // 컨텍스트가 얼마나 찼는지 (초록 → 노랑 60% → 빨강 85%). 세션 정보에 ctx가 없으면 null
+// 사무실 프로그램이 바뀌었을 때 화면 위에 띄울 안내. code: 서버의 { restart, ui }, firstUi: 이 화면을 열 때의 ui 값
+// → { kind: 'restart'|'reload'|'', text }
+export function codeNotice(code, firstUi) {
+  if (!code) return { kind: '', text: '' };
+  if (code.restart) return { kind: 'restart', text: '🔄 사무실 프로그램이 바뀌었어요. 사무실을 끄고 다시 켜야 다 적용돼요 (켠 터미널에서 Ctrl+C 뒤 다시 실행, 플러그인이면 /office:stop 뒤 /office:open)' };
+  if (firstUi && code.ui && code.ui !== firstUi) return { kind: 'reload', text: '🔄 화면이 새로 바뀌었어요. 새로 고치면 적용돼요' };
+  return { kind: '', text: '' };
+}
+
 export function ctxOf(s) {
   const c = s && s.info && s.info.ctx;
   if (!c || !c.tokens) return null;

@@ -22,3 +22,13 @@ test('주요 기능과 캐릭터 모습이 빠지지 않았다', () => {
     assert.ok(html.includes(word), word);
   }
 });
+
+test('도움말 맨 위 hooks 한 줄: 꺼져 있으면 무엇을 실행할지, 켜져 있으면 짧게', async () => {
+  const { hooksLine } = await import('../public/js/help.js');
+  const off = hooksLine({ state: 'off', text: '권한 확인 대기·대화 압축 중까지 보려면 hooks를 켜 주세요', cmd: 'node server.js --install-hooks' });
+  assert.match(off, /^🔌 .*켜 주세요\.<br>터미널에서 <code>node server\.js --install-hooks<\/code>를 실행하고/);
+  assert.equal(hooksLine({ state: 'on', text: 'hooks가 켜져 있어요', cmd: '' }), '🔌 hooks가 켜져 있어요.');
+  assert.match(hooksLine({ state: 'stale', text: 'PreCompact가 <빠져> 있어요', cmd: 'x' }), /^⚠ PreCompact가 &lt;빠져&gt;/);
+  assert.equal(hooksLine({ state: 'unknown', text: '', cmd: '' }), '');
+  assert.equal(hooksLine(null), '');
+});

@@ -141,6 +141,12 @@ test('보안: 화면에는 이 서버의 스크립트 파일만 돌게 하는 CS
   assert.doesNotMatch(r.body, /\son[a-z]+=/i); // onclick= 같은 것도 없다
 });
 
+test('hooks 상태: 설정에 없으면 꺼져 있다며 넣는 명령을 알려 준다', async () => {
+  const h = JSON.parse((await get('/api/hooks')).body);
+  assert.equal(h.state, 'off');
+  assert.equal(h.cmd, 'node server.js --install-hooks');
+});
+
 test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함께 보낸다', async () => {
   const s = stream('all');
   const hello = await until(() => s.log.find(x => x.ev === 'hello'));
@@ -341,6 +347,8 @@ test('대화 압축: PreCompact hook을 받으면 압축 중이라고 알리고,
   await sleep(600);
   assert.ok(!s.updates(SHOP).slice(before).some(u => u.compacting));
   s.close();
+  // hook을 받아 봤으니 설정에서 못 찾아도 켜져 있는 거다
+  assert.equal(JSON.parse((await get('/api/hooks')).body).state, 'on');
 });
 
 test('긴 세션은 화면을 먼저 띄우고, 건너뛴 앞부분의 도구 사용량을 뒤이어 세어 합친다', async () => {

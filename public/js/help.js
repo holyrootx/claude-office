@@ -1,6 +1,7 @@
 // ? 도움말 창 내용: 방이 뭘 하는 곳인지, 캐릭터 모습이 무슨 뜻인지, 무엇을 누르고 어떤 키를 쓰는지 한눈에.
 // 새 기능을 넣으면 여기도 같이 고친다 (test/help.test.js가 빠진 게 없는지 본다).
 import { ROOMS, ROOM_IDS } from './scene.js';
+import { esc } from './util.js';
 
 const rows = list => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 
@@ -38,9 +39,18 @@ export const KEYS = [
   ['<kbd>?</kbd> · <kbd>Esc</kbd>', '이 도움말 · 창 닫기'],
 ];
 
+// 맨 위 hooks 상태 한 줄 (서버의 /api/hooks: { state, text, cmd })
+export function hooksLine(h) {
+  if (!h || !h.text || h.state === 'unknown') return '';
+  const icon = h.state === 'on' || h.state === 'off' ? '🔌' : '⚠';
+  const cmd = h.cmd ? `<br>터미널에서 <code>${esc(h.cmd)}</code>를 실행하고 Claude Code를 다시 켜 주세요.` : '';
+  return `${icon} ${esc(h.text)}.${cmd}`;
+}
+
 export function helpHtml() {
   const rooms = ROOM_IDS.map(id => [`${ROOMS[id].icon} ${ROOMS[id].name}`, ROOMS[id].sub]);
   return `
+    <p id="helpHooks" class="help-hooks" hidden></p>
     <h3>방</h3><dl>${rows(rooms)}</dl>
     <p class="help-tip">도구에 따라 캐릭터가 이 방들을 오가요. 처음 보는 도구는 이름을 보고 방을 골라요.</p>
     <h3>캐릭터 모습</h3><dl>${rows(LOOKS)}</dl>

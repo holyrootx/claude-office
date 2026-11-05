@@ -2,7 +2,7 @@
 import { $, esc, clip, ago, resumeCommand, ctxOf } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
-import { helpHtml } from './js/help.js';
+import { helpHtml, hooksLine } from './js/help.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -795,6 +795,14 @@ function buildHelp() {
 let helpReturn = null;
 function openHelp() {
   if (!$('helpBody').innerHTML) buildHelp();
+  // hooks가 꺼져 있으면 권한 대기·압축 중이 안 보이니, 열 때마다 서버에 물어서 맨 위에 알려 준다
+  fetch('/api/hooks').then(r => r.json()).then(h => {
+    const p = $('helpHooks');
+    if (!p) return;
+    p.innerHTML = hooksLine(h);
+    p.hidden = !p.innerHTML;
+    p.classList.toggle('bad', h.state !== 'on');
+  }).catch(() => {});
   helpReturn = document.activeElement;
   $('help').hidden = false;
   $('helpClose').focus();

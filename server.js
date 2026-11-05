@@ -18,7 +18,7 @@ const runtime = require('./lib/runtime');
 const {
   args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS,
 } = require('./lib/config');
-const { hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
+const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
@@ -76,6 +76,7 @@ function sameToken(t) {
 }
 
 // hook 알림과 끄기 요청. 실행 정보 파일의 토큰을 아는 쪽(같은 컴퓨터의 나)만 보낼 수 있다.
+let hookHeard = false; // 이번에 켠 뒤로 hook 알림을 받은 적이 있는지
 function handlePost(req, res, pathname) {
   if (!sameToken(req.headers['x-office-token'])) { res.writeHead(403); return res.end(); }
   if (pathname === '/api/shutdown') {
@@ -99,6 +100,7 @@ function handlePost(req, res, pathname) {
     if (res.writableEnded) return;
     res.writeHead(204);
     res.end();
+    hookHeard = true;
     try { onHook(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { console.error('[hook]', e.message); }
   });
 }
@@ -111,6 +113,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST') return handlePost(req, res, url.pathname);
 
   if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
+  // hooks가 켜져 있는지 (도움말 창 맨 위에 보여 준다)
+  if (url.pathname === '/api/hooks') return json(res, hooksInfo(CLAUDE_DIR, __dirname, hookHeard));
 
   if (url.pathname === '/api/sessions') {
     const all = scanSessions();

@@ -49,14 +49,20 @@ export function createReplay(office) {
       r.timer = setTimeout(step, 120);
       return;
     }
-    const ev = r.events[r.i++];
-    // 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
-    office.update({ sid: r.sid, events: [{ ...ev, at: ev.ts, atDate: r.multiDay, ts: Date.now() }] });
-    office.setConn('demo', `다시 보기 ${Math.round((r.i / r.events.length) * 100)}% · ${stamp(ev.ts, r.multiDay)}`);
-    renderBar();
+    const ev = show();
     const next = r.events[r.i];
     const gap = next ? Math.min(Math.max(next.ts - ev.ts, 0), 15000) / r.speed : 0;
     r.timer = setTimeout(step, gap);
+  }
+
+  // 다음 일 하나를 보여 준다. 캐릭터는 지금 일어난 일처럼 움직이고, 활동 기록에는 원래 시각(at)을 적는다
+  function show() {
+    const ev = r.events[r.i++];
+    office.update({ sid: r.sid, events: [{ ...ev, at: ev.ts, atDate: r.multiDay, ts: Date.now() }] });
+    const pct = Math.round((r.i / r.events.length) * 100);
+    office.setConn('demo', r.paused ? `다시 보기 멈춤 · ${pct}% · ${stamp(ev.ts, r.multiDay)}` : `다시 보기 ${pct}% · ${stamp(ev.ts, r.multiDay)}`);
+    renderBar();
+    return ev;
   }
 
   // 그때까지의 기록으로 사무실을 다시 세우고 거기서부터 이어 간다
@@ -84,8 +90,9 @@ export function createReplay(office) {
     office.hello({ mode: 'replay', root: '', sessions: [{ sid: r.sid, session: r.session, history: main, plan: planEv ? planEv.plan : null, stats, wait: null, agents }] });
     r.i = idx;
     office.toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${stamp(r.events[idx].ts, r.multiDay)}`);
-    renderBar();
-    step();
+    // 멈춘 채로 옮겼으면 그 자리의 일 하나만 보여 주고 계속 멈춰 있는다
+    if (r.paused) show();
+    else step();
   }
 
   // 멈췄다가 이어 보기 (Space)
@@ -126,6 +133,7 @@ export function createReplay(office) {
   // 너무 많으면 고르게 300개까지만
   function renderMarks() {
     const all = [];
+    r.marks = all; // Shift+← →로 앞뒤 눈금을 오갈 때 쓴다 (다 들고 있고, 그리는 것만 300개까지)
     r.events.forEach((e, i) => {
       if (e.agent) return;
       if (e.k === 'user') all.push({ i, cls: '', tip: `🙋 ${e.text || ''}` });
@@ -163,8 +171,19 @@ export function createReplay(office) {
   $('pauseBtn').addEventListener('click', togglePause);
   $('speedBtn').addEventListener('click', cycleSpeed);
 
+  // 앞(-1)·뒤(+1) 눈금으로: 지금 막 본 일이 시작된 눈금보다 하나 앞, 또는 아직 안 본 다음 눈금
+  function jumpMark(dir) {
+    if (!r || !r.marks || !r.marks.length) return;
+    const idx = r.marks.map(m => m.i);
+    const here = r.i - 1; // 마지막으로 보여 준 일
+    const cur = idx.filter(i => i <= here).pop(); // 지금 보고 있는 일을 시킨 눈금
+    const to = dir > 0 ? idx.find(i => i > here) : idx.filter(i => i < (cur == null ? here : cur)).pop();
+    if (to == null) return office.toast(dir > 0 ? '뒤로는 시킨 일이 더 없어요' : '앞으로는 시킨 일이 더 없어요');
+    seek(to / r.events.length);
+  }
+
   return {
-    start, stop, togglePause,
+    start, stop, togglePause, jumpMark,
     seekBy: delta => r && seek(r.i / r.events.length + delta),
     isOn: () => !!r,
   };

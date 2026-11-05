@@ -995,7 +995,9 @@ document.addEventListener('keydown', e => {
     replay.togglePause();
   } else if (replay.isOn() && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
     e.preventDefault();
-    replay.seekBy(e.key === 'ArrowRight' ? 0.05 : -0.05);
+    // Shift를 같이 누르면 앞뒤로 시킨 일(막대의 눈금)로, 아니면 5%씩
+    if (e.shiftKey) replay.jumpMark(e.key === 'ArrowRight' ? 1 : -1);
+    else replay.seekBy(e.key === 'ArrowRight' ? 0.05 : -0.05);
   } else if (/^[1-9]$/.test(e.key)) {
     const key = [...floors.keys()][Number(e.key) - 1];
     if (key) goFloor(key, true);

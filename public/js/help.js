@@ -33,7 +33,7 @@ export const CLICKS = [
 
 export const KEYS = [
   ['<kbd>1</kbd>~<kbd>9</kbd> · <kbd>0</kbd>', '그 층으로 · 층 자동'],
-  ['<kbd>Space</kbd> · <kbd>←</kbd> <kbd>→</kbd>', '다시 보기 멈추기 · 5%씩 앞뒤로'],
+  ['<kbd>Space</kbd> · <kbd>←</kbd> <kbd>→</kbd>', '다시 보기 멈추기 · 5%씩 앞뒤로 (<kbd>Shift</kbd>를 같이 누르면 앞뒤로 시킨 일로)'],
   ['<kbd>J</kbd> · <kbd>W</kbd> · <kbd>M</kbd>', '업무 일지 열기 · 닫기, 일지에서 한 주 · 한 달 모아 보기'],
   ['<kbd>Tab</kbd> · <kbd>Enter</kbd>', '로비 안내판·업무 일지 줄 고르기 · 열기'],
   ['<kbd>?</kbd> · <kbd>Esc</kbd>', '이 도움말 · 창 닫기'],

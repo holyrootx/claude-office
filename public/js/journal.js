@@ -94,17 +94,27 @@ export function createJournal({ toast, onPick, copy }) {
       : `<p class="jp-empty">${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`;
   }
 
-  // 한 주 모아 보기: 날마다 일한 시간 막대, 프로젝트는 여러 날을 합쳐서 (세션은 긴 순서로 8개까지)
+  // 한 주·한 달 모아 보기의 합계와 프로젝트 목록 (프로젝트는 여러 날을 합쳐서, 세션은 긴 순서로 8개까지)
+  const rangeTotals = (j, days) => {
+    const t = j.totals;
+    return totalsHtml([
+      ['일한 시간', fmtWorked(t.workedMs)], ['일한 날', `${j.worked}/${days}`], ['프로젝트', j.projects.length],
+      ['내 메시지', t.prompts], ...(t.scheduled ? [['예약 작업', t.scheduled]] : []), ['도구', t.tools], ['실패', t.errors], ['출력 토큰', fmtTokens(t.tokens || 0)],
+    ]);
+  };
+  const rangeProjects = (j, empty) => (j.projects.length ? j.projects.map(p => {
+    const more = p.sessions.length > 8 ? `<li class="more">그 밖에 세션 ${p.sessions.length - 8}개</li>` : '';
+    return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small></h3>`
+      + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(sessionLi).join('')}${more}</ul></section>`;
+  }).join('') : `<p class="jp-empty">${empty}</p>`);
+
+  // 한 주 모아 보기: 날마다 일한 시간 막대 (누르면 그날로)
   const WEEKDAY = '일월화수목금토';
   function drawWeek(j) {
     const rel = j.today ? '이번 주' : week === -1 ? '지난 주' : `${-week}주 전`;
     $('journalTitle').innerHTML = `📓 ${esc(j.title)}<small>${rel}</small>`;
     $('journalNext').disabled = j.today;
-    const t = j.totals;
-    $('journalTotals').innerHTML = totalsHtml([
-      ['일한 시간', fmtWorked(t.workedMs)], ['일한 날', `${j.worked}/${j.days.length}`], ['프로젝트', j.projects.length],
-      ['내 메시지', t.prompts], ...(t.scheduled ? [['예약 작업', t.scheduled]] : []), ['도구', t.tools], ['실패', t.errors], ['출력 토큰', fmtTokens(t.tokens || 0)],
-    ]);
+    $('journalTotals').innerHTML = rangeTotals(j, j.days.length);
     const maxD = Math.max(1, ...j.days.map(d => d.workedMs));
     const today = new Date().setHours(0, 0, 0, 0);
     const label = d => { const x = new Date(d.since); return `${x.getMonth() + 1}/${x.getDate()} (${WEEKDAY[x.getDay()]})`; };
@@ -116,23 +126,15 @@ export function createJournal({ toast, onPick, copy }) {
     $('journalHours').hidden = false;
     $('journalHours').innerHTML = j.days.map(d => `<i class="${d.since === today ? 'now' : ''}" data-day="${off(d)}" style="--h:${Math.round((d.workedMs / maxD) * 100)}%" title="${label(d)} · ${d.workedMs ? `${fmtWorked(d.workedMs)} · 도구 ${d.tools}번` : '쉼'} · 누르면 그날 일지"></i>`).join('')
       + j.days.map((d, i) => `<span style="--c:${i + 1}" data-day="${off(d)}" role="button" tabindex="0" aria-label="${label(d)} 일지 보기"><b>${WEEKDAY[new Date(d.since).getDay()]}</b>${d.workedMs ? fmtWorked(d.workedMs) : '·'}</span>`).join('');
-    $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
-      const more = p.sessions.length > 8 ? `<li class="more">그 밖에 세션 ${p.sessions.length - 8}개</li>` : '';
-      return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small></h3>`
-        + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(sessionLi).join('')}${more}</ul></section>`;
-    }).join('') : `<p class="jp-empty">${j.today ? '이번 주에는 아직 일한 기록이 없어요' : '이 주에는 일한 기록이 없어요'}</p>`;
+    $('journalList').innerHTML = rangeProjects(j, j.today ? '이번 주에는 아직 일한 기록이 없어요' : '이 주에는 일한 기록이 없어요');
   }
 
-  // 한 달 모아 보기: 주마다(월요일부터) 일한 시간 막대, 막대를 누르면 그 주로. 프로젝트는 그 달을 합쳐서
+  // 한 달 모아 보기: 주마다(월요일부터) 일한 시간 막대 (누르면 그 주로)
   function drawMonth(j) {
     const rel = j.today ? '이번 달' : month === -1 ? '지난 달' : `${-month}달 전`;
     $('journalTitle').innerHTML = `📓 ${esc(j.title)}<small>${rel}</small>`;
     $('journalNext').disabled = j.today;
-    const t = j.totals;
-    $('journalTotals').innerHTML = totalsHtml([
-      ['일한 시간', fmtWorked(t.workedMs)], ['일한 날', `${j.worked}/${j.days}`], ['프로젝트', j.projects.length],
-      ['내 메시지', t.prompts], ...(t.scheduled ? [['예약 작업', t.scheduled]] : []), ['도구', t.tools], ['실패', t.errors], ['출력 토큰', fmtTokens(t.tokens || 0)],
-    ]);
+    $('journalTotals').innerHTML = rangeTotals(j, j.days);
     const monday = ts => { const d = new Date(ts); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d.getTime(); };
     const thisMonday = monday(Date.now());
     const weekOff = w => Math.round((monday(w.from) - thisMonday) / (7 * 86400000)); // 이번 주가 0
@@ -144,11 +146,7 @@ export function createJournal({ toast, onPick, copy }) {
     $('journalHours').hidden = false;
     $('journalHours').innerHTML = j.weeks.map(w => `<i class="${weekOff(w) === 0 ? 'now' : ''}" data-week="${weekOff(w)}" style="--h:${Math.round((w.workedMs / maxW) * 100)}%" title="${span(w)} · ${w.workedMs ? `${fmtWorked(w.workedMs)} · ${w.worked}일 · 도구 ${w.tools}번` : '쉼'} · 누르면 그 주 일지"></i>`).join('')
       + j.weeks.map((w, i) => `<span style="--c:${i + 1}" data-week="${weekOff(w)}" role="button" tabindex="0" aria-label="${span(w)} 주간 일지 보기"><b>${span(w)}</b>${w.workedMs ? fmtWorked(w.workedMs) : '·'}</span>`).join('');
-    $('journalList').innerHTML = j.projects.length ? j.projects.map(p => {
-      const more = p.sessions.length > 8 ? `<li class="more">그 밖에 세션 ${p.sessions.length - 8}개</li>` : '';
-      return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small></h3>`
-        + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(sessionLi).join('')}${more}</ul></section>`;
-    }).join('') : `<p class="jp-empty">${j.today ? '이번 달에는 아직 일한 기록이 없어요' : '이 달에는 일한 기록이 없어요'}</p>`;
+    $('journalList').innerHTML = rangeProjects(j, j.today ? '이번 달에는 아직 일한 기록이 없어요' : '이 달에는 일한 기록이 없어요');
   }
   let returnFocus = null;
   function closeJournal() {

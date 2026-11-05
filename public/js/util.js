@@ -23,6 +23,12 @@ export function compactHow(ev) {
   const took = s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
   return `${ev.trigger === 'manual' ? '내가 요청' : '자동'}${s ? ` · ${took} 걸림` : ''}`;
 }
+// ts가 든 주가 이번 주(now가 든 주, 월요일부터)에서 몇 주 떨어졌는지: 이번 주 0, 지난 주 -1 …
+export function weekOffset(ts, now = Date.now()) {
+  const monday = t => { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
+}
+
 // 일한 시간: '45분', '1시간', '3시간 34분'
 export const fmtWorked = ms => {
   const m = Math.round((ms || 0) / 60000);

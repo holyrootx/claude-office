@@ -1,6 +1,6 @@
 // 업무 일지: 그날(0시~24시) Claude가 한 일을 프로젝트별로 모아 보여 준다. ◀ ▶로 다른 날, 세션을 누르면 처음부터 다시 본다.
 // '주간'(W)을 누르면 한 주(월요일~)를 날마다, '월간'(M)을 누르면 한 달을 주마다 모아 본다. 막대를 누르면 그 주·그날로.
-import { $, esc, clip, hhmmss, fmtTokens, fmtWorked } from './util.js';
+import { $, esc, clip, hhmmss, fmtTokens, fmtWorked, weekOffset } from './util.js';
 import { ROOMS, ROOM_IDS } from './scene.js';
 
 // toast: 짧은 안내, onPick(file): 세션을 골랐을 때 (다시 보기 시작), copy(text): 클립보드에 넣기 (되면 true)
@@ -131,9 +131,7 @@ export function createJournal({ toast, onPick, copy }) {
     $('journalTitle').innerHTML = `📓 ${esc(j.title)}<small>${rel}</small>`;
     $('journalNext').disabled = j.today;
     $('journalTotals').innerHTML = rangeTotals(j, j.days);
-    const monday = ts => { const d = new Date(ts); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d.getTime(); };
-    const thisMonday = monday(Date.now());
-    const weekOff = w => Math.round((monday(w.from) - thisMonday) / (7 * 86400000)); // 이번 주가 0
+    const weekOff = w => weekOffset(w.from); // 이번 주가 0
     const span = w => { const a = new Date(w.from), b = new Date(w.to); return `${a.getMonth() + 1}/${a.getDate()}${w.to > w.from ? `~${b.getMonth() + 1}/${b.getDate()}` : ''}`; };
     const maxW = Math.max(1, ...j.weeks.map(w => w.workedMs));
     $('journalHours').classList.add('week');

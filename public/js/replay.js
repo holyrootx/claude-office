@@ -3,6 +3,32 @@
 import { $, esc, clip, stamp } from './util.js';
 
 const SPEEDS = [5, 10, 30];
+
+// 다시 볼 이벤트 중 일을 시킨 자리: 🙋 내 말, ⏰ 예약 작업, 📨 다른 세션이 보낸 말 (인턴이 받은 말은 빼고)
+// → [{ i: 이벤트 순서, cls: ''|'schedule'|'peer', tip }]
+export function requestMarks(events) {
+  const out = [];
+  events.forEach((e, i) => {
+    if (e.agent) return;
+    if (e.k === 'user') out.push({ i, cls: '', tip: `🙋 ${e.text || ''}` });
+    else if (e.k === 'note' && e.kind === 'schedule') out.push({ i, cls: 'schedule', tip: `⏰ 예약된 작업 · ${e.text || ''}` });
+    else if (e.k === 'note' && e.kind === 'peer') out.push({ i, cls: 'peer', tip: `📨 ${e.from || ''} · ${e.text || ''}` });
+  });
+  return out;
+}
+
+// 앞(-1)·뒤(+1) 눈금: here는 마지막으로 보여 준 일의 순서. 지금 보고 있는 일을 시킨 눈금의 하나 앞, 또는 아직 안 본 다음 눈금.
+// 없으면 null
+export function nextMark(marks, here, dir) {
+  const idx = marks.map(m => m.i);
+  if (dir > 0) {
+    const to = idx.find(i => i > here);
+    return to == null ? null : to;
+  }
+  const cur = idx.filter(i => i <= here).pop();
+  const to = idx.filter(i => i < (cur == null ? here : cur)).pop();
+  return to == null ? null : to;
+}
 // 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
 const QUEUE = { 5: 1, 10: 3, 30: 12 };
 
@@ -132,14 +158,8 @@ export function createReplay(office) {
   // 진행 막대 위에 일을 시킨 자리를 눈금으로: 🙋 내 말(노랑), ⏰ 예약 작업(보라), 📨 다른 세션이 보낸 말(파랑)
   // 너무 많으면 고르게 300개까지만
   function renderMarks() {
-    const all = [];
+    const all = requestMarks(r.events);
     r.marks = all; // Shift+← →로 앞뒤 눈금을 오갈 때 쓴다 (다 들고 있고, 그리는 것만 300개까지)
-    r.events.forEach((e, i) => {
-      if (e.agent) return;
-      if (e.k === 'user') all.push({ i, cls: '', tip: `🙋 ${e.text || ''}` });
-      else if (e.k === 'note' && e.kind === 'schedule') all.push({ i, cls: 'schedule', tip: `⏰ 예약된 작업 · ${e.text || ''}` });
-      else if (e.k === 'note' && e.kind === 'peer') all.push({ i, cls: 'peer', tip: `📨 ${e.from || ''} · ${e.text || ''}` });
-    });
     const step = Math.max(1, Math.ceil(all.length / 300));
     $('replayMarks').innerHTML = all.filter((_, n) => n % step === 0).map(m => {
       const tip = `${stamp(r.events[m.i].ts, r.multiDay)} ${clip(m.tip, 80)} · 누르면 여기로`;
@@ -174,10 +194,7 @@ export function createReplay(office) {
   // 앞(-1)·뒤(+1) 눈금으로: 지금 막 본 일이 시작된 눈금보다 하나 앞, 또는 아직 안 본 다음 눈금
   function jumpMark(dir) {
     if (!r || !r.marks || !r.marks.length) return;
-    const idx = r.marks.map(m => m.i);
-    const here = r.i - 1; // 마지막으로 보여 준 일
-    const cur = idx.filter(i => i <= here).pop(); // 지금 보고 있는 일을 시킨 눈금
-    const to = dir > 0 ? idx.find(i => i > here) : idx.filter(i => i < (cur == null ? here : cur)).pop();
+    const to = nextMark(r.marks, r.i - 1, dir);
     if (to == null) return office.toast(dir > 0 ? '뒤로는 시킨 일이 더 없어요' : '앞으로는 시킨 일이 더 없어요');
     seek(to / r.events.length);
   }

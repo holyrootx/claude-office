@@ -47,3 +47,13 @@ test('일한 시간: 분, 시간(0분은 빼고), 시간과 분', async () => {
   assert.equal(fmtWorked(214 * 60000), '3시간 34분');
   assert.equal(fmtWorked(0), '0분');
 });
+
+test('몇 주 전인지: 월요일부터 한 주, 이번 주 0 · 지난 주 -1', async () => {
+  const { weekOffset } = await import('../public/js/util.js');
+  const thu = new Date(2026, 10, 5, 12).getTime(); // 목요일
+  assert.equal(weekOffset(new Date(2026, 10, 2).getTime(), thu), 0); // 이번 주 월요일
+  assert.equal(weekOffset(new Date(2026, 10, 1, 23).getTime(), thu), -1); // 어제의 어제(일요일)는 지난 주
+  assert.equal(weekOffset(new Date(2026, 9, 26).getTime(), thu), -1);
+  assert.equal(weekOffset(new Date(2026, 9, 5).getTime(), thu), -4);
+  assert.equal(weekOffset(new Date(2026, 2, 30).getTime(), new Date(2026, 3, 1).getTime()), 0); // 서머타임이 끼어도 (3월 말)
+});

@@ -23,7 +23,8 @@ const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const {
-  journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown, parseMonth, monthText, monthMarkdown,
+  journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
+  parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown,
 } = require('./lib/report');
 // 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
 // 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
@@ -167,6 +168,19 @@ const server = http.createServer((req, res) => {
       res.writeHead(500);
       res.end();
     };
+    // ?month=0 (이번 달) · -1 (지난 달) …: 한 달을 주마다·프로젝트마다 모아서
+    if (url.searchParams.has('month')) {
+      const month = Math.min(0, Math.trunc(Number(url.searchParams.get('month'))) || 0);
+      const r = monthRange(month);
+      weekDays(r).then(days => {
+        if (md) {
+          res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+          return res.end(monthMarkdown(days, r.month));
+        }
+        json(res, { month, today: month === 0, title: monthTitle(days, r.month), weeks: byWeek(days), days: days.length, ...weekSummary(days) });
+      }, fail);
+      return;
+    }
     // ?week=0 (이번 주) · -1 (지난 주) …: 한 주를 날마다·프로젝트마다 모아서
     if (url.searchParams.has('week')) {
       const week = Math.min(0, Math.trunc(Number(url.searchParams.get('week'))) || 0);

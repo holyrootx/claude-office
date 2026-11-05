@@ -966,6 +966,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') journal.prev();
     if (e.key === 'ArrowRight') journal.next();
     if (e.key === 'w' || e.key === 'W' || e.code === 'KeyW') journal.toggleWeek();
+    if (e.key === 'm' || e.key === 'M' || e.code === 'KeyM') journal.toggleMonth();
     return;
   }
   if (e.key === '?') return openHelp();

@@ -1,6 +1,6 @@
 // 다시 보기: 지난 세션을 처음부터 빠르게 다시 틀어 준다. 오래 쉬던 시간은 15초까지로 줄이고,
 // 캐릭터 연출이 밀리면 기다려 준다. 진행 막대를 누르면 그 시점의 사무실로 건너뛴다.
-import { $, clip, stamp } from './util.js';
+import { $, esc, clip, stamp } from './util.js';
 
 const SPEEDS = [5, 10, 30];
 // 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
@@ -28,6 +28,7 @@ export function createReplay(office) {
     // 하루를 넘기는 세션이면 시각마다 날짜를 붙인다
     const multiDay = day(d.events[0].ts) !== day(d.events[d.events.length - 1].ts);
     r = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0, multiDay };
+    renderMarks();
     renderBtns();
     const title = clip(d.session.title || d.session.project, 24);
     office.toast(d.skipped
@@ -121,6 +122,23 @@ export function createReplay(office) {
     bar.querySelector('span').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
   }
 
+  // 진행 막대 위에 일을 시킨 자리를 눈금으로: 🙋 내 말(노랑), ⏰ 예약 작업(보라), 📨 다른 세션이 보낸 말(파랑)
+  // 너무 많으면 고르게 300개까지만
+  function renderMarks() {
+    const all = [];
+    r.events.forEach((e, i) => {
+      if (e.agent) return;
+      if (e.k === 'user') all.push({ i, cls: '', tip: `🙋 ${e.text || ''}` });
+      else if (e.k === 'note' && e.kind === 'schedule') all.push({ i, cls: 'schedule', tip: `⏰ 예약된 작업 · ${e.text || ''}` });
+      else if (e.k === 'note' && e.kind === 'peer') all.push({ i, cls: 'peer', tip: `📨 ${e.from || ''} · ${e.text || ''}` });
+    });
+    const step = Math.max(1, Math.ceil(all.length / 300));
+    $('replayMarks').innerHTML = all.filter((_, n) => n % step === 0).map(m => {
+      const tip = `${stamp(r.events[m.i].ts, r.multiDay)} ${clip(m.tip, 80)} · 누르면 여기로`;
+      return `<u class="${m.cls}" data-i="${m.i}" style="left:${((m.i / r.events.length) * 100).toFixed(2)}%" title="${esc(tip)}"></u>`;
+    }).join('');
+  }
+
   function renderBtns() {
     $('replayBtn').textContent = r ? '⏹' : '⏪';
     $('replayBtn').title = r ? '다시 보기 끝내고 실시간으로 돌아가기' : '고른 세션(없으면 지금 보는 직원)을 처음부터 빠르게 다시 보기';
@@ -136,6 +154,9 @@ export function createReplay(office) {
 
   $('replayBtn').addEventListener('click', () => (r ? stop(true) : start()));
   $('replayBar').addEventListener('click', e => {
+    // 눈금을 누르면 그 일이 시작된 바로 그 자리로
+    const mark = e.target.closest('u[data-i]');
+    if (mark && r) return seek(Number(mark.dataset.i) / r.events.length);
     const box = e.currentTarget.getBoundingClientRect();
     seek((e.clientX - box.left) / box.width);
   });

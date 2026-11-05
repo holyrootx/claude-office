@@ -276,6 +276,12 @@ button, select { font: inherit; color: inherit; }
 .replay-bar i { position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); background: color-mix(in srgb, #fbbf24 35%, transparent); transition: width .3s; }
 .replay-bar span { position: relative; display: block; text-align: center; font: 600 11.5px/24px var(--mono); color: var(--text-amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; }
 .replay-bar:hover i { background: color-mix(in srgb, #fbbf24 50%, transparent); }
+/* 일을 시킨 자리(🙋 내 말 · ⏰ 예약 작업 · 📨 다른 세션): 누르면 바로 그 자리로 */
+.replay-marks { position: absolute; inset: 0; pointer-events: none; }
+.replay-marks u { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--text-amber); opacity: .55; pointer-events: auto; cursor: pointer; text-decoration: none; }
+.replay-marks u.schedule { background: var(--text-violet); }
+.replay-marks u.peer { background: var(--text-link); }
+.replay-marks u:hover { opacity: 1; width: 5px; margin-left: -2px; }
 
 /* ───────── 층 ───────── */
 .floorbar {

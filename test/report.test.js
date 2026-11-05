@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown } = require('../lib/report');
+const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown, parseMonth, monthMarkdown } = require('../lib/report');
 
 const since = new Date(2026, 10, 2).getTime();
 const at = (h, m) => new Date(2026, 10, 2, h, m).getTime();
@@ -84,4 +84,27 @@ test('주간 일지: 날마다 막대와 합계, 프로젝트는 여러 날을 �
   assert.match(text, /11\/2 \(월\)\s+█{12}\s+1시간 · 도구 10/);
   assert.match(text, /11\/3 \(화\)\s+·\s+-/);
   assert.match(weekText([day(3, null)]), /일한 기록이 없어요/);
+});
+
+test('월간 일지: 이번 달은 1일부터 오늘까지, 지난 달·10월은 그 달 전체 (아직 안 온 달은 작년)', () => {
+  const now = new Date(2026, 10, 5, 12); // 11월 5일
+  assert.deepEqual(parseMonth('이번 달', now), { from: -4, to: 0, month: '2026년 11월' });
+  assert.deepEqual(parseMonth('지난 달', now), { from: -35, to: -5, month: '2026년 10월' });
+  assert.deepEqual(parseMonth('10월', now), parseMonth('지난달', now));
+  assert.equal(parseMonth('12월', now).month, '2025년 12월');
+  assert.equal(parseMonth('1월', new Date(2026, 0, 15)).month, '2026년 1월'); // 지난 달이 작년이어도
+  assert.equal(parseMonth('지난 달', new Date(2026, 0, 15)).month, '2025년 12월');
+  assert.equal(parseMonth('10월 31일', now), null);
+  assert.equal(parseMonth('13월', now), null);
+});
+
+test('월간 일지: 주마다(월요일부터) 묶고, 프로젝트는 그 달을 합친다', () => {
+  const day = (d, min) => ({ since: new Date(2026, 9, d).getTime(), totals: min ? { workedMs: min * 60000, prompts: 1, tools: 5, errors: 0, interns: 0, tokens: 0 } : { workedMs: 0, tools: 0 }, projects: min ? [{ project: 'blog', cwd: '/w/blog', workedMs: min * 60000, prompts: 1, tools: 5, errors: 0, interns: 0, tokens: 0, sessions: [{ id: 'a', title: '글쓰기', workedMs: min * 60000 }] }] : [] });
+  // 10/1(목)~10/6(화): 첫 주는 1~4일, 다음 주는 5일(월)부터
+  const days = [day(1, 30), day(2, 0), day(3, 0), day(4, 30), day(5, 60), day(6, 0)];
+  const md = monthMarkdown(days, '2026년 10월');
+  assert.match(md, /^## 2026년 10월 업무 일지 \(10\/1~10\/6\)\n/);
+  assert.match(md, /일한 시간 2시간 · 일한 날 3\/6/);
+  assert.match(md, /- 10\/1~10\/4: 1시간 · 2일 · 도구 10\n- 10\/5~10\/6: 1시간 · 1일 · 도구 5/);
+  assert.match(md, /### blog\n2시간 · 3일 · 메시지 3 · 도구 15/);
 });

@@ -22,8 +22,10 @@ const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookchec
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
-const { journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown } = require('./lib/report');
-// 한 주의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
+const {
+  journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown, parseMonth, monthText, monthMarkdown,
+} = require('./lib/report');
+// 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
 // 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
 async function weekDays({ from, to }) {
   const days = [];
@@ -48,7 +50,8 @@ if (args.includes('--help') || args.includes('-h')) {
     --print-hooks   위 hooks 설정을 출력만 하기 (직접 합치고 싶을 때)
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
                     날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요.
-                    이번 주·지난 주·2주 전을 적으면 한 주를 날마다·프로젝트마다 모아 보여 줘요
+                    이번 주·지난 주·2주 전을 적으면 한 주를 날마다·프로젝트마다,
+                    이번 달·지난 달·10월을 적으면 한 달을 주마다·프로젝트마다 모아 보여 줘요
                     --md를 같이 붙이면 슬랙·노션에 붙여 넣을 마크다운으로
     -v, --version   버전
     -h, --help      이 도움말
@@ -412,9 +415,16 @@ async function printJournal() {
     console.log(args.includes('--md') ? weekMarkdown(days) : weekText(days));
     return;
   }
+  // 이번 달·지난 달·10월: 그 달을 주마다·프로젝트마다
+  const month = parseMonth(v);
+  if (month) {
+    const days = await weekDays(month);
+    console.log(args.includes('--md') ? monthMarkdown(days, month.month) : monthText(days, month.month));
+    return;
+  }
   const day = parseDay(v);
   if (day === null) {
-    console.log(`\n  ⚠ 어느 날인지 모르겠어요: ${v}\n    오늘·어제·그저께, -3이나 3일 전, 10/31이나 10월 31일, 2026-10-31, 한 주는 이번 주·지난 주·2주 전처럼 적어 주세요.\n`);
+    console.log(`\n  ⚠ 어느 날인지 모르겠어요: ${v}\n    오늘·어제·그저께, -3이나 3일 전, 10/31이나 10월 31일, 2026-10-31, 한 주는 이번 주·지난 주·2주 전, 한 달은 이번 달·지난 달·10월처럼 적어 주세요.\n`);
     process.exitCode = 1;
     return;
   }

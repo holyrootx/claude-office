@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd,
+  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
@@ -316,6 +316,8 @@ function serve() {
     if (rules.length) console.log(`  🗂  내 방 설정 ${rules.length}개를 읽었어요 (${ROOM_CONFIG})`);
     const hint = hooksHint(CLAUDE_DIR, __dirname);
     if (hint) console.log(hint);
+    // npx는 같은 주소면 처음 받은 사본을 계속 써서, 새 버전이 저절로 받아지지 않는다
+    if (NPX_COPY) console.log(`  ℹ npx가 받아 둔 ${VERSION} 사본이에요. 같은 주소로는 새 버전을 받지 않으니, 새 버전은 README 방법 A의 최신 명령(?v= 숫자가 바뀐 것)으로 실행하세요.`);
     console.log(`  ⏱  ${POLL_MS}ms마다 최신 세션을 따라 읽는 중… (끄려면 Ctrl+C)\n`);
     if (OPEN_BROWSER) openBrowser(url);
   });

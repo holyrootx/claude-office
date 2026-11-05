@@ -270,6 +270,12 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   assert.ok(w.totals.tools >= shop.tools);
   const md = await get('/api/journal?week=-1&format=md');
   assert.match(md.body, /^## .+~.+ 주간 업무 일지\n/);
+  // 파일을 한 번만 읽어 날마다 나눠 세도 하루씩 따로 본 것과 같다
+  for (const [i, d] of w.days.entries()) {
+    const one = JSON.parse((await get('/api/journal?day=' + (i - w.days.length + 1))).body);
+    assert.equal(d.since, one.since);
+    assert.deepEqual([d.workedMs, d.tools], [one.totals.workedMs || 0, one.totals.tools || 0]);
+  }
 });
 
 test('업무 일지를 터미널에도 출력한다 (--journal)', () => {

@@ -24,9 +24,11 @@ const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const { journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown } = require('./lib/report');
 // 한 주의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
+// 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
 async function weekDays({ from, to }) {
   const days = [];
-  for (let d = from; d <= to; d++) days.push(await journal(d));
+  const cache = new Map();
+  for (let d = from; d <= to; d++) days.push(await journal(d, cache));
   return days;
 }
 if (args.includes('--help') || args.includes('-h')) {

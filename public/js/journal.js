@@ -21,7 +21,7 @@ export function createJournal({ toast, onPick, copy }) {
     day = want;
     week = wantWeek;
     const q = query();
-    $('journalBox').classList.add('busy'); // 한 주는 모으는 데 1~2초 걸린다
+    $('journalBox').classList.add('busy'); // 받아 오는 동안 흐리게 (한 주는 조금 더 걸린다)
     let j;
     try { j = await (await fetch('/api/journal?' + q)).json(); } catch {
       if (ask !== asked) return;

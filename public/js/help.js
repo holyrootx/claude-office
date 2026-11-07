@@ -43,7 +43,7 @@ export const KEYS = [
 export function hooksLine(h) {
   if (!h || !h.text || h.state === 'unknown') return '';
   const icon = h.state === 'on' || h.state === 'off' ? '🔌' : '⚠';
-  const cmd = h.cmd ? `<br>터미널에서 <code>${esc(h.cmd)}</code>를 실행하고 Claude Code를 다시 켜 주세요.` : '';
+  const cmd = h.cmd ? `<br>터미널에서 <code>${esc(h.cmd)}</code>를 실행하고 Claude Code를 다시 켜 주세요. <button type="button" class="hooks-copy" data-cmd="${esc(h.cmd)}">📋 명령 복사</button>` : '';
   return `${icon} ${esc(h.text)}.${cmd}`;
 }
 

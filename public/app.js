@@ -973,6 +973,12 @@ async function copyText(text) {
 }
 el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 닫기
 $('helpBtn').addEventListener('click', openHelp);
+// 도움말 맨 위 hooks 안내의 '📋 명령 복사'
+$('helpBody').addEventListener('click', e => {
+  const b = e.target.closest('.hooks-copy');
+  if (!b) return;
+  copyText(b.dataset.cmd).then(ok => toast(ok ? '📋 복사했어요 · 터미널에 붙여 넣어 실행하세요' : `복사하지 못했어요: ${b.dataset.cmd}`));
+});
 $('helpClose').addEventListener('click', closeHelp);
 $('help').addEventListener('click', e => { if (e.target === e.currentTarget) closeHelp(); });
 // 단축키: Space 다시 보기 멈춤·이어 보기, ←·→ 다시 보기 5%씩 이동, 1~9 그 층으로, 0 층 자동, J 업무 일지

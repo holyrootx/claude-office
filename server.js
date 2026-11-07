@@ -18,7 +18,7 @@ const runtime = require('./lib/runtime');
 const {
   args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
-const { hooksInfo, hooksHint, ourHooks, installHooks } = require('./lib/hookcheck');
+const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
@@ -49,6 +49,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --install-hooks 권한 확인 대기·대화 압축 중을 알려 줄 hooks를 ~/.claude/settings.json에 넣기
                     (다른 hooks는 그대로 두고, 전 내용은 settings.json.before-claude-office로 남겨요)
     --print-hooks   위 hooks 설정을 출력만 하기 (직접 합치고 싶을 때)
+    --uninstall-hooks  넣어 둔 사무실 hooks만 빼기 (다른 hooks는 그대로)
     --journal [날]  업무 일지를 터미널에 출력 (서버를 켜지 않아요).
                     날은 비우면 오늘, 어제·그저께·3일 전·10월 31일·2026-10-31처럼 고를 수 있어요.
                     이번 주·지난 주·2주 전을 적으면 한 주를 날마다·프로젝트마다,
@@ -458,6 +459,10 @@ if (require.main === module) {
   else if (args.includes('--print-hooks')) printHooks();
   else if (args.includes('--install-hooks')) {
     const r = installHooks(CLAUDE_DIR, __dirname);
+    console.log(`\n${r.text}\n`);
+    if (!r.ok) process.exitCode = 1;
+  } else if (args.includes('--uninstall-hooks')) {
+    const r = uninstallHooks(CLAUDE_DIR, __dirname);
     console.log(`\n${r.text}\n`);
     if (!r.ok) process.exitCode = 1;
   } else if (args.includes('--stop')) stopServer();

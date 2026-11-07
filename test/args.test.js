@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const { argProblem } = require('../lib/config');
 
 test('아는 옵션과 그 값은 통과한다', () => {
-  for (const a of [[], ['--port', '4800', '--no-open'], ['--active', '60'], ['--background'], ['--stop'], ['--print-hooks'], ['--install-hooks'], ['-v'], ['--help']]) {
+  for (const a of [[], ['--port', '4800', '--no-open'], ['--active', '60'], ['--background'], ['--stop'], ['--print-hooks'], ['--install-hooks'], ['--uninstall-hooks'], ['-v'], ['--help']]) {
     assert.equal(argProblem(a), null, a.join(' '));
   }
   // --journal 뒤의 날은 -2처럼 -로 시작해도 값이고, 날 없이 바로 --md가 와도 된다

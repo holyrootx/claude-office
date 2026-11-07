@@ -77,6 +77,20 @@ test('--install-hooks: 다른 hook은 두고, 예전 사무실 hook은 바꾸고
     // 다시 넣어도 같은 모습 (두 번 들어가지 않는다)
     run();
     assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), after);
+    // --uninstall-hooks: 사무실 hooks만 빼고 다른 hook·설정은 그대로, 두 번째는 뺄 게 없다고 한다
+    const unrun = () => execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--uninstall-hooks'], { env: { ...process.env, CLAUDE_CONFIG_DIR: dir } }).toString();
+    assert.match(unrun(), /뺐어요/);
+    const removed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(removed.model, 'opus');
+    assert.deepEqual(removed.hooks.Stop, before.hooks.Stop);
+    assert.ok(!JSON.stringify(removed).includes('notify.js'), '사무실 hook은 하나도 안 남는다');
+    assert.ok(JSON.stringify(removed.hooks.PermissionRequest).includes('echo also-here'));
+    assert.match(unrun(), /없어요/);
+    // 사무실 hooks뿐이었으면 hooks 칸째 빠진다
+    fs.writeFileSync(file, JSON.stringify({ theme: 'dark' }));
+    run();
+    unrun();
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { theme: 'dark' });
     // 읽을 수 없는 설정은 건드리지 않는다
     fs.writeFileSync(file, '{ 망가진');
     assert.throws(run);

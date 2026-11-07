@@ -117,6 +117,14 @@ test.after(() => {
   if (srv && srv.exitCode === null) srv.kill();
   fs.rmSync(TMP, { recursive: true, force: true });
 });
+// 테스트를 Ctrl+C나 kill로 중간에 끊어도 띄워 둔 사무실 서버가 남지 않게 (남으면 며칠씩 혼자 돈다)
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.once(sig, () => {
+    if (srv && srv.exitCode === null) srv.kill();
+    fs.rmSync(TMP, { recursive: true, force: true });
+    process.exit(130);
+  });
+}
 
 test('보안: 잘못된 주소·다른 사이트 주소·폴더 밖 파일·토큰 없는 hook을 막는다', async () => {
   assert.equal((await get('/%E0%A4%A')).status, 400);

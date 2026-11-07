@@ -6,8 +6,10 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-// 내 진짜 ~/.claude/claude-office.json 설정이 결과를 바꾸지 않게 빈 임시 폴더를 쓴다
-process.env.CLAUDE_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-norm-'));
+// 내 진짜 ~/.claude/claude-office.json 설정이 결과를 바꾸지 않게 빈 임시 폴더를 쓴다 (끝나면 지운다)
+const CFG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-norm-'));
+process.env.CLAUDE_CONFIG_DIR = CFG_DIR;
+test.after(() => fs.rmSync(CFG_DIR, { recursive: true, force: true }));
 const { Normalizer, roomOf, labelOf, displayName, planFromMarkdown, contextWindow, roomRules, ROOM_CONFIG, rootCwd, worktreeOf } = require('../server.js');
 
 let n = 0;

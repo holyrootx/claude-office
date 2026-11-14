@@ -450,10 +450,21 @@ test('예약해 둔 작업(크론·/loop)이 시작한 차례는 내 메시지�
   const prompt = 'claude-office 자동 개선 1회: 아쉬운 점 하나를 고르고 고친다';
   const evs = feed(norm,
     line({ type: 'user', isMeta: true, promptSource: 'system', turnOrigin: 'scheduled', wakeupSource: 'schedule_wakeup', message: { role: 'user', content: prompt } }),
-    line({ type: 'user', isMeta: true, message: { role: 'user', content: 'Your response above was cut off' } }), // 다른 isMeta 줄은 여전히 숨긴다
+    line({ type: 'user', isMeta: true, message: { role: 'user', content: '[Image: original 2560x1600, displayed at 2000x1250.]' } }), // 다른 isMeta 줄은 여전히 숨긴다
   );
   assert.deepEqual(evs, [{ k: 'note', ts: evs[0].ts, kind: 'schedule', ok: true, text: prompt }]);
   assert.equal(norm.stats.prompts, 0);
+});
+
+test('숨김 안내 중 사람도 알면 좋은 것(답이 끊겨 이어 씀, 한도가 거의 다 됨)은 한 줄로, 나머지는 그대로 숨긴다', () => {
+  const meta = content => line({ type: 'user', isMeta: true, message: { role: 'user', content } });
+  const evs = feed(new Normalizer(),
+    meta('Your response above was cut off mid-stream. Resume directly from where it stops — no apology, no recap.'),
+    meta("[Usage limit reached; a short grace allowance remains, then this turn is cut off without warning.]"),
+    meta('[Image: original 2560x1600, displayed at 2000x1250. Multiply coordinates by 1.28 to map to original image.]'),
+    meta('<local-command-caveat>The command below was run directly in Claude Code</local-command-caveat>'),
+  );
+  assert.deepEqual(evs.map(e => [e.k, e.kind]), [['note', 'resume'], ['note', 'limitsoon']]);
 });
 
 test('다른 세션이 보내서 이 세션을 깨운 말(숨김 줄)도 📨 한 줄로', () => {

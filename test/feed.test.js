@@ -128,3 +128,14 @@ test("예약 작업 이름: 앞쪽의 ':' 앞까지, 없으면 60자로", () => 
   assert.equal(scheduleName('가'.repeat(80)), '가'.repeat(59) + '…');
   assert.equal(scheduleName('가'.repeat(45) + ': 뒤'), '가'.repeat(45) + ': 뒤'); // ':'가 40자 뒤면 이름으로 안 보고 60자까지 그대로
 });
+
+test('답이 끊겨 이어 쓰면 ✂️, 사용 한도가 거의 다 되면 ⏳ 줄 (실패로 세지 않는다)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  feed.add(A.s, A.a, { k: 'note', ts: Date.now(), kind: 'resume', ok: true, text: '답이 중간에 끊겨서 이어서 써요' });
+  feed.add(A.s, A.a, { k: 'note', ts: Date.now(), kind: 'limitsoon', ok: true, text: '사용 한도가 거의 다 됐어요' });
+  assert.match(list.children[1].innerHTML, /<span class="ic">✂️<\/span>[\s\S]*이어서 써요/);
+  assert.match(list.children[0].innerHTML, /<span class="ic">⏳<\/span>[\s\S]*거의 다 됐어요/);
+  assert.equal(feed.failCount(), 0);
+});

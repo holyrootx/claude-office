@@ -47,8 +47,8 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         break;
       case 'interrupt': ic = '✋'; cls = 'err'; tx = '사용자가 작업을 중단했어요'; break;
       case 'compact': ic = '🗜'; tx = `<b>대화 압축</b>${ev.pre && ev.post ? ` ${fmtTokens(ev.pre)} → ${fmtTokens(ev.post)} 토큰` : ''} (${compactHow(ev)})`; break;
-      case 'note': // 백그라운드 작업이 끝났다는 알림, 다른 세션이 보낸 말, 예약해 둔 작업의 시작
-        ic = ev.kind === 'peer' ? '📨' : ev.kind === 'schedule' ? '⏰' : ev.ok ? '🔔' : '⚠';
+      case 'note': // 백그라운드 작업이 끝났다는 알림, 다른 세션이 보낸 말, 예약해 둔 작업의 시작, 답이 끊겨 이어 씀, 한도가 거의 다 됨
+        ic = { peer: '📨', schedule: '⏰', resume: '✂️', limitsoon: '⏳' }[ev.kind] || (ev.ok ? '🔔' : '⚠');
         cls = ev.ok ? '' : 'err';
         tx = ev.kind === 'peer' ? `<b>${esc(ev.from)}</b>에서 온 말 · ${esc(ev.text)}`
           : ev.kind === 'schedule' ? `<b>예약된 작업</b> ${esc(scheduleName(ev.text))}` : esc(ev.text);

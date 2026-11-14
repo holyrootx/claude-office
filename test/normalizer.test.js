@@ -383,6 +383,18 @@ test('세션 중에 하위 폴더로 옮겨 다녀도 시작한 폴더를 찾는
   assert.equal(rootCwd(['/tmp/else'], dir), '/tmp/else'); // 맞는 게 없으면 처음 본 폴더
 });
 
+test("데스크톱 앱이 남기는 'relocated'(이 세션의 폴더)는 시작한 폴더 후보로만 쓰고, 지금 있는 폴더는 바꾸지 않는다", () => {
+  const norm = new Normalizer();
+  const evs = feed(norm,
+    line({ type: 'user', cwd: '/Users/me/practice/demo', message: { role: 'user', content: '데모 고쳐 줘' } }),
+    JSON.stringify({ type: 'relocated', relocatedCwd: '/Users/me/practice', sessionId: 's' }),
+    JSON.stringify({ type: 'tools-used', tools: ['Bash', 'Read'], sessionId: 's' }),
+  );
+  assert.deepEqual(evs.map(e => e.k), ['user']); // 화면에 보일 이벤트는 없다
+  assert.deepEqual(norm.cwds, ['/Users/me/practice/demo', '/Users/me/practice']);
+  assert.equal(norm.meta.cwd, '/Users/me/practice/demo');
+});
+
 test('워크트리(…/.claude/worktrees/이름)에서 시작한 세션은 원래 프로젝트 폴더를 안다', () => {
   assert.deepEqual(worktreeOf('/Users/me/blog/.claude/worktrees/fix-login'), { home: '/Users/me/blog', name: 'fix-login' });
   assert.deepEqual(worktreeOf('C:\\code\\shop\\.claude\\worktrees\\a'), { home: 'C:\\code\\shop', name: 'a' });

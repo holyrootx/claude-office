@@ -329,6 +329,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `public/js/floors.js` | 처음 볼 층, 자동으로 옮겨 갈 층, 같은 이름 층 구별 (테스트 있음) |
 | `public/js/card.js` | 캐릭터 정보 카드에 들어갈 내용 (테스트 있음) |
 | `public/js/lobby.js` | 로비 안내판 줄 (나를 기다리는 사람이 맨 위, 테스트 있음) |
+| `public/js/board.js` | 회의실 화이트보드에 적을 할 일 고르기 (14줄이 넘으면 지금 하는 일 앞뒤, 테스트 있음) |
 | `public/js/help.js` | ? 도움말 내용 (기능이 빠지지 않았는지 테스트) |
 | `public/js/feed.js` · `alerts.js` · `journal.js` · `replay.js` | 활동 기록, 알림·탭 아이콘, 업무 일지, 다시 보기 |
 | `public/js/util.js` · `boot.js` | 여러 곳에서 같이 쓰는 작은 도구들 · 화면을 그리기 전에 밝은 화면·글꼴 준비 |

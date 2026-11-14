@@ -3,6 +3,7 @@ import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked } from '
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
+import { boardWindow, boardSize } from './js/board.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
 import { DEMO_SESSIONS, DEMO_SCRIPT } from './js/demo.js';
@@ -178,14 +179,9 @@ function setBoard(plan, animate) {
   const prev = boardPlan;
   boardPlan = plan || null;
   const all = (plan && plan.items) || [];
-  let items = all;
-  if (all.length > 14) {
-    const cur = Math.max(0, all.findIndex(i => i.status !== 'done'));
-    const start = Math.max(0, Math.min(cur - 3, all.length - 14));
-    items = all.slice(start, start + 14);
-  }
+  const items = boardWindow(all);
   el.board.classList.toggle('has-items', all.length > 0);
-  el.board.dataset.size = items.length > 6 ? 'xs' : items.length > 5 ? 's' : 'm';
+  el.board.dataset.size = boardSize(items.length);
   $('boardTitle').textContent = plan ? plan.title || '계획' : '화이트보드';
   const done = all.filter(i => i.status === 'done').length;
   $('boardCount').textContent = all.length ? `${done}/${all.length}` : '';

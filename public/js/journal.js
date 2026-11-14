@@ -1,4 +1,4 @@
-// 업무 일지: 그날(0시~24시) Claude가 한 일을 프로젝트별로 모아 보여 준다. ◀ ▶로 다른 날, 세션을 누르면 처음부터 다시 본다.
+// 업무 일지: 그날(0시~24시) Claude가 한 일을 프로젝트별로 모아 보여 준다. ◀ ▶로 다른 날, 세션을 누르면 그날부터 다시 본다.
 // '주간'(W)을 누르면 한 주(월요일~)를 날마다, '월간'(M)을 누르면 한 달을 주마다 모아 본다. 막대를 누르면 그 주·그날로.
 import { $, esc, clip, hhmmss, fmtTokens, fmtWorked, weekOffset } from './util.js';
 import { ROOMS, ROOM_IDS } from './scene.js';
@@ -38,7 +38,8 @@ export function createJournal({ toast, onPick, copy }) {
     if (ask !== asked) return;
     loading = false;
     $('journalBox').classList.remove('busy');
-    fetch(`/api/journal?${q}&format=md`).then(r => r.text()).then(text => { if (query() === q) md = { q, text }; }, () => {});
+    // 📋 복사할 마크다운은 일지와 같이 온다 (누른 순간 바로 복사해야 Safari도 클립보드를 허락한다)
+    md = typeof j.md === 'string' ? { q, text: j.md } : null;
     if (month != null) {
       lastMonth = month;
       drawMonth(j);

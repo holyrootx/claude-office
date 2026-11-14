@@ -272,6 +272,8 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   const w = JSON.parse((await get('/api/journal?week=0')).body);
   assert.match(w.title, /주간 업무 일지$/);
   assert.equal(w.days.length, (new Date().getDay() + 6) % 7 + 1);
+  assert.match(w.md, /^## .+ 주간 업무 일지\n/, '📋 복사용 마크다운도 같이 온다');
+  assert.match(JSON.parse((await get('/api/journal?day=0')).body).md, /^## \d+월 \d+일 업무 일지\n/);
   assert.equal(w.today, true);
   const shop = w.projects.find(p => p.project === 'shop');
   assert.ok(shop && shop.days >= 1 && shop.sessions[0].file, '오늘 일한 프로젝트와 다시 볼 세션 파일이 들어 있다');

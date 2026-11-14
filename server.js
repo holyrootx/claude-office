@@ -172,7 +172,8 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/journal') {
     // ?day=-1 (어제) 또는 ?day=2026-10-31. 없으면 오늘
-    // ?format=md면 슬랙·노션에 붙여 넣을 마크다운 글로
+    // ?format=md면 슬랙·노션에 붙여 넣을 마크다운 글로. JSON에도 같은 마크다운을 md로 실어 보낸다
+    // (화면이 📋 복사용으로 같은 일지를 한 번 더 모으지 않게)
     const md = url.searchParams.get('format') === 'md';
     const project = url.searchParams.get('project') || ''; // 이 이름이 든 프로젝트만
     const fail = e => {
@@ -189,7 +190,7 @@ const server = http.createServer((req, res) => {
           res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
           return res.end(monthMarkdown(days, r.month));
         }
-        json(res, { month, today: month === 0, title: monthTitle(days, r.month), weeks: byWeek(days), days: days.length, ...weekSummary(days) });
+        json(res, { month, today: month === 0, title: monthTitle(days, r.month), weeks: byWeek(days), days: days.length, ...weekSummary(days), md: monthMarkdown(days, r.month) });
       }, fail);
       return;
     }
@@ -199,7 +200,7 @@ const server = http.createServer((req, res) => {
       weekDays(weekRange(week), project).then(days => {
         if (!md) {
           const daysOut = days.map(j => ({ since: j.since, workedMs: (j.totals && j.totals.workedMs) || 0, tools: (j.totals && j.totals.tools) || 0 }));
-          return json(res, { week, today: week === 0, title: weekTitle(days), days: daysOut, ...weekSummary(days) });
+          return json(res, { week, today: week === 0, title: weekTitle(days), days: daysOut, ...weekSummary(days), md: weekMarkdown(days) });
         }
         res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(weekMarkdown(days));
@@ -207,7 +208,7 @@ const server = http.createServer((req, res) => {
       return;
     }
     journal(url.searchParams.get('day') || 0, null, project).then(j => {
-      if (!md) return json(res, j);
+      if (!md) return json(res, { ...j, md: journalMarkdown(j) });
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(journalMarkdown(j));
     }, fail);

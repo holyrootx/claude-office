@@ -454,6 +454,12 @@ test('예약해 둔 작업(크론·/loop)이 시작한 차례는 내 메시지�
   );
   assert.deepEqual(evs, [{ k: 'note', ts: evs[0].ts, kind: 'schedule', ok: true, text: prompt }]);
   assert.equal(norm.stats.prompts, 0);
+  // 예전 Claude Code: turnOrigin 없이 promptSource 'sdk'로만 (안내 글처럼 '['·'<'로 시작하면 아니다)
+  const old = feed(new Normalizer(),
+    line({ type: 'user', isMeta: true, promptSource: 'sdk', message: { role: 'user', content: 'QA 프로젝트를 확인하고 토론 절차를 진행한다.' } }),
+    line({ type: 'user', isMeta: true, promptSource: 'sdk', message: { role: 'user', content: '<system-reminder>상태</system-reminder>' } }),
+  );
+  assert.deepEqual(old.map(e => [e.k, e.kind, e.text]), [['note', 'schedule', 'QA 프로젝트를 확인하고 토론 절차를 진행한다.']]);
 });
 
 test('숨김 안내 중 사람도 알면 좋은 것(답이 끊겨 이어 씀, 한도가 거의 다 됨)은 한 줄로, 나머지는 그대로 숨긴다', () => {

@@ -89,7 +89,7 @@ export class Actor {
 
   setTag(text) {
     if (this.tag.textContent !== text) this.tag.textContent = text;
-    this.tag.hidden = !text;
+    if (this.tag.hidden !== !text) this.tag.hidden = !text; // 같은 값을 다시 쓰지 않는다 (화면이 1초에 네 번 그린다)
   }
 
   // ───────────────────────── 모습 ─────────────────────────
@@ -174,7 +174,8 @@ export class Actor {
     s.innerHTML = `${ev.git ? '<span class="git">git</span>' : ''}<b>${esc(ev.tool || ev.name)}</b>${ev.label ? `<span>${esc(ev.label)}</span>` : ''}<em></em>`;
   }
   hideSign() {
-    this.sign.classList.remove('show');
+    // 이미 내렸으면 건드리지 않는다 (classList.remove는 없는 걸 빼도 속성을 다시 써서, 쉬는 동안 0.5초마다 화면을 흔든다)
+    if (this.sign.classList.contains('show')) this.sign.classList.remove('show');
     this.signTool = null;
   }
   popCheck() {

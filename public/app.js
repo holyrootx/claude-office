@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -461,7 +461,7 @@ function renderNow(a, many) {
 let floorbarHtml = '';
 function renderFloorbar() {
   const bar = $('floorbar');
-  bar.hidden = floors.size < 2;
+  setHidden(bar, floors.size < 2);
   if (bar.hidden) return;
   $('floorAuto').classList.toggle('on', floorAuto);
   const html = [...floors.values()].map((f, i) => {
@@ -488,7 +488,7 @@ function renderLobby() {
     }
   }
   const interns = [...actors].filter(a => a.intern && !a.leaving).length;
-  $('lobbyCount').textContent = sessions.size ? `직원 ${sessions.size}명${interns ? ` · 인턴 ${interns}명` : ''}` : '';
+  setText($('lobbyCount'), sessions.size ? `직원 ${sessions.size}명${interns ? ` · 인턴 ${interns}명` : ''}` : '');
 }
 
 function renderStats() {
@@ -496,14 +496,14 @@ function renderStats() {
   for (const s of sessions.values()) if (s.floor === current) for (const k in t) t[k] += s.stats[k] || 0;
   const max = Math.max(1, ...ROOM_IDS.map(r => t[r]));
   for (const id of ROOM_IDS) {
-    statRows[id].querySelector('i').style.width = (t[id] / max) * 100 + '%';
-    statRows[id].querySelector('b').textContent = t[id];
-    signs[id].querySelector('b').textContent = t[id];
+    setStyle(statRows[id].querySelector('i'), 'width', (t[id] / max) * 100 + '%');
+    setText(statRows[id].querySelector('b'), t[id]);
+    setText(signs[id].querySelector('b'), t[id]);
   }
-  $('kTools').textContent = t.tools;
-  $('kErrors').textContent = t.errors;
-  $('kPrompts').textContent = t.prompts;
-  $('statsScope').textContent = floors.size > 1 && current ? `${floorNum(current)}F` : '';
+  setText($('kTools'), t.tools);
+  setText($('kErrors'), t.errors);
+  setText($('kPrompts'), t.prompts);
+  setText($('statsScope'), floors.size > 1 && current ? `${floorNum(current)}F` : '');
 }
 
 let headerKey = '';
@@ -535,7 +535,7 @@ function renderHeader(focus) {
 function render() {
   const here = [...actors].filter(a => a.floor === current);
   for (const a of actors) {
-    a.wrap.hidden = a.floor !== current;
+    setHidden(a.wrap, a.floor !== current);
     if (!a.wrap.hidden) a.setPile(a.intern ? 0 : (ctxOf(sessions.get(a.sid)) || {}).p); // 컨텍스트 서류 더미
   }
   // 이름표: 인턴은 늘, 직원은 같은 층에 둘 이상일 때
@@ -550,7 +550,7 @@ function render() {
   renderFeedScope();
   renderHeader(focus);
   renderCard();
-  $('empty').hidden = sessions.size > 0 || viewMode === 'demo';
+  setHidden($('empty'), sessions.size > 0 || viewMode === 'demo');
 }
 
 // 활동 기록 '이 층만': 층이 둘 이상일 때만 버튼이 보이고, 고른 것은 기억해 둔다
@@ -559,9 +559,9 @@ let feedThisFloor = false, feedScope;
 try { feedThisFloor = localStorage.getItem(FEED_KEY) === '1'; } catch { /* 저장소 없음 */ }
 function renderFeedScope() {
   const btn = $('feedScope');
-  btn.hidden = floors.size < 2;
+  setHidden(btn, floors.size < 2);
   btn.classList.toggle('on', feedThisFloor);
-  btn.setAttribute('aria-pressed', String(feedThisFloor));
+  setAttr(btn, 'aria-pressed', feedThisFloor);
   const want = feedThisFloor && floors.size > 1 ? current : null;
   if (want !== feedScope) feed.only((feedScope = want));
 }
@@ -575,10 +575,10 @@ $('feedScope').addEventListener('click', () => {
 let feedFails = false;
 function renderFeedFails(n = feed.failCount()) {
   const btn = $('feedFails');
-  btn.hidden = !n && !feedFails;
-  btn.textContent = n ? `실패만 ${n}` : '실패만';
+  setHidden(btn, !n && !feedFails);
+  setText(btn, n ? `실패만 ${n}` : '실패만');
   btn.classList.toggle('on', feedFails);
-  btn.setAttribute('aria-pressed', String(feedFails));
+  setAttr(btn, 'aria-pressed', feedFails);
 }
 $('feedFails').addEventListener('click', () => {
   feedFails = !feedFails;
@@ -599,7 +599,7 @@ function openCard(a, keep) {
 }
 function closeCard() {
   cardActor = null;
-  $('card').hidden = true;
+  setHidden($('card'), true);
 }
 function renderCard() {
   const a = cardActor;
@@ -614,14 +614,14 @@ function renderCard() {
   });
   const card = $('card');
   if (html !== cardHtml) card.innerHTML = cardHtml = html;
-  card.hidden = false;
+  setHidden(card, false);
   // 작은 무대에서는 다시 키우되 무대 높이는 넘지 않게
   const k = Math.min(cardK, (H - 16) / card.offsetHeight);
-  card.style.setProperty('--k', k.toFixed(3));
+  setStyle(card, '--k', k.toFixed(3));
   const w = card.offsetWidth * k, h = card.offsetHeight * k;
   // 캐릭터 오른쪽 위에 붙이되 무대 밖으로 나가지 않게
-  card.style.left = Math.max(8, Math.min(a.x + 34, W - w - 8)) + 'px';
-  card.style.top = Math.max(8, Math.min(a.y - h - 20, H - h - 8)) + 'px';
+  setStyle(card, 'left', Math.max(8, Math.min(a.x + 34, W - w - 8)) + 'px');
+  setStyle(card, 'top', Math.max(8, Math.min(a.y - h - 20, H - h - 8)) + 'px');
 }
 
 // ───────────────────────── 서버 연결 ─────────────────────────

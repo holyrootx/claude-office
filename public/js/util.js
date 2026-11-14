@@ -37,6 +37,13 @@ export function weekOffset(ts, now = Date.now()) {
   return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
 }
 
+// 같은 값을 다시 쓰지 않는다: 화면은 1초에 네 번 다시 그리는데, 같은 글·같은 숨김을 다시 쓰면
+// 바뀐 게 없어도 브라우저가 스타일을 다시 계산해서 가만히 있을 때도 CPU를 쓴다
+export const setText = (el, v) => { v = String(v); if (el.textContent !== v) el.textContent = v; };
+export const setHidden = (el, h) => { if (el.hidden !== !!h) el.hidden = !!h; };
+export const setAttr = (el, k, v) => { v = String(v); if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
+export const setStyle = (el, k, v) => { if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); };
+
 // 화면 가운데 짧은 안내를 얼마나 띄울지: 글이 길수록 오래 (읽을 틈을 주게), 1.4초~4초
 export const toastMs = text => Math.min(4000, Math.max(1400, 600 + String(text || '').length * 70));
 

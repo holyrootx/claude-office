@@ -25,6 +25,7 @@ test('눈금은 내 말·예약 작업·다른 세션이 보낸 말에만, 색�
   assert.deepEqual(marks.map(m => [m.i, m.cls]), [[0, ''], [5, 'schedule'], [7, 'peer']]);
   assert.equal(marks[0].tip, '🙋 로그인 고쳐 줘');
   assert.equal(marks[1].tip, '⏰ 예약된 작업 · 자동 개선 1회');
+  assert.equal(requestMarks([{ k: 'note', kind: 'schedule', text: 'claude-office 자동 개선 1회: (1) 코드 분석' }])[0].tip, '⏰ 예약된 작업 · claude-office 자동 개선 1회');
   assert.equal(marks[2].tip, '📨 블로그 · 인계 문서 받았어요');
 });
 

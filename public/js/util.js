@@ -23,6 +23,14 @@ export function compactHow(ev) {
   const took = s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초` : `${s}초`;
   return `${ev.trigger === 'manual' ? '내가 요청' : '자동'}${s ? ` · ${took} 걸림` : ''}`;
 }
+// 예약해 둔 작업은 같은 긴 지시가 회차마다 반복되니 이름만: 'claude-office 자동 개선 1회: (1) …' → 'claude-office 자동 개선 1회'
+// (앞쪽 40자 안에 ':'가 없으면 60자로 자른다. 활동 기록·말풍선·다시 보기 눈금이 같이 쓴다)
+export function scheduleName(text) {
+  const t = String(text || '');
+  const i = t.search(/[:：]\s/);
+  return i > 0 && i <= 40 ? t.slice(0, i) : clip(t, 60);
+}
+
 // ts가 든 주가 이번 주(now가 든 주, 월요일부터)에서 몇 주 떨어졌는지: 이번 주 0, 지난 주 -1 …
 export function weekOffset(ts, now = Date.now()) {
   const monday = t => { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d.getTime(); };

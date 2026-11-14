@@ -1,6 +1,6 @@
 // 다시 보기: 지난 세션을 처음부터 빠르게 다시 틀어 준다. 오래 쉬던 시간은 15초까지로 줄이고,
 // 캐릭터 연출이 밀리면 기다려 준다. 진행 막대를 누르면 그 시점의 사무실로 건너뛴다.
-import { $, esc, clip, stamp } from './util.js';
+import { $, esc, clip, stamp, scheduleName } from './util.js';
 
 const SPEEDS = [5, 10, 30];
 
@@ -11,7 +11,7 @@ export function requestMarks(events) {
   events.forEach((e, i) => {
     if (e.agent) return;
     if (e.k === 'user') out.push({ i, cls: '', tip: `🙋 ${e.text || ''}` });
-    else if (e.k === 'note' && e.kind === 'schedule') out.push({ i, cls: 'schedule', tip: `⏰ 예약된 작업 · ${e.text || ''}` });
+    else if (e.k === 'note' && e.kind === 'schedule') out.push({ i, cls: 'schedule', tip: `⏰ 예약된 작업 · ${scheduleName(e.text)}` });
     else if (e.k === 'note' && e.kind === 'peer') out.push({ i, cls: 'peer', tip: `📨 ${e.from || ''} · ${e.text || ''}` });
   });
   return out;

@@ -1,13 +1,7 @@
 // 오른쪽 활동 기록: 이벤트 하나를 한 줄로 쌓는다. 도구 줄에는 나중에 성공(✓)·실패(✗)를 붙인다.
-import { esc, clip, stamp, fmtTokens, compactHow } from './util.js';
+import { esc, clip, stamp, fmtTokens, compactHow, scheduleName } from './util.js';
 
-// 예약해 둔 작업은 같은 긴 지시가 회차마다 쌓이니 이름만: 'claude-office 자동 개선 1회: (1) …' → 'claude-office 자동 개선 1회'
-// (앞쪽 40자 안에 ':'가 없으면 60자로 자른다. 전체 글은 줄에 마우스를 올리면 보인다)
-export function scheduleName(text) {
-  const t = String(text || '');
-  const i = t.search(/[:：]\s/);
-  return i > 0 && i <= 40 ? t.slice(0, i) : clip(t, 60);
-}
+export { scheduleName }; // 테스트가 여기서 가져다 쓴다
 import { ROOMS } from './scene.js';
 
 const MAX_LINES = 200;

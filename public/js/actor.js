@@ -1,5 +1,5 @@
 // 캐릭터 한 명: 세션의 메인 Claude(직원) 또는 서브에이전트(인턴). 받은 이벤트를 차례로 연출한다.
-import { esc, clamp, clip, sleep, secs, fmtTokens, compactHow } from './util.js';
+import { esc, clamp, clip, sleep, secs, fmtTokens, compactHow, scheduleName } from './util.js';
 import { ROOMS, W, LANE_Y, SPEED, slotPoint, doorInside } from './scene.js';
 
 class Abort extends Error {}
@@ -402,7 +402,7 @@ export class Actor {
         if (ev.kind === 'schedule') {
           // 예약해 둔 작업(크론·/loop)이 시간이 돼서 시작됐다
           this.setMode('idle');
-          this.showBubble('say', `⏰ 예약해 둔 작업을 시작해요<br><small>${esc(clip(ev.text, 60))}</small>`);
+          this.showBubble('say', `⏰ 예약해 둔 작업을 시작해요<br><small>${esc(scheduleName(ev.text))}</small>`);
           this.setNow('⏰', '예약된 작업을 시작해요', ev.text, this.room || this.home);
           await this.dwell(1400);
         } else if (ev.kind === 'peer') {

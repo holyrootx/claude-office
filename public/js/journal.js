@@ -3,7 +3,7 @@
 import { $, esc, clip, hhmmss, fmtTokens, fmtWorked, weekOffset } from './util.js';
 import { ROOMS, ROOM_IDS } from './scene.js';
 
-// toast: 짧은 안내, onPick(file): 세션을 골랐을 때 (다시 보기 시작), copy(text): 클립보드에 넣기 (되면 true)
+// toast: 짧은 안내, onPick(file, since): 세션을 골랐을 때 (보고 있던 날·주·달의 처음부터 다시 보기), copy(text): 클립보드에 넣기 (되면 true)
 export function createJournal({ toast, onPick, copy }) {
   let day = 0; // 0 = 오늘, -1 = 어제 …
   let week = null; // 한 주 모아 보기면 0 = 이번 주, -1 = 지난 주 …, 하루 일지면 null
@@ -11,6 +11,7 @@ export function createJournal({ toast, onPick, copy }) {
   let lastWeek = 0; // 마지막으로 본 주 (요일 막대를 눌러 하루로 갔다가 '주간'을 누르면 그 주로 돌아간다)
   let lastMonth = 0; // 마지막으로 본 달 (같은 식으로 '월간'을 누르면 그 달로)
   let project = ''; // '이 프로젝트만'으로 고른 프로젝트 ('' = 전부)
+  let viewSince = 0; // 보고 있는 날·주·달의 처음 (세션을 누르면 여기부터 다시 본다)
   const query = () => (month != null ? `month=${month}` : week != null ? `week=${week}` : `day=${day}`)
     + (project ? `&project=${encodeURIComponent(project)}` : '');
   // 프로젝트 이름 옆 '이 프로젝트만' (둘 이상일 때만), 골랐으면 제목 옆 '✕ blog만'으로 풀기
@@ -66,10 +67,11 @@ export function createJournal({ toast, onPick, copy }) {
     return ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round(((rooms[r] || 0) / max) * 100)}%" title="${ROOMS[r].name} ${rooms[r] || 0}번">${ROOMS[r].icon}<i></i><b>${rooms[r] || 0}</b></span>`).join('');
   };
   const numsHtml = p => `<div class="jp-nums">메시지 ${p.prompts}${p.scheduled ? ` · 예약 작업 ${p.scheduled}` : ''} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${fmtTokens(p.tokens)}` : ''}</div>`;
-  const sessionLi = s => `<li data-file="${esc(s.file)}" tabindex="0" role="button" title="누르면 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`;
+  const sessionLi = s => `<li data-file="${esc(s.file)}" tabindex="0" role="button" title="누르면 지금 보는 날·주·달의 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`;
 
   // 하루 일지
   function drawDay(j) {
+    viewSince = j.since;
     const d = new Date(j.since);
     const rel = j.today ? '오늘' : day === -1 ? '어제' : `${-day}일 전`;
     $('journalTitle').innerHTML = `📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지<small>${rel}</small>${clearBtn()}`;
@@ -112,6 +114,7 @@ export function createJournal({ toast, onPick, copy }) {
   // 한 주 모아 보기: 날마다 일한 시간 막대 (누르면 그날로)
   const WEEKDAY = '일월화수목금토';
   function drawWeek(j) {
+    viewSince = (j.days[0] && j.days[0].since) || 0;
     const rel = j.today ? '이번 주' : week === -1 ? '지난 주' : `${-week}주 전`;
     $('journalTitle').innerHTML = `📓 ${esc(j.title)}<small>${rel}</small>${clearBtn()}`;
     $('journalNext').disabled = j.today;
@@ -132,6 +135,7 @@ export function createJournal({ toast, onPick, copy }) {
 
   // 한 달 모아 보기: 주마다(월요일부터) 일한 시간 막대 (누르면 그 주로)
   function drawMonth(j) {
+    viewSince = (j.weeks[0] && j.weeks[0].from) || 0;
     const rel = j.today ? '이번 달' : month === -1 ? '지난 달' : `${-month}달 전`;
     $('journalTitle').innerHTML = `📓 ${esc(j.title)}<small>${rel}</small>${clearBtn()}`;
     $('journalNext').disabled = j.today;
@@ -189,7 +193,7 @@ export function createJournal({ toast, onPick, copy }) {
   $('journalClose').addEventListener('click', closeJournal);
   const pick = li => {
     closeJournal();
-    onPick(li.dataset.file);
+    onPick(li.dataset.file, viewSince);
   };
   $('journal').addEventListener('click', e => {
     if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기

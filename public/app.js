@@ -94,7 +94,7 @@ function tellWait(s, w) {
   alerts.notifyWait(s, w);
   announce(`${s.main.name}: ${w.kind === 'input' ? '내 입력을 기다려요' : '실행 허락을 기다려요'}. ${w.tool ? `${w.tool} ${w.label || ''}` : w.text || ''}`);
 }
-const journal = createJournal({ toast: (...a) => toast(...a), onPick: file => replay.start(file), copy: text => copyText(text) });
+const journal = createJournal({ toast: (...a) => toast(...a), onPick: (file, since) => replay.start(file, { since }), copy: text => copyText(text) });
 const replay = createReplay({
   pickFile: () => {
     const focus = focusActor([...actors].filter(a => a.floor === current));

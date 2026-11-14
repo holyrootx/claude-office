@@ -39,7 +39,8 @@ const QUEUE = { 5: 1, 10: 3, 30: 12 };
 export function createReplay(office) {
   let r = null;
 
-  async function start(fileArg) {
+  // since: 이 시각부터 보기 (업무 일지에서 고른 날·주·달의 처음, 며칠씩 이어진 세션을 처음부터 다 보지 않게)
+  async function start(fileArg, { since = 0 } = {}) {
     // 직접 준 세션(업무 일지·정보 카드), 아니면 보기 메뉴에서 고른 세션이나 지금 보는 직원의 세션
     const file = fileArg || office.pickFile();
     if (!file) return office.toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
@@ -57,6 +58,11 @@ export function createReplay(office) {
     renderMarks();
     renderBtns();
     const title = clip(d.session.title || d.session.project, 24);
+    const from = since > d.events[0].ts ? d.events.findIndex(e => e.ts >= since) : 0;
+    if (from > 0) {
+      office.toast(`⏪ ${title} · ${stamp(d.events[from].ts, true)}부터 다시 보기`);
+      return seek(from / d.events.length, true);
+    }
     office.toast(d.skipped
       ? `⏪ ${title} · 너무 길어서 앞부분 ${d.skipped.toLocaleString()}개는 빼고 볼게요`
       : `⏪ ${title} 처음부터 다시 보기`);
@@ -92,7 +98,7 @@ export function createReplay(office) {
   }
 
   // 그때까지의 기록으로 사무실을 다시 세우고 거기서부터 이어 간다
-  function seek(frac) {
+  function seek(frac, quiet = false) {
     if (!r || !Number.isFinite(frac)) return;
     const idx = Math.max(0, Math.min(r.events.length - 1, Math.round(frac * r.events.length)));
     clearTimeout(r.timer);
@@ -115,7 +121,7 @@ export function createReplay(office) {
     const planEv = [...main].reverse().find(e => e.k === 'tool' && e.plan);
     office.hello({ mode: 'replay', root: '', sessions: [{ sid: r.sid, session: r.session, history: main, plan: planEv ? planEv.plan : null, stats, wait: null, agents }] });
     r.i = idx;
-    office.toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${stamp(r.events[idx].ts, r.multiDay)}`);
+    if (!quiet) office.toast(`⏩ ${Math.round(frac * 100)}% 지점부터 · ${stamp(r.events[idx].ts, r.multiDay)}`);
     // 멈춘 채로 옮겼으면 그 자리의 일 하나만 보여 주고 계속 멈춰 있는다
     if (r.paused) show();
     else step();

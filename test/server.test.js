@@ -469,6 +469,22 @@ test('보고 있지 않던 세션이 권한을 기다리면 빌딩에 데려온�
   s.close();
 });
 
+test('Claude Code를 닫으면(SessionEnd) 30분을 기다리지 않고 바로 퇴근하고, 이어 하면 다시 출근한다', async () => {
+  const BYE = 'ffffffff-6666-0000-0000-000000000006';
+  const file = path.join(PROJ2, BYE + '.jsonl');
+  userMsg(file, '오늘 글 다듬어 줘');
+  const s = stream('all');
+  await until(() => s.log.find(x => x.ev === 'hello'));
+  await until(() => s.log.find(x => (x.ev === 'join' && x.sid === BYE) || (x.ev === 'hello' && x.sessions.some(y => y.sid === BYE))), 4000);
+  hook({ session_id: BYE, transcript_path: file, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' });
+  const leave = await until(() => s.log.find(x => x.ev === 'leave' && x.sid === BYE), 4000);
+  assert.equal(leave.why, 'ended');
+  await sleep(2500);
+  userMsg(file, '이어서 하자'); // claude --resume으로 이어 하면 기록이 다시 는다
+  assert.ok(await until(() => s.log.find(x => x.ev === 'join' && x.sid === BYE && s.log.indexOf(x) > s.log.indexOf(leave)), 5000), '다시 출근한다');
+  s.close();
+});
+
 test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었으면(keep) 함께 준다', async () => {
   const P = path.join(CFG, 'projects', '-tmp-many');
   fs.mkdirSync(P, { recursive: true });

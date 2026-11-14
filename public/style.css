@@ -232,6 +232,9 @@ button, select { font: inherit; color: inherit; }
 .journal-hours.week span:hover b, .journal-hours.week span:focus-visible b { color: var(--text); }
 .journal-box.busy .journal-totals, .journal-box.busy .journal-hours, .journal-box.busy .journal-list { opacity: .45; transition: opacity .2s; }
 .jp li.more { color: var(--faint); font-size: 12px; cursor: default; }
+.jp-only, .jp-clear { font: 500 11px var(--ui); color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; margin-left: 8px; cursor: pointer; vertical-align: middle; }
+.jp-only:hover, .jp-clear:hover { color: var(--text); }
+.jp-clear { color: var(--text); border-color: var(--amber-line); }
 .btn-icon.wide { width: auto; padding: 0 9px; font: 600 12.5px var(--ui); white-space: nowrap; }
 .journal-hours i { grid-row: 1; align-self: end; height: max(2px, var(--h)); border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--claude) 55%, var(--panel-2)); }
 .journal-hours i.now { background: var(--claude); }

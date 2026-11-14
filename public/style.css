@@ -283,10 +283,10 @@ button, select { font: inherit; color: inherit; }
 .replay-bar:hover i { background: color-mix(in srgb, #fbbf24 50%, transparent); }
 /* 일을 시킨 자리(🙋 내 말 · ⏰ 예약 작업 · 📨 다른 세션): 누르면 바로 그 자리로 */
 .replay-marks { position: absolute; inset: 0; pointer-events: none; }
-.replay-marks u { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--text-amber); opacity: .55; pointer-events: auto; cursor: pointer; text-decoration: none; }
+.replay-marks u { position: absolute; bottom: 0; height: 8px; width: 3px; margin-left: -1px; border-radius: 1px 1px 0 0; background: var(--text-amber); opacity: .7; pointer-events: auto; cursor: pointer; text-decoration: none; }
 .replay-marks u.schedule { background: var(--text-violet); }
 .replay-marks u.peer { background: var(--text-link); }
-.replay-marks u:hover { opacity: 1; width: 5px; margin-left: -2px; }
+.replay-marks u:hover { opacity: 1; width: 5px; margin-left: -2px; height: 100%; }
 
 /* ───────── 층 ───────── */
 .floorbar {

@@ -55,8 +55,8 @@ export function createReplay(office) {
     // 하루를 넘기는 세션이면 시각마다 날짜를 붙인다
     const multiDay = day(d.events[0].ts) !== day(d.events[d.events.length - 1].ts);
     r = { sid: d.sid, session: d.session, events: d.events, i: 0, speed: 10, timer: 0, multiDay };
+    renderBtns(); // 막대를 먼저 보이게 해야 폭을 재서 눈금 수를 정한다
     renderMarks();
-    renderBtns();
     const title = clip(d.session.title || d.session.project, 24);
     const from = since > d.events[0].ts ? d.events.findIndex(e => e.ts >= since) : 0;
     if (from > 0) {
@@ -161,12 +161,13 @@ export function createReplay(office) {
     bar.querySelector('span').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
   }
 
-  // 진행 막대 위에 일을 시킨 자리를 눈금으로: 🙋 내 말(노랑), ⏰ 예약 작업(보라), 📨 다른 세션이 보낸 말(파랑)
-  // 너무 많으면 고르게 300개까지만
+  // 진행 막대 아래쪽에 일을 시킨 자리를 짧은 눈금으로: 🙋 내 말(노랑), ⏰ 예약 작업(보라), 📨 다른 세션이 보낸 말(파랑)
+  // 막대 글자를 가리지 않게 아래쪽에만 긋고, 너무 많으면 막대 폭 4px에 하나꼴로 고르게(최대 300개) 그린다
   function renderMarks() {
     const all = requestMarks(r.events);
     r.marks = all; // Shift+← →로 앞뒤 눈금을 오갈 때 쓴다 (다 들고 있고, 그리는 것만 300개까지)
-    const step = Math.max(1, Math.ceil(all.length / 300));
+    const room = Math.min(300, Math.max(20, Math.floor(($('replayBar').clientWidth || 1200) / 4)));
+    const step = Math.max(1, Math.ceil(all.length / room));
     $('replayMarks').innerHTML = all.filter((_, n) => n % step === 0).map(m => {
       const tip = `${stamp(r.events[m.i].ts, r.multiDay)} ${clip(m.tip, 80)} · 누르면 여기로`;
       return `<u class="${m.cls}" data-i="${m.i}" style="left:${((m.i / r.events.length) * 100).toFixed(2)}%" title="${esc(tip)}"></u>`;

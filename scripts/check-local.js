@@ -2,6 +2,8 @@
 // 내 컴퓨터의 실제 세션 기록으로 사무실을 점검한다. 기록은 어디에도 보내지 않고 읽기만 한다.
 // - 모든 세션을 처음부터 읽어 이벤트로 바꿔 보고, 다시 보기와 업무 일지를 만들어 본다
 // - 사무실이 아직 모르는 기록 종류가 있으면 알려 준다 (Claude Code가 새 기록을 남기기 시작했다는 뜻)
+// - 고칠 거리를 찾는 데 쓰는 숫자도 보여 준다: 표지판 글이 없는 도구, 화면에 안 보이고 버려지는 숨김 user 줄
+//   (내용은 찍지 않고 종류와 개수만)
 // 문제가 있으면 exit 1.   사용법: npm run check-local
 'use strict';
 
@@ -26,10 +28,12 @@ const KNOWN_SYSTEM = new Set(['compact_boundary', 'stop_hook_summary', 'turn_dur
 
 const fmt = n => n.toLocaleString();
 
+const bump = (m, k, n = 1) => m.set(k, (m.get(k) || 0) + n);
+
 async function scanFile(file, sidechain) {
   const norm = new Normalizer({ sidechain });
-  const unknown = new Map();
-  let events = 0, lines = 0, broken = 0;
+  const unknown = new Map(), noLabel = new Map(), hidden = new Map();
+  let events = 0, lines = 0, broken = 0, tools = 0;
   const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
   for await (const l of rl) {
     if (!l) continue;
@@ -37,18 +41,29 @@ async function scanFile(file, sidechain) {
     let j;
     try { j = JSON.parse(l); } catch { broken++; continue; }
     const kind = j.type === 'system' ? (KNOWN_SYSTEM.has(j.subtype) ? null : `system:${j.subtype}`) : KNOWN_TYPES.has(j.type) ? null : String(j.type);
-    if (kind) unknown.set(kind, (unknown.get(kind) || 0) + 1);
-    events += norm.line(l).length;
+    if (kind) bump(unknown, kind);
+    const evs = norm.line(l);
+    events += evs.length;
+    for (const e of evs) {
+      if (e.k !== 'tool') continue;
+      tools++;
+      if (!e.label && !e.detail) bump(noLabel, e.name.replace(/^mcp__[0-9a-f-]{36}__/, 'mcp__(커넥터)__'));
+    }
+    // 사람이 볼 글이 든 숨김(isMeta) user 줄인데 아무 이벤트도 안 됐으면: 어디서 온 건지만 센다
+    const c = j.message && j.message.content;
+    if (j.type === 'user' && j.isMeta && !evs.length && typeof c === 'string' && c.trim()) {
+      bump(hidden, (j.origin && j.origin.kind) || j.turnOrigin || j.promptSource || '출처 표시 없음');
+    }
   }
-  return { events, lines, broken, unknown };
+  return { events, lines, broken, unknown, tools, noLabel, hidden };
 }
 
 (async () => {
   const sessions = scanSessions();
   console.log(`\n  🔎 ${PROJECTS} 의 세션 ${sessions.length}개를 점검해요 (읽기만 해요)\n`);
-  const unknown = new Map();
+  const unknown = new Map(), noLabel = new Map(), hidden = new Map();
   const problems = [];
-  let events = 0, lines = 0, broken = 0;
+  let events = 0, lines = 0, broken = 0, tools = 0;
   for (const s of sessions) {
     const name = path.basename(s.file);
     const files = [[s.file, false]];
@@ -60,7 +75,10 @@ async function scanFile(file, sidechain) {
         events += r.events;
         lines += r.lines;
         broken += r.broken;
-        for (const [k, n] of r.unknown) unknown.set(k, (unknown.get(k) || 0) + n);
+        tools += r.tools;
+        for (const [k, n] of r.unknown) bump(unknown, k, n);
+        for (const [k, n] of r.noLabel) bump(noLabel, k, n);
+        for (const [k, n] of r.hidden) bump(hidden, k, n);
       } catch (e) {
         problems.push(`${name}: 읽다가 오류 — ${e.message}`);
       }
@@ -79,6 +97,11 @@ async function scanFile(file, sidechain) {
     console.log('\n  🆕 사무실이 아직 모르는 기록 종류가 있어요 (Claude Code가 새로 남기기 시작한 것일 수 있어요):');
     for (const [k, n] of [...unknown].sort((a, b) => b[1] - a[1])) console.log(`     ${k}  ${fmt(n)}개`);
   } else console.log('  모르는 기록 종류: 없음');
+  // 고칠 거리 찾기용 (문제는 아니에요)
+  const top = (m, n) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} ${fmt(v)}`).join(', ');
+  const sum = m => [...m.values()].reduce((a, b) => a + b, 0);
+  console.log(`  표지판 글이 없는 도구: ${fmt(sum(noLabel))}개 / 도구 ${fmt(tools)}개${noLabel.size ? ` (많은 순: ${top(noLabel, 5)})` : ''}`);
+  console.log(`  화면에 안 보이는 숨김 user 줄: ${fmt(sum(hidden))}개${hidden.size ? ` (어디서: ${top(hidden, 5)})` : ''}`);
   if (problems.length) {
     console.log('\n  ⚠ 문제:');
     for (const p of problems) console.log('     ' + p);

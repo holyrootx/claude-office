@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
+  args, argValue, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
@@ -26,12 +26,12 @@ const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
   parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown,
 } = require('./lib/report');
-// 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1)
+// 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1, project: 그 프로젝트만)
 // 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
-async function weekDays({ from, to }) {
+async function weekDays({ from, to }, project = '') {
   const days = [];
   const cache = new Map();
-  for (let d = from; d <= to; d++) days.push(await journal(d, cache));
+  for (let d = from; d <= to; d++) days.push(await journal(d, cache, project));
   return days;
 }
 if (args.includes('--help') || args.includes('-h')) {
@@ -54,6 +54,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --journal 이번 주    한 주를 날마다·프로젝트마다 (지난 주·2주 전도)
     --journal 이번 달    한 달을 주마다·프로젝트마다 (지난 달·10월도)
     --md                 위 일지를 슬랙·노션에 붙여 넣을 마크다운으로
+    --project <이름>     위 일지를 이름이 든 프로젝트만 (예: --journal 지난 주 --project blog)
 
   hooks (권한 확인 대기·대화 압축 중까지 보기)
     --install-hooks      ~/.claude/settings.json에 넣기 (다른 hooks는 그대로, 전 내용은 남겨요)
@@ -173,6 +174,7 @@ const server = http.createServer((req, res) => {
     // ?day=-1 (어제) 또는 ?day=2026-10-31. 없으면 오늘
     // ?format=md면 슬랙·노션에 붙여 넣을 마크다운 글로
     const md = url.searchParams.get('format') === 'md';
+    const project = url.searchParams.get('project') || ''; // 이 이름이 든 프로젝트만
     const fail = e => {
       console.error('[journal]', e.message);
       res.writeHead(500);
@@ -182,7 +184,7 @@ const server = http.createServer((req, res) => {
     if (url.searchParams.has('month')) {
       const month = Math.min(0, Math.trunc(Number(url.searchParams.get('month'))) || 0);
       const r = monthRange(month);
-      weekDays(r).then(days => {
+      weekDays(r, project).then(days => {
         if (md) {
           res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
           return res.end(monthMarkdown(days, r.month));
@@ -194,7 +196,7 @@ const server = http.createServer((req, res) => {
     // ?week=0 (이번 주) · -1 (지난 주) …: 한 주를 날마다·프로젝트마다 모아서
     if (url.searchParams.has('week')) {
       const week = Math.min(0, Math.trunc(Number(url.searchParams.get('week'))) || 0);
-      weekDays(weekRange(week)).then(days => {
+      weekDays(weekRange(week), project).then(days => {
         if (!md) {
           const daysOut = days.map(j => ({ since: j.since, workedMs: (j.totals && j.totals.workedMs) || 0, tools: (j.totals && j.totals.tools) || 0 }));
           return json(res, { week, today: week === 0, title: weekTitle(days), days: daysOut, ...weekSummary(days) });
@@ -204,7 +206,7 @@ const server = http.createServer((req, res) => {
       }, fail);
       return;
     }
-    journal(url.searchParams.get('day') || 0).then(j => {
+    journal(url.searchParams.get('day') || 0, null, project).then(j => {
       if (!md) return json(res, j);
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(journalMarkdown(j));
@@ -434,17 +436,18 @@ function journalDay() {
 
 async function printJournal() {
   const v = journalDay();
+  const project = argValue('--project') || ''; // --project blog: 그 프로젝트만
   // 이번 주·지난 주: 그 주의 날마다 일지를 모아 주간 일지로
   const week = parseWeek(v);
   if (week) {
-    const days = await weekDays(week);
+    const days = await weekDays(week, project);
     console.log(args.includes('--md') ? weekMarkdown(days) : weekText(days));
     return;
   }
   // 이번 달·지난 달·10월: 그 달을 주마다·프로젝트마다
   const month = parseMonth(v);
   if (month) {
-    const days = await weekDays(month);
+    const days = await weekDays(month, project);
     console.log(args.includes('--md') ? monthMarkdown(days, month.month) : monthText(days, month.month));
     return;
   }
@@ -454,7 +457,7 @@ async function printJournal() {
     process.exitCode = 1;
     return;
   }
-  const j = await journal(day);
+  const j = await journal(day, null, project);
   console.log(args.includes('--md') ? journalMarkdown(j) : journalText(j));
 }
 

@@ -31,3 +31,10 @@ test('쓸 수 있는 옵션은 다 --help에 나온다 (새 옵션을 넣고 도
   const { OPTIONS } = require('../lib/config');
   for (const opt of Object.keys(OPTIONS)) assert.ok(help.includes(opt), `${opt}가 도움말에 없어요`);
 });
+
+test('--project는 뒤에 이름이 있어야 한다', () => {
+  const { argProblem } = require('../lib/config');
+  assert.equal(argProblem(['--journal', '지난', '주', '--project', 'blog']), null);
+  assert.match(argProblem(['--journal', '--project']), /--project 뒤에 프로젝트 이름을/);
+  assert.match(argProblem(['--project', '--md']), /--project 뒤에 프로젝트 이름을/);
+});

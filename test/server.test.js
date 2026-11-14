@@ -278,6 +278,12 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   assert.ok(w.totals.tools >= shop.tools);
   const md = await get('/api/journal?week=-1&format=md');
   assert.match(md.body, /^## .+~.+ 주간 업무 일지\n/);
+  // 프로젝트를 고르면 그 프로젝트만 (제목에도 붙는다)
+  const shopOnly = JSON.parse((await get('/api/journal?week=0&project=SHOP')).body);
+  assert.deepEqual(shopOnly.projects.map(p => p.project), ['shop']);
+  assert.match(shopOnly.title, / · SHOP$/);
+  const none = await get('/api/journal?day=0&format=md&project=' + encodeURIComponent('없는-프로젝트'));
+  assert.match(none.body, /'없는-프로젝트'가 든 프로젝트에서 오늘은 아직 일한 기록이 없어요/);
   // 한 달: 주마다 묶은 막대와 날 수
   const m = JSON.parse((await get('/api/journal?month=0')).body);
   assert.match(m.title, /^\d{4}년 \d{1,2}월 업무 일지 \(/);

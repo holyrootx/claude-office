@@ -23,3 +23,11 @@ test('모르는 옵션·= 붙여 쓰기·숫자가 아닌 값은 무엇이 틀�
   assert.match(argProblem(['--port', '70000']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--active', '--no-open']), /--active 뒤에 분을/);
 });
+
+test('쓸 수 있는 옵션은 다 --help에 나온다 (새 옵션을 넣고 도움말을 빠뜨리지 않게)', () => {
+  const { execFileSync } = require('child_process');
+  const path = require('path');
+  const help = execFileSync(process.execPath, [path.join(__dirname, '..', 'server.js'), '--help']).toString();
+  const { OPTIONS } = require('../lib/config');
+  for (const opt of Object.keys(OPTIONS)) assert.ok(help.includes(opt), `${opt}가 도움말에 없어요`);
+});

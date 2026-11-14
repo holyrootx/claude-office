@@ -37,9 +37,9 @@ globalThis.document = {
   },
 };
 
-let createFeed;
+let createFeed, scheduleName;
 test.before(async () => {
-  ({ createFeed } = await import('../public/js/feed.js'));
+  ({ createFeed, scheduleName } = await import('../public/js/feed.js'));
 });
 
 const person = floor => ({ s: { floor, color: '#000' }, a: { key: floor + ':main', name: floor } });
@@ -115,5 +115,16 @@ test('예약해 둔 작업이 시작되면 ⏰ 예약된 작업 줄로', () => {
   const A = person('A');
   feed.add(A.s, A.a, { k: 'note', ts: Date.now(), kind: 'schedule', ok: true, text: '자동 개선 1회' });
   assert.match(list.children[0].innerHTML, /⏰[\s\S]*<b>예약된 작업<\/b> 자동 개선 1회/);
+  // 긴 지시는 이름만 보이고, 전체는 줄의 title로
+  feed.add(A.s, A.a, { k: 'note', ts: Date.now(), kind: 'schedule', ok: true, text: 'claude-office 자동 개선 1회: (1) 코드 분석으로 아쉬운 점 하나를 고르고 (2) 고치고' });
+  assert.match(list.children[0].innerHTML, /<b>예약된 작업<\/b> claude-office 자동 개선 1회<\/div>/);
+  assert.equal(list.children[0].title, 'claude-office 자동 개선 1회: (1) 코드 분석으로 아쉬운 점 하나를 고르고 (2) 고치고');
   assert.ok(!list.children[0].classList.contains('err'));
+});
+
+test("예약 작업 이름: 앞쪽의 ':' 앞까지, 없으면 60자로", () => {
+  assert.equal(scheduleName('매일 아침 보고서: 어제 커밋을 정리해 줘'), '매일 아침 보고서');
+  assert.equal(scheduleName('짧은 작업'), '짧은 작업');
+  assert.equal(scheduleName('가'.repeat(80)), '가'.repeat(59) + '…');
+  assert.equal(scheduleName('가'.repeat(45) + ': 뒤'), '가'.repeat(45) + ': 뒤'); // ':'가 40자 뒤면 이름으로 안 보고 60자까지 그대로
 });

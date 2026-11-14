@@ -1,5 +1,13 @@
 // 오른쪽 활동 기록: 이벤트 하나를 한 줄로 쌓는다. 도구 줄에는 나중에 성공(✓)·실패(✗)를 붙인다.
 import { esc, clip, stamp, fmtTokens, compactHow } from './util.js';
+
+// 예약해 둔 작업은 같은 긴 지시가 회차마다 쌓이니 이름만: 'claude-office 자동 개선 1회: (1) …' → 'claude-office 자동 개선 1회'
+// (앞쪽 40자 안에 ':'가 없으면 60자로 자른다. 전체 글은 줄에 마우스를 올리면 보인다)
+export function scheduleName(text) {
+  const t = String(text || '');
+  const i = t.search(/[:：]\s/);
+  return i > 0 && i <= 40 ? t.slice(0, i) : clip(t, 60);
+}
 import { ROOMS } from './scene.js';
 
 const MAX_LINES = 200;
@@ -13,7 +21,7 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
   let onlyFloor = null;
   let fails = 0;
   function add(s, a, ev) {
-    let ic = '', cls = '', tx = '', room = '';
+    let ic = '', cls = '', tx = '', room = '', full = '';
     switch (ev.k) {
       case 'agent': ic = '👋'; cls = 'agent'; tx = `<b>${esc(ev.type || '서브에이전트')} 인턴 출근</b> ${esc(ev.desc || '')}`; break;
       case 'user':
@@ -49,7 +57,8 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         ic = ev.kind === 'peer' ? '📨' : ev.kind === 'schedule' ? '⏰' : ev.ok ? '🔔' : '⚠';
         cls = ev.ok ? '' : 'err';
         tx = ev.kind === 'peer' ? `<b>${esc(ev.from)}</b>에서 온 말 · ${esc(ev.text)}`
-          : ev.kind === 'schedule' ? `<b>예약된 작업</b> ${esc(ev.text)}` : esc(ev.text);
+          : ev.kind === 'schedule' ? `<b>예약된 작업</b> ${esc(scheduleName(ev.text))}` : esc(ev.text);
+        if (ev.kind === 'schedule') full = ev.text;
         break;
       case 'freed': ic = '✅'; cls = 'say'; tx = '<b>사용 한도가 풀렸어요</b> 다시 일을 시킬 수 있어요'; break;
       case 'leave': ic = '👋'; tx = '<b>퇴근</b> 한동안 조용해서 빌딩을 나갔어요. 다시 일하면 출근해요'; break;
@@ -64,6 +73,7 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
       ? `<span class="who" style="--wc:${s.color}">${a.intern ? '인턴 · ' : ''}${esc(a.name)}</span>`
       : '';
     const li = document.createElement('li');
+    if (full) li.title = full;
     if (cls) li.className = cls;
     if (room) li.dataset.room = room;
     li.dataset.floor = s.floor;

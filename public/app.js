@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -227,11 +227,7 @@ function addSession(snap) {
   };
   sessions.set(s.sid, s);
   // 화면을 열기 전에 예약 작업이 시킨 차례가 진행 중이었는지 (끝날 때 알림을 띄울지)
-  for (const ev of snap.history || []) {
-    if (ev.agent) continue;
-    if (ev.k === 'note' && ev.kind === 'schedule') s.scheduledTurn = true;
-    else if (ev.k === 'user' || (ev.k === 'say' && ev.final)) s.scheduledTurn = false;
-  }
+  s.scheduledTurn = (snap.history || []).reduce(scheduledAfter, false);
   const w = s.wait;
   const internIds = new Set((snap.agents || []).map(a => a.id));
   s.main = new Actor(office, { key: s.sid, sid: s.sid, name: shortName(info), color: s.color, floor: key });
@@ -331,13 +327,11 @@ function applyUpdate(u) {
     if (ev.k === 'tool' && ev.ask) tell(s, '❓ 물어볼 게 있어요', ev.ask);
     // 이번 차례를 누가 시켰는지: 예약해 둔 작업(크론·/loop)이 시킨 차례가 끝나면 브라우저 알림은 띄우지 않는다
     // (30분마다 도는 작업이면 하루에 수십 번 울린다. 화면 읽기 프로그램에는 그대로 알려 주고, 허락·질문·멈춤은 늘 알린다)
-    if (!ev.agent && ev.k === 'note' && ev.kind === 'schedule') s.scheduledTurn = true;
-    if (!ev.agent && ev.k === 'user') s.scheduledTurn = false;
     if (ev.k === 'say' && ev.final && !ev.agent) {
       if (s.scheduledTurn) announce(`${s.main.name}: 예약된 작업 응답 완료. ${clip(ev.text || '', 100)}`);
       else tell(s, '✅ 응답 완료', ev.text);
-      s.scheduledTurn = false;
     }
+    s.scheduledTurn = scheduledAfter(s.scheduledTurn, ev);
     // 사용 한도나 오류로 끝내 멈췄을 때도 알린다 (응답 완료가 오지 않으니까)
     if (ev.k === 'apierr' && ev.stop && !ev.agent) {
       tell(s, ev.kind === 'limit' ? '⏳ 사용 한도에 걸렸어요' : '⚠ 오류로 일이 멈췄어요', ev.kind === 'limit' ? (ev.resets ? `${ev.resets}에 다시 열려요` : '한도가 풀리면 다시 일해요') : ev.text);

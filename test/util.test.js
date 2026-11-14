@@ -66,3 +66,15 @@ test('가운데 안내는 글이 길수록 오래 띄운다 (1.4초~4초)', asyn
   assert.ok(toastMs(long) > 2500 && toastMs(long) <= 4000);
   assert.equal(toastMs('가'.repeat(200)), 4000);
 });
+
+test('이번 차례를 예약 작업이 시켰는지: ⏰로 시작하면 예약, 내 말·답 마침이면 아님, 인턴 일은 안 본다', async () => {
+  const { scheduledAfter } = await import('../public/js/util.js');
+  const run = evs => evs.reduce(scheduledAfter, false);
+  const sched = { k: 'note', kind: 'schedule' }, me = { k: 'user', text: '고쳐 줘' }, done = { k: 'say', final: true };
+  assert.equal(run([sched, { k: 'tool' }, { k: 'think' }]), true); // 예약 작업이 일하는 중
+  assert.equal(run([sched, { k: 'user', agent: 'i1' }]), true); // 인턴이 받은 말은 상관없다
+  assert.equal(run([sched, me]), false); // 중간에 내가 말을 걸면 내 차례
+  assert.equal(run([sched, done]), false); // 답을 마치면 끝
+  assert.equal(run([me, { k: 'note', kind: 'task' }]), false); // 백그라운드 알림은 상관없다
+  assert.equal(scheduledAfter(true, { k: 'say', final: true, agent: 'i1' }), true); // 인턴이 마친 건 차례 끝이 아니다
+});

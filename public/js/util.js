@@ -37,6 +37,15 @@ export function weekOffset(ts, now = Date.now()) {
   return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
 }
 
+// 이번 차례를 예약해 둔 작업(크론·/loop)이 시켰는지: ⏰ 예약된 작업으로 시작하면 true, 내 말로 시작하거나 답을 마치면 false.
+// 인턴의 일은 보지 않는다. 예약 작업이 시킨 차례가 끝날 때는 브라우저 알림을 띄우지 않으려고 쓴다
+export function scheduledAfter(prev, ev) {
+  if (!ev || ev.agent) return prev;
+  if (ev.k === 'note' && ev.kind === 'schedule') return true;
+  if (ev.k === 'user' || (ev.k === 'say' && ev.final)) return false;
+  return prev;
+}
+
 // 같은 값을 다시 쓰지 않는다: 화면은 1초에 네 번 다시 그리는데, 같은 글·같은 숨김을 다시 쓰면
 // 바뀐 게 없어도 브라우저가 스타일을 다시 계산해서 가만히 있을 때도 CPU를 쓴다
 export const setText = (el, v) => { v = String(v); if (el.textContent !== v) el.textContent = v; };

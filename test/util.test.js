@@ -4,9 +4,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-let resumeCommand, fmtTokens, compactHow, codeNotice;
+let resumeCommand, fmtTokens, compactHow, codeNotice, ago;
 test.before(async () => {
-  ({ resumeCommand, fmtTokens, compactHow, codeNotice } = await import('../public/js/util.js'));
+  ({ resumeCommand, fmtTokens, compactHow, codeNotice, ago } = await import('../public/js/util.js'));
 });
 
 test('이어 하기 명령: 그 폴더로 가서 claude --resume', () => {
@@ -77,4 +77,18 @@ test('이번 차례를 예약 작업이 시켰는지: ⏰로 시작하면 예약
   assert.equal(run([sched, done]), false); // 답을 마치면 끝
   assert.equal(run([me, { k: 'note', kind: 'task' }]), false); // 백그라운드 알림은 상관없다
   assert.equal(scheduledAfter(true, { k: 'say', final: true, agent: 'i1' }), true); // 인턴이 마친 건 차례 끝이 아니다
+});
+
+test("얼마나 지났는지: 반올림해서 단위가 넘어가면 윗단위로 ('60분 전'·'24시간 전'이 아니라)", () => {
+  const now = Date.parse('2026-11-15T12:00:00');
+  const before = sec => ago(now - sec * 1000, now);
+  assert.equal(before(10), '방금');
+  assert.equal(before(44), '방금');
+  assert.equal(before(45), '1분 전');
+  assert.equal(before(12 * 60), '12분 전');
+  assert.equal(before(59 * 60 + 40), '1시간 전');
+  assert.equal(before(3 * 3600 + 600), '3시간 전');
+  assert.equal(before(23 * 3600 + 50 * 60), '1일 전');
+  assert.equal(before(2 * 86400), '2일 전');
+  assert.equal(before(-30), '방금'); // 시계가 조금 어긋나 앞날이어도
 });

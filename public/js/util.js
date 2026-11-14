@@ -62,11 +62,15 @@ export const fmtWorked = ms => {
   return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
 };
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
-export function ago(ms) {
-  const s = Math.round((Date.now() - ms) / 1000);
+// 얼마나 지났는지: '방금', '12분 전', '3시간 전', '2일 전'
+// 반올림한 뒤에 단위를 고른다 (59분 40초가 '60분 전', 23시간 50분이 '24시간 전'으로 나오지 않게)
+export function ago(ms, now = Date.now()) {
+  const s = Math.round((now - ms) / 1000);
   if (s < 45) return '방금';
-  if (s < 3600) return `${Math.round(s / 60)}분 전`;
-  if (s < 86400) return `${Math.round(s / 3600)}시간 전`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}분 전`;
+  const h = Math.round(s / 3600);
+  if (h < 24) return `${h}시간 전`;
   return `${Math.round(s / 86400)}일 전`;
 }
 

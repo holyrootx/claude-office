@@ -37,6 +37,9 @@ export function weekOffset(ts, now = Date.now()) {
   return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
 }
 
+// 화면 가운데 짧은 안내를 얼마나 띄울지: 글이 길수록 오래 (읽을 틈을 주게), 1.4초~4초
+export const toastMs = text => Math.min(4000, Math.max(1400, 600 + String(text || '').length * 70));
+
 // 일한 시간: '45분', '1시간', '3시간 34분'
 export const fmtWorked = ms => {
   const m = Math.round((ms || 0) / 60000);

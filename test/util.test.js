@@ -57,3 +57,12 @@ test('몇 주 전인지: 월요일부터 한 주, 이번 주 0 · 지난 주 -1'
   assert.equal(weekOffset(new Date(2026, 9, 5).getTime(), thu), -4);
   assert.equal(weekOffset(new Date(2026, 2, 30).getTime(), new Date(2026, 3, 1).getTime()), 0); // 서머타임이 끼어도 (3월 말)
 });
+
+test('가운데 안내는 글이 길수록 오래 띄운다 (1.4초~4초)', async () => {
+  const { toastMs } = await import('../public/js/util.js');
+  assert.ok(toastMs('🛗 2F · blog') < 1500); // 층 옮김처럼 짧은 건 거의 그대로
+  assert.equal(toastMs(''), 1400);
+  const long = '📋 복사했어요 · 터미널에 붙여 넣으면 이 세션을 이어서 해요';
+  assert.ok(toastMs(long) > 2500 && toastMs(long) <= 4000);
+  assert.equal(toastMs('가'.repeat(200)), 4000);
+});

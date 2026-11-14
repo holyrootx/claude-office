@@ -332,6 +332,11 @@ test('표지판 글자가 비던 도구들: 브라우저 묶음, 창 크기, Jir
   assert.equal(labelOf('mcp__Claude_Browser__preview_logs', { serverId: 's', search: 'ERROR' }), 'ERROR');
   assert.equal(labelOf('CronList', {}), '예약 목록');
   assert.equal(labelOf('mcp__some_server__do_thing', { id: 3 }), '');
+  // 데스크톱 앱 도구는 서버까지 보고, 커넥터 도구는 이름으로
+  assert.equal(labelOf('mcp__ccd_pr__get_status', {}), 'PR 상태 확인');
+  assert.equal(labelOf('mcp__terminal__read_terminal', { lines: 200 }), '터미널 읽기');
+  assert.equal(labelOf('mcp__other__get_status', {}), ''); // 다른 서버의 get_status는 모른다
+  assert.equal(labelOf('mcp__9be74c07-6424-43bb-ba00-725d536ca1b7__getJiraProjectIssueTypesMetadata', { cloudId: 'c' }), 'Jira 이슈 종류 보기');
   const jira = 'mcp__9be74c07-6424-43bb-ba00-725d536ca1b7__';
   assert.equal(labelOf(jira + 'addCommentToJiraIssue', { cloudId: 'c', issueIdOrKey: 'QA-1', commentBody: '긴 글' }), 'QA-1');
   assert.equal(labelOf(jira + 'searchJiraIssuesUsingJql', { cloudId: 'c', jql: 'project = KAN' }), 'project = KAN');

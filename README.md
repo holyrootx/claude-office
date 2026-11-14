@@ -332,6 +332,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `public/js/board.js` | 회의실 화이트보드에 적을 할 일 고르기 (14줄이 넘으면 지금 하는 일 앞뒤, 테스트 있음) |
 | `public/js/help.js` | ? 도움말 내용 (기능이 빠지지 않았는지 테스트) |
 | `public/js/feed.js` · `alerts.js` · `journal.js` · `replay.js` | 활동 기록, 알림·탭 아이콘, 업무 일지, 다시 보기 |
+| `public/js/journal-view.js` | 업무 일지 창에 들어갈 글(하루·한 주·한 달, 테스트 있음) |
 | `public/js/util.js` · `boot.js` | 여러 곳에서 같이 쓰는 작은 도구들 · 화면을 그리기 전에 밝은 화면·글꼴 준비 |
 | `public/style.css` | 디자인과 애니메이션 |
 | `test/` | 테스트 (`npm test`, 설치할 것 없음) |

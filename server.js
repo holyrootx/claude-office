@@ -21,7 +21,7 @@ const {
 const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
-const { scanSessions, describe, insideProjects, waits, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
+const { scanSessions, describe, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
   parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown,
@@ -165,7 +165,11 @@ const server = http.createServer((req, res) => {
       if (k && !top.includes(k)) top.push(k);
     }
     sweepStale(); // 꺼진 Claude Code가 남긴 🔐는 지운다
-    const list = top.map(s => ({ ...describe(s), waiting: waits.has(path.basename(s.file, '.jsonl')) }));
+    // waiting: 권한 확인 대기(🔐), ended: Claude Code를 닫은 시각(🚪, 닫았다는 hook을 받았고 그 뒤로 이어 하지 않았을 때)
+    const list = top.map(s => {
+      const sid = path.basename(s.file, '.jsonl');
+      return { ...describe(s), waiting: waits.has(sid), ended: endedAt(sid, s.mtime) };
+    });
     // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
     return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list, code: codeInfo() });
   }

@@ -499,6 +499,8 @@ test('이 세션만 볼 때 Claude Code를 닫으면 나가지는 않고 닫았�
   hook({ session_id: PIN, transcript_path: file, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' });
   const u = await until(() => s.updates(PIN).find(x => x.ended > 0), 4000);
   assert.ok(u, '닫은 시각이 온다');
+  const listed = JSON.parse((await get('/api/sessions')).body).sessions.find(x => x.id === PIN);
+  assert.equal(listed.ended, u.ended, '세션 목록에도 닫았다고 나온다 (🚪)');
   await sleep(300);
   assert.ok(!s.log.some(x => x.ev === 'leave'), '이 세션만 보는 중이면 나가지 않는다');
   s.close();

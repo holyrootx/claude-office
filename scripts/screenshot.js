@@ -5,6 +5,7 @@
 //   npm run screenshot                     → 데모 14초 지점 (인턴이 보고하는 장면), docs/screenshot.png
 //   npm run screenshot -- --at 22 --out x.png
 //   npm run screenshot -- --theme light --out light.png   → 밝은 화면으로
+//   npm run screenshot -- --clock 15                       → 활동 기록 시각이 오후 3시쯤 (기본 11시)
 'use strict';
 
 const fs = require('fs');
@@ -21,6 +22,15 @@ const AT = Number(opt('--at', 14));
 const OUT = path.resolve(opt('--out', path.join(ROOT, 'docs', 'screenshot.png')));
 const SIZE = opt('--size', '1680,945');
 const THEME = /^(light|dark)$/.test(opt('--theme', '')) ? opt('--theme') : '';
+const CLOCK = Math.min(23, Math.max(0, Number(opt('--clock', 11)) || 0));
+
+// 화면의 시각(활동 기록 등)은 찍는 때의 시계를 따라가서, 새벽에 찍으면 README 사진에 '01:28'이 남았다.
+// Chrome만 다른 시간대로 띄워서 언제 찍든 그 시간대의 시각이 hour시쯤이 되게 한다 (Etc/GMT±N, 부호가 반대다)
+function tzFor(hour, now = new Date()) {
+  let off = (((hour - now.getUTCHours()) % 24) + 24) % 24; // 0~23시간 앞
+  if (off > 14) off -= 24; // Etc/GMT 시간대는 -12~+14까지
+  return off === 0 ? 'Etc/GMT' : off > 0 ? `Etc/GMT-${off}` : `Etc/GMT+${-off}`;
+}
 
 function findChrome() {
   const list = [process.env.CHROME].filter(Boolean);
@@ -66,7 +76,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--no-default-browser-check',
       `--user-data-dir=${path.join(tmp, 'chrome')}`, `--window-size=${SIZE}`, `--virtual-time-budget=${AT * 1000}`,
       `--screenshot=${OUT}`, `http://localhost:${port}/?demo${THEME ? '&theme=' + THEME : ''}`,
-    ], { stdio: 'ignore', timeout: 120000 });
+    ], { stdio: 'ignore', timeout: 120000, env: { ...process.env, TZ: tzFor(CLOCK) } });
     if (r.status !== 0 || !fs.existsSync(OUT)) throw new Error('Chrome이 화면을 찍지 못했어요');
     console.log(`  ✅ ${path.relative(process.cwd(), OUT)} (${Math.round(fs.statSync(OUT).size / 1024)}KB)`);
   } catch (e) {

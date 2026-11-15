@@ -237,6 +237,17 @@ test('세션 정보: 자동 제목, PR, 비용, 권한 모드를 읽는다', () 
   assert.equal(norm.meta.mode, 'plan');
 });
 
+test("권한 모드: 내가 보낸 줄의 permissionMode를 읽고, type: 'mode'의 'normal'(입력창 모드)은 권한 모드로 치지 않는다", () => {
+  const norm = new Normalizer();
+  feed(norm,
+    line({ type: 'user', permissionMode: 'acceptEdits', message: { role: 'user', content: '고쳐 줘' } }),
+    line({ type: 'mode', mode: 'normal' }), // 실제 기록에는 이 줄이 수천 개다
+  );
+  assert.equal(norm.meta.mode, 'acceptEdits');
+  feed(norm, line({ type: 'user', isMeta: true, permissionMode: 'auto', message: { role: 'user', content: '예약된 작업' } }));
+  assert.equal(norm.meta.mode, 'auto'); // 가장 최근 것
+});
+
 test('압축 전후 토큰을 읽고, 같은 압축은 한 번만 알린다', () => {
   const norm = new Normalizer();
   norm.ctx = 960000;

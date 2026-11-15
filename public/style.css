@@ -748,7 +748,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
   .now-icon { font-size: 22px; width: 28px; }
   .now-text { flex-basis: calc(100% - 48px); }
   .now-text b { font-size: 15px; }
-  .now-ctx { margin-left: 38px; }
+  #nowCtx { margin-left: 38px; } /* 위쪽 '지금 하는 일' 줄에서만 (정보 카드의 컨텍스트 줄까지 밀리지 않게) */
   .floorbar { padding: 6px 12px; }
   .stage-wrap { padding: 8px; }
   .panel { padding: 12px; }

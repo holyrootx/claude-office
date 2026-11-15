@@ -276,6 +276,23 @@ test('바쁠 때 보낸 내 메시지 대기열을 따라간다', () => {
   assert.deepEqual(norm.queue, []);
 });
 
+test('대기열의 예약 작업·백그라운드 알림·붙여 넣은 글은 대화 기록과 같은 꼴로 보여 준다', () => {
+  const norm = new Normalizer();
+  const q = o => JSON.stringify({ type: 'queue-operation', timestamp: ts, ...o });
+  const cron = 'claude-office 자동 개선 1회: (1) 코드 분석으로 아쉬운 점 하나를 고르고 (2) 고치고 …';
+  // 예약 작업이 한 번 시작된 뒤로는 같은 지시를 알아본다
+  feed(norm, line({ type: 'user', isMeta: true, turnOrigin: 'scheduled', message: { role: 'user', content: cron } }));
+  feed(norm,
+    q({ operation: 'enqueue', content: cron }),
+    q({ operation: 'enqueue', content: '<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n<summary>Background command "npm test" completed (exit code 0)</summary>\n</task-notification>' }),
+    q({ operation: 'enqueue', content: '이거 봐 줘 <pasted_content id="a1">한 줄\n두 줄\n세 줄</pasted_content id="a1">' }),
+  );
+  assert.deepEqual(norm.queue, ['⏰ 예약된 작업 · claude-office 자동 개선 1회', '⚙ 백그라운드 명령 끝남: npm test', '이거 봐 줘 [붙여 넣은 글 3줄]']);
+  feed(norm, q({ operation: 'remove', content: '<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n<summary>Background command "npm test" completed (exit code 0)</summary>\n</task-notification>' }));
+  assert.equal(norm.queue.length, 2); // 빼는 것도 같은 꼴로 찾아서
+  assert.equal(norm.queue[1], '이거 봐 줘 [붙여 넣은 글 3줄]');
+});
+
 test('질문과 답을 읽는다', () => {
   const norm = new Normalizer();
   const evs = feed(norm,

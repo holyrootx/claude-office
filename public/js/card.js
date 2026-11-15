@@ -40,7 +40,7 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
   if (!a.intern && info.mode && MODE_NAMES[info.mode]) extras.push(`🛡 ${MODE_NAMES[info.mode]}`);
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
-  const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 내 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
+  const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
   const nums = a.intern ? internNums(a) : `<div class="card-nums">도구 ${s.stats.tools} · ${s.stats.errors ? `<button type="button" class="card-fails" data-act="fails" title="활동 기록에서 실패만 모아 봐요">실패 ${s.stats.errors}</button>` : '실패 0'} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}${today >= 60000 ? ` · 오늘 ${fmtWorked(today)}` : ''}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const acts = !a.intern && live

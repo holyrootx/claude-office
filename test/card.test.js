@@ -31,7 +31,7 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
   assert.match(html, /href="https:\/\/github.com\/o\/r\/pull\/86"/);
   assert.match(html, /\$1\.23 · \+10 −2줄/);
   assert.match(html, /🛡 계획 모드/);
-  assert.match(html, /기다리는 내 메시지 4개/);
+  assert.match(html, /기다리는 메시지 4개/);
   assert.equal((html.match(/<small>(하나|둘|셋|넷)<\/small>/g) || []).length, 3); // 앞의 셋만
   assert.match(html, /card-ctx now-ctx mid" style="--p:72%"/);
   assert.match(html, /data-act="replay"/);

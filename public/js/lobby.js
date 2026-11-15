@@ -26,7 +26,7 @@ export function lobbyHtml(floors, sessions, current) {
         if (a.leaving) continue;
         const st = a.status;
         const queue = !a.intern && s.info.queue && s.info.queue.length
-          ? ` <small class="q" title="Claude가 바쁠 때 보내서 기다리는 내 메시지">📨${s.info.queue.length}</small>` : '';
+          ? ` <small class="q" title="Claude가 바쁠 때 들어와서 기다리는 메시지 (내 말·예약 작업·알림)">📨${s.info.queue.length}</small>` : '';
         rows.push({
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${esc(s.color)}">`

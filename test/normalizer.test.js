@@ -543,3 +543,10 @@ test('실패 내용은 무슨 일인지 알 수 있는 줄로: 파이썬은 맨 
   assert.equal(err('Exit code 127\n\u001b[31mcommand not found: timeout\u001b[0m'), 'Exit code 127 · command not found: timeout');
 });
 
+
+test("연결 오류는 'Connection error.' 대신 왜 끊겼는지 (connection.code)", () => {
+  const { apiErrorText } = require('../lib/normalize');
+  assert.equal(apiErrorText({ error: { message: 'Connection error.', formatted: "Can't reach the API server — check your internet or DNS (ENOTFOUND)", connection: { code: 'ENOTFOUND' } }, retryAttempt: 1, maxRetries: 10 }), '인터넷 연결이 끊겼어요 · 다시 시도 1/10');
+  assert.equal(apiErrorText({ error: { message: 'Connection error.', formatted: 'Connection lost while your computer was asleep', connection: { code: 'StreamSuspended' } }, retryAttempt: 2, maxRetries: 10 }), '컴퓨터가 잠들어서 연결이 끊겼어요 · 다시 시도 2/10');
+  assert.equal(apiErrorText({ error: { message: 'Connection error.' } }), '인터넷 연결이 끊겼어요'); // 까닭이 안 적혀 있어도
+});

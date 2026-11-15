@@ -3,7 +3,7 @@
 ## 다음 버전 (아직 버전을 올리지 않았어요)
 
 - 폰 브라우저 주소창 색이 화면 배경과 같아요(어두우면 어둡게, 밝으면 밝게). 🌓 화면 밝기 버튼으로 고르면 주소창도 따라 바뀌어요. 전에는 어두운 사무실 위에 흰 주소창이 떴어요.
-- claude.ai에서 연결한 커넥터 도구가 'MCP.addCommentToJiraIssue'·'MCP.notion-search'처럼 나오던 것을, 도구 이름에 서비스가 드러나면 'Atlassian.addCommentToJiraIssue'·'Notion.search'처럼 보여 줘요(내 기록의 커넥터 도구 674번 중 404번). 이름만으로 알 수 없는 것('batch' 등)은 전처럼 'MCP'예요.
+- claude.ai에서 연결한 커넥터 도구가 'MCP.addCommentToJiraIssue'·'MCP.batch'처럼 나오던 것을 서비스 이름으로 보여 줘요: 세션 처음에 Claude Code가 남기는 커넥터 안내 글('Claude Docs: …', 'provided by Gmail API')로 'Docs.batch'·'Gmail.search_threads'처럼, 그 글을 못 읽었으면 도구 이름으로 짐작해 'Atlassian.addCommentToJiraIssue'·'Notion.search'처럼요. 둘 다 모르면 전처럼 'MCP'예요.
 - 폰처럼 좁은 화면에서 정보 카드의 '컨텍스트 64%' 줄만 왼쪽이 비고 오른쪽으로 밀렸던 것을 고쳤어요(위쪽 줄에 주는 여백이 카드에도 걸렸어요).
 - MCP 도구 이름이 서버 이름을 되풀이하지 않아요: 데스크톱 앱 브라우저의 'Browser.browser_batch'는 'Browser.batch'로, Claude in Chrome도 같은 꼴로 'Chrome.batch'·'Chrome.tabs_context'(끝의 `_mcp`는 떼요)로, iOS 시뮬레이터의 'Code_iOS_Simulator.control'은 'Simulator.control'로 위쪽 줄·표지판·활동 기록에 나와요.
 - 도구가 실패했을 때 Claude Code가 직접 내는 영어 안내를 무슨 일인지 우리말로 보여 줘요: '자동 모드가 이 작업을 막았어요 (Modify Shared Resources)', '자동 모드가 안전한지 판단하지 못해서 막았어요', '권한 확인이 취소됐어요', '읽은 뒤에 파일이 바뀌어서 다시 읽어야 해요' 등. 전에는 'The server-side auto mode classifier gave no verdict…' 같은 긴 영어 첫 줄이 빨간 말풍선과 활동 기록에 나왔어요. 명령 오류처럼 도구가 낸 글은 그대로예요.

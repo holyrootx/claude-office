@@ -575,3 +575,21 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail('InputValidationError: AskUserQuestion was called with input that could not be parsed'), 'AskUserQuestion에 맞지 않는 값을 넘겼어요');
   assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), 'Exit code 1 · npm ERR! missing script: lint'); // 나머지는 그대로
 });
+
+test("커넥터 도구는 세션 처음의 안내 글로 어느 서비스인지 알아내서 'MCP.batch' 대신 'Docs.batch'로", () => {
+  const norm = new Normalizer();
+  const DOCS = '1a59c906-04da-521d-bda7-7f71b9f9e01c', MAIL = 'f1284c93-ea7b-45af-b7a9-5444b3f4031c', NOTION = '17f2887d-fe66-4893-a5fb-207294ee4155';
+  feed(norm, line({ type: 'attachment', attachment: { type: 'mcp_instructions_delta', addedNames: [DOCS, MAIL, NOTION], addedBlocks: [
+    `## ${DOCS}\nClaude Docs: living docs you create and edit here.`,
+    `## ${MAIL}\nThis is an MCP server provided by Gmail API.`,
+    `## ${NOTION}\nThis Notion connection stores useful chat work in pages and databases. Recommend Notion for work the user will return to.`,
+    '## computer-use\nYou have a computer-use MCP available.',
+  ] } }));
+  const [docs] = feed(norm, toolUse('d1', `mcp__${DOCS}__batch`, {}));
+  const [mail] = feed(norm, toolUse('m1', `mcp__${MAIL}__search_threads`, {}));
+  const [notion] = feed(norm, toolUse('n1', `mcp__${NOTION}__notion-search`, {}));
+  assert.deepEqual([docs.tool, mail.tool, notion.tool], ['Docs.batch', 'Gmail.search_threads', 'Notion.search']);
+  // 안내 글을 못 본 세션(끝부분만 읽음)은 전처럼
+  const [other] = feed(new Normalizer(), toolUse('d2', `mcp__${DOCS}__batch`, {}));
+  assert.equal(other.tool, 'MCP.batch');
+});

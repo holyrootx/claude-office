@@ -38,3 +38,11 @@ test('--project는 뒤에 이름이 있어야 한다', () => {
   assert.match(argProblem(['--journal', '--project']), /--project 뒤에 프로젝트 이름을/);
   assert.match(argProblem(['--project', '--md']), /--project 뒤에 프로젝트 이름을/);
 });
+
+test('--md·--project만 쓰면 사무실을 켜지 않고 --journal과 같이 쓰라고 알려 준다', () => {
+  const { argProblem } = require('../lib/config');
+  assert.equal(argProblem(['--md']), '--md는 --journal과 같이 써요 (예: --journal 지난 주 --md)');
+  assert.equal(argProblem(['--project', 'blog']), '--project는 --journal과 같이 써요 (예: --journal 지난 주 --project blog)');
+  assert.equal(argProblem(['--no-open', '--project', 'blog', '--md']), '--md는 --journal과 같이 써요 (예: --journal 지난 주 --md)');
+  assert.equal(argProblem(['--journal', '--md', '--project', 'blog']), null);
+});

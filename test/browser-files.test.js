@@ -75,3 +75,15 @@ test("$('아이디')로 찾는 화면 요소가 index.html(또는 화면 코드�
   }
   assert.deepEqual(bad, []);
 });
+
+test('화면과 hook이 부르는 서버 주소(/api/…, /hook)가 서버에 있다', () => {
+  // 서버에서 주소 이름을 바꾸고 화면을 깜빡하면 그 기능만 조용히 '읽지 못했어요'가 된다
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const served = new Set([...server.matchAll(/pathname\s*[!=]==\s*'(\/[a-z/]+)'/g)].map(m => m[1]));
+  const used = new Set();
+  for (const f of [...files, path.join(__dirname, '..', 'hooks', 'notify.js')]) {
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/['`](\/(?:api\/[a-z]+|hook))\b/g)) used.add(m[1]);
+  }
+  assert.ok(used.size >= 6, [...used].join(' '));
+  assert.deepEqual([...used].filter(p => !served.has(p)), []);
+});

@@ -550,3 +550,17 @@ test("연결 오류는 'Connection error.' 대신 왜 끊겼는지 (connection.c
   assert.equal(apiErrorText({ error: { message: 'Connection error.', formatted: 'Connection lost while your computer was asleep', connection: { code: 'StreamSuspended' } }, retryAttempt: 2, maxRetries: 10 }), '컴퓨터가 잠들어서 연결이 끊겼어요 · 다시 시도 2/10');
   assert.equal(apiErrorText({ error: { message: 'Connection error.' } }), '인터넷 연결이 끊겼어요'); // 까닭이 안 적혀 있어도
 });
+
+test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·파일이 바뀜 등)는 무슨 일인지 우리말로', () => {
+  const fail = text => {
+    const norm = new Normalizer();
+    feed(norm, toolUse('t1', 'Bash', { command: 'git push' }));
+    return feed(norm, toolResult('t1', text, true))[0].error;
+  };
+  assert.equal(fail("Permission for this action was denied by the Claude Code auto mode classifier. Reason: [Modify Shared Resources]. If you have other tasks that don't depend on this action, continue working on those."), '자동 모드가 이 작업을 막았어요 (Modify Shared Resources)');
+  assert.match(fail('The server-side auto mode classifier gave no verdict (the response ended before its verdict arrived), so auto mode cannot determine the safety of Bash.'), /^자동 모드가 안전한지 판단하지 못해서/);
+  assert.equal(fail('Tool permission request aborted'), '권한 확인이 취소됐어요');
+  assert.equal(fail('<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>'), '읽은 뒤에 파일이 바뀌어서 다시 읽어야 해요');
+  assert.equal(fail('InputValidationError: AskUserQuestion was called with input that could not be parsed'), 'AskUserQuestion에 맞지 않는 값을 넘겼어요');
+  assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), 'Exit code 1 · npm ERR! missing script: lint'); // 나머지는 그대로
+});

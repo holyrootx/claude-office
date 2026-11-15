@@ -87,6 +87,10 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(labelOf('WebFetch', { url: 'https://example.com/a/b' }), 'example.com');
   assert.equal(displayName('mcp__claude-in-chrome__navigate'), 'Chrome.navigate');
   assert.equal(displayName('mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__batch'), 'MCP.batch');
+  // 커넥터라도 도구 이름에 서비스가 드러나면 그 이름으로
+  assert.equal(displayName('mcp__9be74c07-6424-43bb-ba00-725d536ca1b7__addCommentToJiraIssue'), 'Atlassian.addCommentToJiraIssue');
+  assert.equal(displayName('mcp__17f2887d-fe66-4893-a5fb-207294ee4155__notion-search'), 'Notion.search');
+  assert.equal(displayName('mcp__aaaaaaaa-1111-2222-3333-444444444444__inkbox_imessage_send'), 'Inkbox.imessage_send');
   // 도구 이름이 서버 이름을 되풀이하면 한 번만, 데스크톱 앱의 iOS 시뮬레이터는 짧게
   assert.equal(displayName('mcp__Claude_Browser__browser_batch'), 'Browser.batch');
   assert.equal(displayName('mcp__Claude_Browser__javascript_tool'), 'Browser.javascript_tool');

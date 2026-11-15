@@ -27,6 +27,11 @@ const seenWaits = new Set();
 let current = null; // 보고 있는 층
 let floorAuto = true;
 let viewMode = 'all'; // all 빌딩 · auto 가장 최근 세션 · file 고른 세션 · demo
+// hooks가 켜져 있는지 (서버의 /api/hooks, 모르면 null). 꺼져 있으면 오래 걸리는 편집을 권한 대기로 짐작한다
+let hooksOn = null;
+const GUESS_WAIT_SEC = 8;
+const GUESS_WAIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+const checkHooks = () => fetch('/api/hooks').then(r => r.json()).then(h => { hooksOn = h.state === 'unknown' ? null : h.state === 'on'; }).catch(() => {});
 let es = null, demo = null;
 let boardSid = null, boardPlan = null;
 
@@ -63,6 +68,14 @@ const office = {
   },
   select(actor) {
     openCard(actor);
+  },
+  // hooks가 없으면 권한 확인 창을 알 수 없다. 기본 권한 모드에서 파일 편집(Edit·Write)은 1초 안에 끝나니
+  // 8초 넘게 결과가 없으면 내 허락을 기다리는 것으로 짐작한다 (hooks가 켜져 있으면 짐작하지 않고 hook을 믿는다)
+  maybeWaiting(actor, p, sec) {
+    if (hooksOn !== false || viewMode === 'demo' || viewMode === 'replay' || sec < GUESS_WAIT_SEC || !GUESS_WAIT_TOOLS.has(p.name)) return false;
+    const s = sessions.get(actor.sid);
+    const mode = s && s.info.mode;
+    return !mode || mode === 'default';
   },
   remove(actor) {
     if (cardActor === actor) closeCard();
@@ -1070,6 +1083,8 @@ loadSessions(saved).then(() => {
   else connect();
 });
 setInterval(() => { if ($('conn').dataset.state !== 'off') loadSessions(); }, 15000); // 서버가 꺼져 있으면 쉰다
+checkHooks();
+setInterval(checkHooks, 5 * 60 * 1000); // 켜 두는 사이에 hooks를 넣었을 수도 있으니 가끔 다시 본다
 
 // 콘솔에서 이벤트를 직접 넣어 볼 수 있게 (예: officeDebug.ingest([{k:'think', text:'테스트'}]))
 window.officeDebug = {

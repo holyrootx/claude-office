@@ -197,3 +197,21 @@ test('컨텍스트가 찬 만큼 발치에 서류가 쌓이고, 압축되면 정
   assert.equal(a.pile.hidden, true);
 });
 
+
+test('hooks가 없을 때 편집이 8초 넘게 결과가 없으면 허락을 기다리는 것 같다고 보여 준다 (화면이 짐작해 주면)', () => {
+  const o = office();
+  o.maybeWaiting = (a, p, sec) => p.name === 'Edit' && sec >= 8;
+  const a = actor(o);
+  a.load([{ k: 'user', ts: ago(1), text: 'x' }, { ...tool('e', 'Edit', 'dev', 0), ts: Date.now() - 20000 }]);
+  assert.equal(a.room, 'dev');
+  a.signTool = { id: 'e' }; a.mode = 'work'; // 이미 개발실에서 일하는 자세
+  a.rest();
+  assert.equal(a.now.title, 'Edit 허락을 기다리는 것 같아요');
+  assert.equal(a.now.mode, 'wait');
+  assert.equal(a.status, 'work'); // 짐작일 뿐이라 알림·탭 숫자에는 넣지 않는다
+  const b = actor(o);
+  b.load([{ k: 'user', ts: ago(1), text: 'x' }, { ...tool('b', 'Bash', 'server', 0), ts: Date.now() - 20000 }]);
+  b.signTool = { id: 'b' }; b.mode = 'work';
+  b.rest();
+  assert.match(b.now.title, /Bash 실행 중/); // 명령은 오래 걸릴 수 있어서 짐작하지 않는다
+});

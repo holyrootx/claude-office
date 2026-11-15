@@ -698,7 +698,10 @@ export class Actor {
       if (this.bubbleKind && Date.now() - this.bubbleAt > 4000) this.hideBubble();
       const r = ROOMS[p.room];
       const s = Math.round((Date.now() - p.ts) / 1000);
-      this.setNow(r.icon, `${r.name} · ${p.tool} 실행 중`, p.label || p.detail || r.sub, p.room);
+      // hooks 없이 짐작한 권한 대기: 편집이 이렇게 오래 걸리지는 않는다 (화면 쪽 office.maybeWaiting이 정한다)
+      if (this.office.maybeWaiting && this.office.maybeWaiting(this, p, s)) {
+        this.setNow('🔐', `${p.tool} 허락을 기다리는 것 같아요`, `${p.label || p.detail || r.sub} · 편집이 이렇게 오래 걸리지는 않아요 (hooks를 켜면 정확히 알려 줘요)`, p.room, 'wait');
+      } else this.setNow(r.icon, `${r.name} · ${p.tool} 실행 중`, p.label || p.detail || r.sub, p.room);
       this.now.time = secs(s);
       const em = this.sign.querySelector('em');
       if (em) em.textContent = s >= 3 ? `${s}s` : '';

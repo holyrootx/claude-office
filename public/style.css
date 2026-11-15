@@ -234,7 +234,9 @@ button, select { font: inherit; color: inherit; }
 .journal-hours.week i:hover { filter: brightness(1.25); }
 .journal-hours.week span:hover b, .journal-hours.week span:focus-visible b { color: var(--text); }
 .journal-box.busy .journal-totals, .journal-box.busy .journal-hours, .journal-box.busy .journal-list { opacity: .45; transition: opacity .2s; }
-.jp li.more { color: var(--faint); font-size: 12px; cursor: default; }
+.jp li.more { color: var(--faint); font-size: 12px; cursor: default; padding: 0; background: none; }
+.jp-more { width: 100%; text-align: left; font: 500 12px var(--ui); color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: 8px; padding: 5px 8px; cursor: pointer; }
+.jp-more:hover, .jp-more:focus-visible { color: var(--text); border-color: var(--muted); }
 .jp-only, .jp-clear { font: 500 11px var(--ui); color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; margin-left: 8px; cursor: pointer; vertical-align: middle; }
 .jp-only:hover, .jp-clear:hover { color: var(--text); }
 .jp-clear { color: var(--text); border-color: var(--amber-line); }
@@ -254,6 +256,7 @@ button, select { font: inherit; color: inherit; }
 .jp ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; } /* 긴 세션 제목이 줄을 넓혀 옆으로 넘치지 않게 (…로 자른다) */
 .jp li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 8px; background: var(--panel-2); font-size: 13px; cursor: pointer; }
 .jp li:hover { filter: brightness(1.2); }
+.jp li[hidden] { display: none; } /* '더 보기'로 펼치기 전 (display: flex가 hidden을 이기지 않게) */
 .jp li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jp li time { font: 12px var(--mono); color: var(--faint); flex-shrink: 0; }
 .jp-empty { color: var(--muted); text-align: center; padding: 20px 0; }

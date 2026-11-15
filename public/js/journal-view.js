@@ -13,7 +13,7 @@ const roomsHtml = rooms => {
   return ROOM_IDS.map(r => `<span style="--c:var(--${r});--w:${Math.round(((rooms[r] || 0) / max) * 100)}%" title="${ROOMS[r].name} ${rooms[r] || 0}번">${ROOMS[r].icon}<i></i><b>${rooms[r] || 0}</b></span>`).join('');
 };
 const numsHtml = p => `<div class="jp-nums">메시지 ${p.prompts}${p.scheduled ? ` · 예약 작업 ${p.scheduled}` : ''} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${fmtTokens(p.tokens)}` : ''}</div>`;
-const sessionLi = s => `<li data-file="${esc(s.file)}" tabindex="0" role="button" title="누르면 지금 보는 날·주·달의 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`;
+const sessionLi = (s, hidden = false) => `<li data-file="${esc(s.file)}" tabindex="0" role="button"${hidden ? ' hidden' : ''} title="누르면 지금 보는 날·주·달의 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`;
 // 프로젝트 이름 옆 '이 프로젝트만' (둘 이상이고 아직 안 골랐을 때), 골랐으면 제목 옆 '✕ blog만'으로 풀기
 const onlyBtn = (p, many, project) => (many && !project ? ` <button type="button" class="jp-only" data-project="${esc(p.project)}" title="이 프로젝트만 모아 봐요 (📋 복사도 이 프로젝트만)">이 프로젝트만</button>` : '');
 const clearBtn = project => (project ? `<button type="button" class="jp-clear" title="모든 프로젝트 다시 보기">✕ ${esc(project)}만</button>` : '');
@@ -48,7 +48,7 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
   };
 }
 
-// 한 주·한 달의 합계와 프로젝트 목록 (프로젝트는 여러 날을 합쳐서, 세션은 긴 순서로 8개까지)
+// 한 주·한 달의 합계와 프로젝트 목록 (프로젝트는 여러 날을 합쳐서, 세션은 긴 순서로 8개까지 보이고 나머지는 '더 보기'로 펼친다)
 const rangeTotals = (j, days) => {
   const t = j.totals || {};
   return totalsHtml([
@@ -57,9 +57,10 @@ const rangeTotals = (j, days) => {
   ]);
 };
 const rangeProjects = (j, empty, project) => (j.projects.length ? j.projects.map(p => {
-  const more = p.sessions.length > 8 ? `<li class="more">그 밖에 세션 ${p.sessions.length - 8}개</li>` : '';
+  const rest = p.sessions.slice(8);
+  const more = rest.length ? `<li class="more"><button type="button" class="jp-more" aria-expanded="false">그 밖에 세션 ${rest.length}개 더 보기</button></li>` : '';
   return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, j.projects.length > 1, project)}</h3>`
-    + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(sessionLi).join('')}${more}</ul></section>`;
+    + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(s => sessionLi(s)).join('')}${rest.map(s => sessionLi(s, true)).join('')}${more}</ul></section>`;
 }).join('') : `<p class="jp-empty">${empty}</p>`);
 
 // 한 주: 요일 막대 (누르면 그날 일지로: data-day는 오늘이 0, 어제가 -1)

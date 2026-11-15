@@ -41,7 +41,9 @@ test('한 주: 요일 막대는 오늘을 0으로 그날을 가리키고, 오늘
   assert.deepEqual([...v.hours.html.matchAll(/<span[^>]*data-day="(-?\d+)"/g)].map(m => Number(m[1])), [-6, -5, -4, -3, -2, -1, 0]);
   assert.match(v.hours.html, /<i class="now" data-day="0"/);
   assert.match(v.totals, /<b>1\/7<\/b><span>일한 날<\/span>/);
-  assert.match(v.list, /그 밖에 세션 2개/); // 세션은 8개까지
+  assert.match(v.list, /<button type="button" class="jp-more"[^>]*>그 밖에 세션 2개 더 보기<\/button>/); // 세션은 8개까지 보이고
+  assert.equal((v.list.match(/<li data-file=/g) || []).length, 10); // 나머지 둘도 숨겨 두었다가 '더 보기'로 펼친다
+  assert.equal((v.list.match(/<li data-file="[^"]*" tabindex="0" role="button" hidden/g) || []).length, 2);
   assert.match(weekView({ ...j, today: false }, { week: -1, now: NOW }).title, /<small>지난 주<\/small>/);
 });
 

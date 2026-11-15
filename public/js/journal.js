@@ -140,6 +140,15 @@ export function createJournal({ toast, onPick, copy }) {
     if (e.target === e.currentTarget) return closeJournal(); // 바깥을 누르면 닫기
     const li = e.target.closest('li[data-file]');
     if (li) return pick(li);
+    // 주간·월간의 '그 밖에 세션 N개 더 보기': 숨겨 둔 세션을 펼치고, 키보드로 눌렀으면 펼친 첫 줄로
+    const more = e.target.closest('.jp-more');
+    if (more) {
+      const hidden = [...more.closest('ul').querySelectorAll('li[data-file][hidden]')];
+      for (const h of hidden) h.hidden = false;
+      more.closest('li').remove();
+      if (hidden[0] && e.detail === 0) hidden[0].focus();
+      return;
+    }
     // '이 프로젝트만' / '✕ blog만': 보고 있던 날·주·달 그대로 다시 받아 온다
     const only = e.target.closest('.jp-only');
     const clear = e.target.closest('.jp-clear');

@@ -316,9 +316,9 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 |---|---|
 | `server.js` | 서버 시작, HTTP, `--background`·`--stop` 같은 실행 방법 (의존성 없음) |
 | `lib/normalize.js` | 세션 기록 한 줄을 화면용 이벤트로 바꾸기, 도구 → 방 규칙 |
-| `lib/sessions.js` | 세션 파일 찾기·따라 읽기, 화면마다 보내기, 권한 대기, 다시 보기 |
-| `lib/report.js` | 업무 일지(하루·한 주)를 터미널 글·마크다운으로 쓰기, `--journal` 뒤에 적은 날·주 알아듣기 |
-| `lib/config.js` | 실행 옵션과 설정값 |
+| `lib/sessions.js` | 세션 파일 찾기·따라 읽기, 화면마다 보내기, 권한 대기·압축 중·닫은 세션(hooks), 다시 보기, 업무 일지 모으기(읽은 기록은 들고 있다가 이어 읽기) |
+| `lib/report.js` | 업무 일지(하루·한 주·한 달)를 터미널 글·마크다운으로 쓰기, `--journal` 뒤에 적은 날·주·달과 일지 API 값 알아듣기 |
+| `lib/config.js` | 실행 옵션과 설정값, 잘못 쓴 옵션 알려 주기 |
 | `lib/runtime.js` | 켜져 있는 서버의 포트·토큰을 임시 파일로 주고받기 (`--stop`·hooks가 사용) |
 | `lib/hookcheck.js` | 켤 때 hooks가 켜져 있는지·빠진 hook은 없는지 보기, `--install-hooks`로 넣기 |
 | `hooks/notify.js`, `hooks/hooks.json` | 권한 확인 창이 뜨거나 대화 압축을 시작하거나 Claude Code를 닫으면 서버에 알리는 Claude Code hook |
@@ -335,7 +335,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `public/js/help.js` | ? 도움말 내용 (기능이 빠지지 않았는지 테스트) |
 | `public/js/feed.js` · `alerts.js` · `journal.js` · `replay.js` | 활동 기록, 알림·탭 아이콘, 업무 일지, 다시 보기 |
 | `public/js/journal-view.js` | 업무 일지 창에 들어갈 글(하루·한 주·한 달, 테스트 있음) |
-| `public/js/util.js` · `boot.js` | 여러 곳에서 같이 쓰는 작은 도구들 · 화면을 그리기 전에 밝은 화면·글꼴 준비 |
+| `public/js/util.js` · `boot.js` | 여러 곳에서 같이 쓰는 작은 도구들(바뀐 글자만 고치기 morph, 창 안 Tab 가두기 등) · 화면을 그리기 전에 화면 밝기·글꼴 준비 |
 | `public/style.css` | 디자인과 애니메이션 |
 | `test/` | 테스트 (`npm test`, 설치할 것 없음) |
 | `scripts/check-local.js` · `screenshot.js` | 내 실제 기록으로 점검(`npm run check-local`) · README 사진 찍기(`npm run screenshot`) |

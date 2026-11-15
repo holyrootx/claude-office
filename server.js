@@ -55,7 +55,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --md                 위 일지를 슬랙·노션에 붙여 넣을 마크다운으로
     --project <이름>     위 일지를 이름이 든 프로젝트만 (예: --journal 지난 주 --project blog)
 
-  hooks (권한 확인 대기·대화 압축 중·닫으면 바로 퇴근까지 보기)
+  hooks (권한 확인 대기·대화 압축 중·닫으면 바로 퇴근하는 모습까지 보기)
     --install-hooks      ~/.claude/settings.json에 넣기 (다른 hooks는 그대로, 전 내용은 남겨요)
     --uninstall-hooks    넣어 둔 사무실 hooks만 빼기
     --print-hooks        설정을 출력만 하기 (직접 합치고 싶을 때)

@@ -539,6 +539,12 @@ test('이 세션만 볼 때 Claude Code를 닫으면 나가지는 않고 닫았�
   s.close();
 });
 
+test("세션 목록에 다시 켜는 명령을 실어 준다 ('npx claude-office'는 다른 사람 패키지라 쓰지 않는다)", async () => {
+  const d = JSON.parse((await get('/api/sessions')).body);
+  assert.match(d.start, /server\.js|\/office:open|main\.tar\.gz/);
+  assert.doesNotMatch(d.start, /npx claude-office\b/);
+});
+
 test('세션 목록: 30개 밖으로 밀린 세션도 화면이 고정해 두었으면(keep) 함께 준다', async () => {
   const P = path.join(CFG, 'projects', '-tmp-many');
   fs.mkdirSync(P, { recursive: true });

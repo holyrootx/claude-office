@@ -148,6 +148,9 @@ function newest(p) {
 const serverStamp = () => Math.max(newest(__filename), newest(path.join(__dirname, 'lib')), newest(path.join(__dirname, 'package.json')));
 const SERVER_STAMP = serverStamp();
 const codeInfo = () => ({ restart: serverStamp() > SERVER_STAMP, ui: newest(PUBLIC) });
+// 다시 켜는 명령: 플러그인이면 Claude Code에서 /office:open, 아니면 지금 켠 방법 그대로 (npx면 버전 붙은 주소, 아니면 server.js 전체 경로).
+// npm의 'claude-office'는 다른 사람 패키지라 'npx claude-office'라고 하면 안 된다
+const START_CMD = path.resolve(__dirname).startsWith(path.resolve(CLAUDE_DIR, 'plugins') + path.sep) ? 'Claude Code에서 /office:open' : runCmd('', true).trim();
 
 const server = http.createServer((req, res) => {
   for (const [k, v] of Object.entries(API_HEADERS)) res.setHeader(k, v); // writeHead에 준 머리글이 있으면 그쪽이 이긴다
@@ -177,7 +180,8 @@ const server = http.createServer((req, res) => {
       return { ...describe(s), waiting: waits.has(sid), ended: endedAt(sid, s.mtime) };
     });
     // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
-    return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list, code: codeInfo() });
+    // start: 사무실이 꺼졌을 때 화면이 '다시 켜려면 …'으로 보여 줄 명령 (꺼진 뒤에는 물어볼 수 없어서 미리 받아 둔다)
+    return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list, code: codeInfo(), start: START_CMD });
   }
 
   if (url.pathname === '/api/journal') {

@@ -716,10 +716,12 @@ function beat() {
   $('conn').classList.add('beat');
   beatTimer = setTimeout(() => { $('conn').classList.remove('beat'); beatTimer = 0; }, 1600);
 }
+// 사무실을 다시 켜는 명령 (서버가 세션 목록과 함께 알려 준다. 그 전에는 받은 폴더에서 node server.js)
+let startCmd = 'node server.js (받은 폴더에서)';
 function setConn(state, text) {
   $('conn').dataset.state = state;
   $('conn').querySelector('span').textContent = text;
-  $('conn').title = state === 'off' ? '터미널에서 npx claude-office (또는 node server.js)로 다시 켜 주세요' : '';
+  $('conn').title = state === 'off' ? `다시 켜려면: ${startCmd}` : '';
 }
 
 // 서버가 꺼졌으면(--stop, 컴퓨터를 껐다 켬 등) 브라우저가 1.5초마다 다시 붙으려는 걸 멈추고
@@ -760,6 +762,7 @@ async function loadSessions(keepFile) {
   let d;
   try { d = await (await fetch('/api/sessions' + (isFile(keep) ? '?keep=' + encodeURIComponent(keep) : ''))).json(); } catch { return; }
   showCodeNotice(d.code);
+  if (typeof d.start === 'string' && d.start) startCmd = d.start;
   const want = [
     ['all', `🏢 빌딩 · 최근 ${minutesText(d.activeMinutes || 30)} 세션 모두`],
     ['auto', '자동 · 가장 최근 세션 하나'],

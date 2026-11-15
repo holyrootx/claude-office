@@ -138,6 +138,17 @@ test('보안: 잘못된 주소·다른 사이트 주소·폴더 밖 파일·토�
   assert.equal((await get('/')).status, 200); // 그래도 서버는 살아 있다
 });
 
+test('보안: 마크다운 일지·JSON·오류 글은 주소에 적은 글이 들어 있어도 문서로 열려 스크립트가 돌지 않는다', async () => {
+  const evil = encodeURIComponent('<script>alert(1)</script>');
+  for (const p of [`/api/journal?day=0&format=md&project=${evil}`, `/api/journal?week=0&format=md&project=${evil}`, `/api/journal?day=0&project=${evil}`, '/api/sessions', '/api/replay', '/nothing']) {
+    const r = await get(p);
+    assert.equal(r.headers['x-content-type-options'], 'nosniff', p);
+    assert.match(r.headers['content-security-policy'] || '', /default-src 'none'.*sandbox/, p);
+  }
+  // 화면은 그대로 자기 CSP (스크립트 파일은 돌아야 하니까)
+  assert.match((await get('/')).headers['content-security-policy'], /script-src 'self'/);
+});
+
 test('보안: 화면에는 이 서버의 스크립트 파일만 돌게 하는 CSP를 붙이고, 페이지 안에 직접 쓴 스크립트는 없다', async () => {
   const r = await get('/');
   const csp = r.headers['content-security-policy'] || '';

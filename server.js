@@ -87,6 +87,10 @@ const CSP = [
   "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data:", "connect-src 'self'",
   "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'",
 ].join('; ');
+// 화면(html)이 아닌 응답(API의 JSON·마크다운, 오류 글)은 문서로 열려도 아무것도 돌지 않게 한다.
+// 마크다운 일지에는 주소에 적은 프로젝트 이름(?project=)이 그대로 들어가서, 다른 사이트가 이 주소로 보내도
+// 브라우저가 HTML로 짐작해 스크립트를 돌리는 일이 없게 (화면 파일은 아래에서 CSP로 바꿔 단다)
+const API_HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; sandbox" };
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
 function json(res, data) {
@@ -145,6 +149,7 @@ const SERVER_STAMP = serverStamp();
 const codeInfo = () => ({ restart: serverStamp() > SERVER_STAMP, ui: newest(PUBLIC) });
 
 const server = http.createServer((req, res) => {
+  for (const [k, v] of Object.entries(API_HEADERS)) res.setHeader(k, v); // writeHead에 준 머리글이 있으면 그쪽이 이긴다
   // DNS 리바인딩 막기: 다른 사이트 주소로 들어온 요청은 받지 않는다
   if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden'); }
   let url;

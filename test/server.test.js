@@ -85,6 +85,7 @@ const blog = path.join(PROJ2, BLOG + '.jsonl');
 const old = path.join(PROJ, OLD + '.jsonl');
 const subDir = path.join(PROJ, SHOP, 'subagents');
 let srv;
+let srvAt = 0; // 테스트 서버를 띄운 시각 (아래 '서버 쪽 파일이 바뀌면' 테스트가 실패할 때 보여 준다)
 
 test.before(async () => {
   fs.mkdirSync(PROJ, { recursive: true });
@@ -109,8 +110,11 @@ test.before(async () => {
   toolUse(busy, 'k1', 'Grep', { pattern: 'verifyToken' }, { isSidechain: true, agentId: 'busy1' });
 
   srv = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(PORT)], { env: ENV, stdio: 'ignore' });
+  srvAt = Date.now();
   for (let i = 0; i < 50 && (await get('/api/health')).status !== 200; i++) await sleep(100);
   assert.ok(await until(() => fs.existsSync(ENV.CLAUDE_OFFICE_RUNTIME), 3000), '서버가 켜졌다');
+  // 그 포트에 다른 서버(전에 남은 테스트 서버 등)가 떠 있으면 엉뚱한 서버와 이야기하게 된다: 우리가 띄운 서버인지 확인
+  assert.equal(JSON.parse((await get('/api/health')).body).pid, srv.pid, `${PORT} 포트에 이 테스트가 띄우지 않은 서버가 떠 있어요`);
 });
 
 test.after(() => {
@@ -162,8 +166,15 @@ test('보안: 화면에는 이 서버의 스크립트 파일만 돌게 하는 CS
 
 test('켜 둔 사이에 서버 쪽 파일이 바뀌면 세션 목록에 다시 켜라고 실어 보낸다', async () => {
   const code = () => get('/api/sessions').then(r => JSON.parse(r.body).code);
+  // 가끔(파일을 고친 직후) 첫 확인에서 restart가 true로 와서 실패한 적이 있다. 다시 나면 원인이 보이게:
+  // 서버를 띄운 시각과 가장 최근에 고친 서버 쪽 파일 셋을 같이 남긴다
+  const why = () => {
+    const files = [path.join(ROOT, 'server.js'), path.join(ROOT, 'package.json'), ...fs.readdirSync(path.join(ROOT, 'lib')).map(f => path.join(ROOT, 'lib', f))];
+    const top = files.map(f => [path.relative(ROOT, f), Math.round(fs.statSync(f).mtimeMs - srvAt)]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return `서버를 띄운 뒤 몇 ms에 고쳤는지: ${JSON.stringify(top)}`;
+  };
   const before = await code();
-  assert.equal(before.restart, false);
+  assert.equal(before.restart, false, why());
   assert.ok(before.ui > 0);
   // 파일 내용은 그대로 두고 고친 시각만 잠깐 미래로 (git pull로 바뀐 것처럼)
   const f = path.join(ROOT, 'lib', 'config.js');
@@ -172,9 +183,11 @@ test('켜 둔 사이에 서버 쪽 파일이 바뀌면 세션 목록에 다시 �
     fs.utimesSync(f, st.atime, new Date(Date.now() + 60000));
     assert.equal((await code()).restart, true);
   } finally {
-    fs.utimesSync(f, st.atime, st.mtime);
+    // 1ms 앞으로 되돌린다: st.mtime(Date)으로 되돌리면 밀리초로 반올림돼서 원래보다 최대 0.5ms 늦어질 수 있고,
+    // config.js가 서버 쪽에서 가장 최근에 고친 파일이면(회차마다 main에 합친 직후) '바뀌었다'가 남아 가끔 실패했다
+    fs.utimesSync(f, st.atime, new Date(st.mtimeMs - 1));
   }
-  assert.equal((await code()).restart, false);
+  assert.equal((await code()).restart, false, why());
 });
 
 test('hooks 상태: 설정에 없으면 꺼져 있다며 넣는 명령을 알려 준다', async () => {

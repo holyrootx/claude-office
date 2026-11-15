@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -994,6 +994,26 @@ async function copyText(text) {
 }
 el.stage.addEventListener('click', () => closeCard()); // 빈 곳을 누르면 닫기
 $('helpBtn').addEventListener('click', openHelp);
+
+// 화면 밝기: 컴퓨터 설정 따라가기 → 밝게 → 어둡게. 고른 것은 기억해 두고 다음에 열 때 boot.js가 먼저 적용한다
+const THEME_KEY = 'claude-office-theme';
+function renderTheme() {
+  const t = document.documentElement.getAttribute('data-theme') || '';
+  const now = THEMES[t] || THEMES[''];
+  const next = THEMES[nextTheme(t)];
+  $('themeBtn').textContent = now.icon;
+  $('themeBtn').title = `화면 밝기: ${now.name} (누르면 ${next.name})`;
+  $('themeBtn').setAttribute('aria-label', `화면 밝기: ${now.name}`);
+}
+$('themeBtn').addEventListener('click', () => {
+  const t = nextTheme(document.documentElement.getAttribute('data-theme') || '');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  try { t ? localStorage.setItem(THEME_KEY, t) : localStorage.removeItem(THEME_KEY); } catch { /* 저장소 없음 */ }
+  renderTheme();
+  toast(`${THEMES[t].icon} 화면 밝기: ${THEMES[t].name}`);
+});
+renderTheme();
 // 도움말 맨 위 hooks 안내의 '📋 명령 복사'
 $('helpBody').addEventListener('click', e => {
   const b = e.target.closest('.hooks-copy');

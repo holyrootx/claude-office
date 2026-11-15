@@ -128,3 +128,9 @@ test('창이 떠 있으면 Tab이 창 밖으로 빠져나가지 않는다 (마�
   assert.equal(trapTab(box, { key: 'Enter' }), false);
   delete globalThis.document;
 });
+
+test('화면 밝기 버튼: 컴퓨터 설정 따라가기 → 밝게 → 어둡게 → 다시 따라가기', async () => {
+  const { nextTheme, THEMES } = await import('../public/js/util.js');
+  assert.deepEqual([nextTheme(''), nextTheme('light'), nextTheme('dark')], ['light', 'dark', '']);
+  for (const t of ['', 'light', 'dark']) assert.ok(THEMES[t].icon && THEMES[t].name, t);
+});

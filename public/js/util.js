@@ -96,6 +96,14 @@ export function trapTab(box, e) {
   return false;
 }
 
+// 화면 밝기 버튼: 컴퓨터 설정 따라가기('') → 밝게 → 어둡게 → 다시 따라가기
+export const THEMES = {
+  '': { icon: '🌓', name: '컴퓨터 설정을 따라가요' },
+  light: { icon: '☀️', name: '밝게' },
+  dark: { icon: '🌙', name: '어둡게' },
+};
+export const nextTheme = t => (t === '' ? 'light' : t === 'light' ? 'dark' : '');
+
 // 화면 가운데 짧은 안내를 얼마나 띄울지: 글이 길수록 오래 (읽을 틈을 주게), 1.4초~4초
 export const toastMs = text => Math.min(4000, Math.max(1400, 600 + String(text || '').length * 70));
 

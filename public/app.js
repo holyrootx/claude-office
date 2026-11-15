@@ -1017,6 +1017,10 @@ function renderTheme() {
   $('themeBtn').textContent = now.icon;
   $('themeBtn').title = `화면 밝기: ${now.name} (누르면 ${next.name})`;
   $('themeBtn').setAttribute('aria-label', `화면 밝기: ${now.name}`);
+  // 폰 브라우저 주소창 색도 같이: 직접 골랐으면 그 색, 아니면 컴퓨터 설정 따라 (index.html의 기본값)
+  const COLORS = { dark: '#0e131d', light: '#eeeae1' };
+  setAttr($('themeColorDark'), 'content', COLORS[t] || COLORS.dark);
+  setAttr($('themeColorLight'), 'content', COLORS[t] || COLORS.light);
 }
 $('themeBtn').addEventListener('click', () => {
   const t = nextTheme(document.documentElement.getAttribute('data-theme') || '');

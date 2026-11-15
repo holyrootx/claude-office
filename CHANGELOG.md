@@ -2,6 +2,7 @@
 
 ## 다음 버전 (아직 버전을 올리지 않았어요)
 
+- 폰 브라우저 주소창 색이 화면 배경과 같아요(어두우면 어둡게, 밝으면 밝게). 🌓 화면 밝기 버튼으로 고르면 주소창도 따라 바뀌어요. 전에는 어두운 사무실 위에 흰 주소창이 떴어요.
 - claude.ai에서 연결한 커넥터 도구가 'MCP.addCommentToJiraIssue'·'MCP.notion-search'처럼 나오던 것을, 도구 이름에 서비스가 드러나면 'Atlassian.addCommentToJiraIssue'·'Notion.search'처럼 보여 줘요(내 기록의 커넥터 도구 674번 중 404번). 이름만으로 알 수 없는 것('batch' 등)은 전처럼 'MCP'예요.
 - 폰처럼 좁은 화면에서 정보 카드의 '컨텍스트 64%' 줄만 왼쪽이 비고 오른쪽으로 밀렸던 것을 고쳤어요(위쪽 줄에 주는 여백이 카드에도 걸렸어요).
 - MCP 도구 이름이 서버 이름을 되풀이하지 않아요: 데스크톱 앱 브라우저의 'Browser.browser_batch'는 'Browser.batch'로, Claude in Chrome도 같은 꼴로 'Chrome.batch'·'Chrome.tabs_context'(끝의 `_mcp`는 떼요)로, iOS 시뮬레이터의 'Code_iOS_Simulator.control'은 'Simulator.control'로 위쪽 줄·표지판·활동 기록에 나와요.

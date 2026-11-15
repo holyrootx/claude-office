@@ -1,6 +1,7 @@
 // 데모: 두 층에서 직원 둘과 인턴 둘이 동시에 일하는 장면.
 // script 항목은 [앞 항목과의 간격(ms), 세션 id, 이벤트]. 이벤트에 agent가 있으면 인턴, { wait }는 hook이 알려 주는 권한 대기,
-// { compacting }은 hook이 알려 주는 대화 압축 중 흉내. 이벤트에 ctx를 붙이면 컨텍스트 크기도 바뀐다.
+// { compacting }은 hook이 알려 주는 대화 압축 중 흉내, { ended }는 Claude Code를 닫았다는 hook(SessionEnd) 흉내,
+// { leave }는 서버가 보내는 퇴근. 이벤트에 ctx를 붙이면 컨텍스트 크기도 바뀐다.
 const shop = 'demo-shop', blog = 'demo-blog';
 
 export const DEMO_SESSIONS = [
@@ -65,7 +66,10 @@ export const DEMO_SCRIPT = [
   [300, shop, { k: 'tool', id: 's6', name: 'Bash', tool: 'Bash', room: 'server', label: 'npm test', detail: 'npm test -- auth' }],
   [900, blog, { k: 'result', id: 'b5', ok: true }],
   [700, blog, { k: 'say', final: true, text: '초안을 쓰고 미리보기로 배포했어요. 예제 코드는 인턴이 모두 확인했어요.' }],
-  [1400, shop, { k: 'result', id: 's6', ok: true }],
+  // 블로그 쪽은 다 끝나서 Claude Code를 닫았다: 마지막 말을 마치면 🚪로 쉬다가 빌딩을 걸어 나간다 (hook을 켜 두면 30분을 기다리지 않는다)
+  [3600, blog, { ended: true }],
+  [2600, blog, { leave: 'ended' }],
+  [0, shop, { k: 'result', id: 's6', ok: true }],
   [300, shop, { k: 'tool', id: 's7', name: 'mcp__ccd_turn__update_plan', tool: 'update_plan', room: 'meeting', label: '진행 상황 갱신', plan: todo('done', 'done', 'done', 'doing') }],
   [500, shop, { k: 'result', id: 's7', ok: true }],
   [300, shop, { k: 'tool', id: 's8', name: 'AskUserQuestion', tool: 'AskUserQuestion', room: 'desk', label: '커밋 방식', ask: '바로 커밋할까요, 아니면 PR로 올릴까요?', options: ['바로 커밋', 'PR로 올리기'] }],

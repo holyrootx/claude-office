@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Claude Code hook → Claude 사무실 서버. 권한 확인 창이 떴다는 것처럼 세션 기록 파일에 남지 않는 일을 알려 준다.
+// Claude Code hook → Claude 사무실 서버. 권한 확인 창이 떴다, 압축을 시작했다, Claude Code를 닫았다처럼 세션 기록 파일에 남지 않는 일을 알려 준다.
 // 사무실이 꺼져 있거나 응답이 느려도 Claude Code를 방해하지 않게, 무슨 일이 있어도 조용히 exit 0으로 끝난다.
 'use strict';
 

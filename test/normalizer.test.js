@@ -92,6 +92,8 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(displayName('mcp__Claude_Browser__javascript_tool'), 'Browser.javascript_tool');
   assert.equal(displayName('mcp__Claude_Code_iOS_Simulator__control'), 'Simulator.control');
   assert.equal(displayName('mcp__ccd_session__start_session'), 'session.start_session');
+  assert.equal(displayName('mcp__claude-in-chrome__browser_batch'), 'Chrome.batch'); // 데스크톱 앱 브라우저와 같은 꼴로
+  assert.equal(displayName('mcp__claude-in-chrome__tabs_context_mcp'), 'Chrome.tabs_context');
 });
 
 test('도구 사용과 결과, 실패 이유를 이벤트로 바꾼다', () => {

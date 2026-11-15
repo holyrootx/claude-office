@@ -625,14 +625,24 @@ let cardActor = null, cardHtml = '';
 // 이어 하기 명령을 Windows(PowerShell) 꼴로 만들지
 const IS_WIN = /Win/i.test(navigator.platform || navigator.userAgent || '');
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
-function openCard(a, keep) {
+// focus: 키보드로 열었으면(로비 줄에서 Enter) 초점을 카드로 옮겨 안의 버튼을 바로 Tab으로 고르게 하고,
+// 닫으면(Esc·✕) 원래 줄로 돌려준다. 마우스로 열 때는 초점을 건드리지 않는다
+let cardReturn = null;
+function openCard(a, keep, focus = false) {
   cardActor = cardActor === a && !keep ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
   cardHtml = '';
   renderCard();
+  if (focus && cardActor && !$('card').hidden) {
+    cardReturn = document.activeElement;
+    $('card').focus({ preventScroll: true });
+  }
 }
 function closeCard() {
   cardActor = null;
+  const had = $('card').contains(document.activeElement);
   setHidden($('card'), true);
+  if (had && cardReturn && cardReturn.isConnected) cardReturn.focus({ preventScroll: true });
+  cardReturn = null;
 }
 function renderCard() {
   const a = cardActor;
@@ -951,18 +961,18 @@ $('floorTabs').addEventListener('click', e => {
 });
 $('floorAuto').addEventListener('click', () => { floorAuto = true; autoFloor(); render(); });
 // 로비 안내판 줄이나 활동 기록 줄을 누르면 그 층으로 가서, 그 사람의 정보 카드를 연다
-function showActor(li) {
+function showActor(li, focus = false) {
   if (!li) return;
   goFloor(li.dataset.floor, true);
   const a = [...actors].find(x => x.key === li.dataset.actor && !x.leaving);
-  if (a) openCard(a, true);
+  if (a) openCard(a, true, focus);
 }
 $('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 // 키보드로도: Tab으로 줄을 고르고 Enter
 $('lobby').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
-  showActor(e.target.closest('[data-floor]'));
+  showActor(e.target.closest('[data-floor]'), true); // 키보드로 열면 초점이 카드로
 });
 el.feed.addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 

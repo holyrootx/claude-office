@@ -766,3 +766,6 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 .conn-copy { margin-left: 6px; font: 500 11px var(--ui); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; cursor: pointer; }
 .conn-copy[hidden] { display: none; }
 .conn-copy:hover, .conn-copy:focus-visible { border-color: var(--muted); }
+
+/* 키보드로 연 정보 카드: 초점이 카드에 있다는 표시 */
+.card:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }

@@ -126,7 +126,7 @@ Claude Code 안에서 아래 두 줄을 입력하세요.
 |---|---|
 | `/office:open` | 사무실을 뒤에서 켜고 브라우저로 열어요. 이미 켜져 있으면 화면만 열고, 켜져 있는 게 예전 버전이면(플러그인을 업데이트한 뒤) 끄고 새 버전으로 다시 켜요. |
 | `/office:stop` | 사무실을 꺼요. |
-| `/office:journal` | 오늘의 업무 일지를 Claude Code 안에 보여 줘요. `/office:journal 어제`처럼 다른 날도, `/office:journal 이번 주`·`/office:journal 지난 달`처럼 한 주·한 달도 볼 수 있어요. |
+| `/office:journal` | 오늘의 업무 일지를 Claude Code 안에 보여 줘요. `/office:journal 어제`처럼 다른 날도, `/office:journal 이번 주`·`/office:journal 지난 달`처럼 한 주·한 달도 볼 수 있어요. 뒤에 `--md`를 붙이면 슬랙·노션에 붙여 넣을 마크다운으로, `--project blog`를 붙이면 그 프로젝트만 나와요("지난 주 일지 마크다운으로"처럼 말로 해도 돼요). |
 
 플러그인에는 [권한 확인 대기를 알려 주는 hooks](#권한-확인-대기까지-보기-hooks)가 들어 있어서, 따로 설정하지 않아도 권한 대기 장면이 나와요.
 

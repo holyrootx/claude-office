@@ -102,3 +102,29 @@ test("일한 시간: 조금이라도 일했으면 '0분'이 아니라 '1분 미�
   assert.equal(fmtWorked(60 * 60000), '1시간');
   assert.equal(fmtWorked(214 * 60000), '3시간 34분');
 });
+
+test('창이 떠 있으면 Tab이 창 밖으로 빠져나가지 않는다 (마지막 → 처음, Shift+Tab 처음 → 마지막, 숨긴 버튼은 건너뜀)', async () => {
+  const { trapTab } = await import('../public/js/util.js');
+  let focused = null;
+  const el = (name, shown = true) => ({ name, getClientRects: () => (shown ? [1] : []), focus() { focused = name; globalThis.document.activeElement = this; } });
+  const a = el('a'), b = el('b'), hidden = el('hidden', false), c = el('c');
+  const box = { querySelectorAll: () => [a, b, hidden, c], contains: x => [a, b, hidden, c].includes(x) };
+  const key = (shiftKey = false) => { const e = { key: 'Tab', shiftKey, prevented: false, preventDefault() { e.prevented = true; } }; return e; };
+  globalThis.document = { activeElement: c };
+  let e = key();
+  assert.equal(trapTab(box, e), true);
+  assert.equal(focused, 'a');
+  assert.ok(e.prevented);
+  e = key(true); // a에서 Shift+Tab → 숨긴 것을 건너뛰고 c
+  assert.equal(trapTab(box, e), true);
+  assert.equal(focused, 'c');
+  globalThis.document.activeElement = b; // 가운데에서는 브라우저에 맡긴다
+  e = key();
+  assert.equal(trapTab(box, e), false);
+  assert.equal(e.prevented, false);
+  globalThis.document.activeElement = { outside: true }; // 초점이 창 밖이면 창 안으로
+  assert.equal(trapTab(box, key()), true);
+  assert.equal(focused, 'a');
+  assert.equal(trapTab(box, { key: 'Enter' }), false);
+  delete globalThis.document;
+});

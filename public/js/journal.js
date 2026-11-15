@@ -55,8 +55,12 @@ export function createJournal({ toast, onPick, copy }) {
       $(id).setAttribute('aria-pressed', String(on));
     }
     const unit = month != null ? '달' : week != null ? '주' : '날';
-    $('journalPrev').title = `${unit === '날' ? '전날' : `지난 ${unit}`} (←)`;
+    // 화면 읽기 프로그램이 읽는 이름(aria-label)도 같이: 월간 보기에서 ◀를 '전날'이라고 읽지 않게
+    const prevName = unit === '날' ? '전날' : `지난 ${unit}`;
+    $('journalPrev').title = `${prevName} (←)`;
+    $('journalPrev').setAttribute('aria-label', prevName);
     $('journalNext').title = `다음 ${unit} (→)`;
+    $('journalNext').setAttribute('aria-label', `다음 ${unit}`);
     if ($('journal').hidden) {
       // 창을 열면 키보드 초점을 창 안으로 옮기고, 닫을 때 원래 자리(📓 버튼 등)로 돌려준다
       returnFocus = document.activeElement;

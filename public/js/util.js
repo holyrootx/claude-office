@@ -53,6 +53,24 @@ export const setHidden = (el, h) => { if (el.hidden !== !!h) el.hidden = !!h; };
 export const setAttr = (el, k, v) => { v = String(v); if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
 export const setStyle = (el, k, v) => { if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); };
 
+// 창(업무 일지·도움말)이 떠 있는 동안 Tab이 창 밖(뒤의 사무실 화면)으로 빠져나가지 않게 한다.
+// 마지막 버튼에서 Tab이면 처음으로, 처음에서 Shift+Tab이면 마지막으로. 초점이 창 밖에 있으면 창 안으로 데려온다.
+const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
+export function trapTab(box, e) {
+  if (e.key !== 'Tab' || !box) return false;
+  const list = [...box.querySelectorAll(FOCUSABLE)].filter(el => el.getClientRects().length); // 숨긴 것은 빼고
+  if (!list.length) return false;
+  const first = list[0], last = list[list.length - 1];
+  const at = document.activeElement;
+  const out = !box.contains(at);
+  if (e.shiftKey ? out || at === first : out || at === last) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus();
+    return true;
+  }
+  return false;
+}
+
 // 화면 가운데 짧은 안내를 얼마나 띄울지: 글이 길수록 오래 (읽을 틈을 주게), 1.4초~4초
 export const toastMs = text => Math.min(4000, Math.max(1400, 600 + String(text || '').length * 70));
 

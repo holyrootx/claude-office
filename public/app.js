@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -1010,9 +1010,11 @@ document.addEventListener('keydown', e => {
   if (cardActor && e.key === 'Escape') return closeCard();
   if (!$('help').hidden) {
     if (e.key === 'Escape' || e.key === '?') closeHelp();
+    trapTab($('helpBox'), e); // Tab이 창 뒤로 빠져나가지 않게
     return;
   }
   if (journal.isOpen()) {
+    trapTab($('journalBox'), e);
     if (e.key === 'Escape' || isJ(e)) journal.close();
     if (e.key === 'ArrowLeft') journal.prev();
     if (e.key === 'ArrowRight') journal.next();

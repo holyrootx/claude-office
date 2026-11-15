@@ -82,7 +82,7 @@ node -v
 #### 방법 A. 설치 없이 한 줄로 실행 (가장 간단)
 
 ```bash
-npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.8.0
+npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.9.0
 ```
 
 처음 한 번만 "Ok to proceed? (y)"라고 물으면 `y`를 누르세요.

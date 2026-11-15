@@ -686,9 +686,13 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
     }));
     assert.equal(h.app, 'claude-office');
     // 직접 정한 포트는 다른 데로 옮기지 않는다
-    let out = '';
-    try { execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(D)], { env: { ...env, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-x.json') } }); } catch (e) { out = String(e.stdout); }
+    // execFileSync로 기다리면 이 테스트(= 그 포트의 '다른 프로그램')가 멈춰서, 사무실이 '거기 사무실이 떠 있나?' 물어도
+    // 대답을 못 하고 시간이 다 될 때까지 기다린다 (컴퓨터가 바쁘면 몇 분씩 늘어진 적이 있다). 비동기로 돌려 바로 대답하게
+    const started = Date.now();
+    const out = await new Promise(resolve => execFile(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(D)],
+      { env: { ...env, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-x.json') }, timeout: 20000 }, (e, stdout) => resolve(String(stdout))));
     assert.match(out, /다른 프로그램이 쓰고 있어요/);
+    assert.ok(Date.now() - started < 10000, '포트가 막혔다는 안내는 곧바로 나온다');
   } finally {
     child.kill();
     busy.close();

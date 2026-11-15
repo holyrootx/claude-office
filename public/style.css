@@ -773,3 +773,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 /* 정보 카드의 권한 모드: 마우스를 올리면 설명, '모든 권한 허용'은 눈에 띄게 */
 .card-mode { cursor: help; }
 .card-mode.risky { color: var(--text-warn, #f59e0b); font-weight: 600; }
+
+/* 설명이 붙은 카드 글(💵·🛡): 글자처럼 보이되 누를 수 있게 */
+.card-tip { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+.card-tip:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; border-radius: 3px; }

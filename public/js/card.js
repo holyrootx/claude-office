@@ -4,6 +4,8 @@ import { esc, clip, resumeCommand, secs, fmtWorked, modelName } from './util.js'
 
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
+// 설명이 붙은 글: 마우스를 올리면 title로, 누르면(폰처럼 마우스가 없어도) 화면 가운데 안내로 보여 준다 (app.js가 data-tip을 띄운다)
+const tipBtn = (cls, tip, html) => `<button type="button" class="card-tip${cls ? ' ' + cls : ''}" data-tip="${esc(tip)}" title="${esc(tip)}">${html}</button>`;
 // 마우스를 올리면 보이는 설명: 그 모드에서 무엇을 묻고 무엇을 안 묻는지
 const MODE_HELP = {
   plan: '파일을 고치거나 명령을 실행하지 않고 계획만 세워요. 계획을 받아들이면 일을 시작해요',
@@ -51,10 +53,10 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
   if (!a.intern && info.pr && /^https?:\/\//i.test(info.pr.url || '')) extras.push(`<a href="${esc(info.pr.url)}" target="_blank" rel="noopener">🔗 PR #${esc(info.pr.number)}</a>`);
   if (!a.intern && info.cost) {
     const lines = info.cost.added || info.cost.removed ? ` · +${info.cost.added} −${info.cost.removed}줄` : '';
-    extras.push(`<span title="Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요">💵 $${info.cost.usd.toFixed(2)}${lines}</span>`);
+    extras.push(tipBtn('', 'Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요', `💵 $${info.cost.usd.toFixed(2)}${lines}`));
   }
   if (!a.intern && info.mode && MODE_NAMES[info.mode]) {
-    extras.push(`<span class="card-mode${info.mode === 'bypassPermissions' ? ' risky' : ''}" title="${esc(MODE_HELP[info.mode])}">${info.mode === 'bypassPermissions' ? '⚠' : '🛡'} ${MODE_NAMES[info.mode]}</span>`);
+    extras.push(tipBtn(`card-mode${info.mode === 'bypassPermissions' ? ' risky' : ''}`, MODE_HELP[info.mode], `${info.mode === 'bypassPermissions' ? '⚠' : '🛡'} ${MODE_NAMES[info.mode]}`));
   }
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const q = !a.intern && info.queue && info.queue.length ? info.queue : null;

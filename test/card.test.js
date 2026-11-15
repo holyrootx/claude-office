@@ -30,7 +30,7 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
   assert.match(html, /도구 7 · <button[^>]*data-act="fails"[^>]*>실패 1<\/button> · 내 메시지 2 · 인턴 1명/);
   assert.match(html, /href="https:\/\/github.com\/o\/r\/pull\/86"/);
   assert.match(html, /\$1\.23 · \+10 −2줄/);
-  assert.match(html, /<span class="card-mode" title="파일을 고치거나 명령을 실행하지 않고 계획만[^"]*">🛡 계획 모드<\/span>/); // 무엇을 묻는지는 마우스를 올리면
+  assert.match(html, /<button type="button" class="card-tip card-mode" data-tip="파일을 고치거나 명령을 실행하지 않고 계획만[^"]*" title="[^"]*">🛡 계획 모드<\/button>/); // 무엇을 묻는지는 마우스를 올리거나 누르면
   assert.match(html, /기다리는 메시지 4개/);
   assert.equal((html.match(/<small>(하나|둘|셋|넷)<\/small>/g) || []).length, 3); // 앞의 셋만
   assert.match(html, /card-ctx now-ctx mid" style="--p:72%"/);
@@ -116,7 +116,7 @@ test('직원 카드: 세션을 언제 시작했는지 (오늘이면 시각, 전�
 });
 
 test("권한 모드 '모든 권한 허용'은 ⚠로 눈에 띄게, 기본 모드는 안 쓴다", () => {
-  assert.match(cardHtml(main, session({ mode: 'bypassPermissions' })), /<span class="card-mode risky" title="아무것도 묻지 않고[^"]*">⚠ 모든 권한 허용<\/span>/);
+  assert.match(cardHtml(main, session({ mode: 'bypassPermissions' })), /<button type="button" class="card-tip card-mode risky" data-tip="아무것도 묻지 않고[^"]*"[^>]*>⚠ 모든 권한 허용<\/button>/);
   assert.match(cardHtml(main, session({ mode: 'auto' })), /🛡 자동 모드/);
   assert.doesNotMatch(cardHtml(main, session({ mode: 'default' })), /card-mode/);
 });

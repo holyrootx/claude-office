@@ -989,6 +989,9 @@ $('demoBtn').addEventListener('click', () => (demo ? stopDemo(true) : startDemo(
 $('emptyDemo').addEventListener('click', () => startDemo());
 $('card').addEventListener('click', e => {
   e.stopPropagation();
+  // 💵 비용·🛡 권한 모드처럼 설명이 붙은 글은 누르면 설명을 보여 준다 (폰에서는 마우스를 올려 볼 수 없어서)
+  const tip = e.target.closest('[data-tip]');
+  if (tip) return toast(tip.dataset.tip);
   const act = e.target.closest('[data-act]');
   const s = cardActor && sessions.get(cardActor.sid);
   if (!act || !s) return;

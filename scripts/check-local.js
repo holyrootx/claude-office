@@ -34,6 +34,9 @@ async function scanFile(file, sidechain) {
   const norm = new Normalizer({ sidechain });
   const unknown = new Map(), noLabel = new Map(), hidden = new Map();
   let events = 0, lines = 0, broken = 0, tools = 0;
+  // 우리말로 못 바꾼 것들: 이름을 모르는 커넥터 도구(MCP.…), 글자가 모두 영어인 API 오류·실패 안내 (내용은 세지 않고 개수만)
+  let mcpUnknown = 0, apiEnglish = 0, failEnglish = 0, fails = 0;
+  const english = t => /[a-z]{3}/i.test(t) && !/[가-힣]/.test(t);
   const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
   for await (const l of rl) {
     if (!l) continue;
@@ -45,8 +48,12 @@ async function scanFile(file, sidechain) {
     const evs = norm.line(l);
     events += evs.length;
     for (const e of evs) {
+      if (e.k === 'apierr' && english(e.text || '')) apiEnglish++;
+      // 영어 문장 그대로인 실패 안내 (명령의 Exit code 줄은 빼고)
+      if (e.k === 'result' && !e.ok) { fails++; if (/^[A-Z][a-z]+ [a-z]/.test(e.error || '') && !/^Exit code/.test(e.error) && !/[가-힣]/.test(e.error)) failEnglish++; }
       if (e.k !== 'tool') continue;
       tools++;
+      if (/^MCP\./.test(e.tool)) mcpUnknown++;
       if (!e.label && !e.detail) bump(noLabel, e.name.replace(/^mcp__[0-9a-f-]{36}__/, 'mcp__(커넥터)__'));
     }
     // 사람이 볼 글이 든 숨김(isMeta) user 줄인데 아무 이벤트도 안 됐으면: 어디서 온 건지만 센다
@@ -55,7 +62,7 @@ async function scanFile(file, sidechain) {
       bump(hidden, (j.origin && j.origin.kind) || j.turnOrigin || j.promptSource || '출처 표시 없음');
     }
   }
-  return { events, lines, broken, unknown, tools, noLabel, hidden };
+  return { events, lines, broken, unknown, tools, noLabel, hidden, mcpUnknown, apiEnglish, failEnglish, fails, mode: !sidechain && norm.meta.mode };
 }
 
 (async () => {
@@ -63,7 +70,7 @@ async function scanFile(file, sidechain) {
   console.log(`\n  🔎 ${PROJECTS} 의 세션 ${sessions.length}개를 점검해요 (읽기만 해요)\n`);
   const unknown = new Map(), noLabel = new Map(), hidden = new Map();
   const problems = [];
-  let events = 0, lines = 0, broken = 0, tools = 0;
+  let events = 0, lines = 0, broken = 0, tools = 0, mcpUnknown = 0, apiEnglish = 0, failEnglish = 0, fails = 0, noMode = 0;
   for (const s of sessions) {
     const name = path.basename(s.file);
     const files = [[s.file, false]];
@@ -76,6 +83,8 @@ async function scanFile(file, sidechain) {
         lines += r.lines;
         broken += r.broken;
         tools += r.tools;
+        mcpUnknown += r.mcpUnknown; apiEnglish += r.apiEnglish; failEnglish += r.failEnglish; fails += r.fails;
+        if (!sidechain && !r.mode) noMode++;
         for (const [k, n] of r.unknown) bump(unknown, k, n);
         for (const [k, n] of r.noLabel) bump(noLabel, k, n);
         for (const [k, n] of r.hidden) bump(hidden, k, n);
@@ -102,6 +111,8 @@ async function scanFile(file, sidechain) {
   const sum = m => [...m.values()].reduce((a, b) => a + b, 0);
   console.log(`  표지판 글이 없는 도구: ${fmt(sum(noLabel))}개 / 도구 ${fmt(tools)}개${noLabel.size ? ` (많은 순: ${top(noLabel, 5)})` : ''}`);
   console.log(`  화면에 안 보이는 숨김 user 줄: ${fmt(sum(hidden))}개${hidden.size ? ` (어디서: ${top(hidden, 5)})` : ''}`);
+  console.log(`  이름을 모르는 커넥터 도구(MCP.…): ${fmt(mcpUnknown)}번 · 영어 그대로인 API 오류: ${fmt(apiEnglish)}줄 · 영어 문장 그대로인 실패 안내: ${fmt(failEnglish)}건 / 실패 ${fmt(fails)}건 (도구가 낸 오류도 있어요)`);
+  console.log(`  권한 모드를 모르는 세션: ${fmt(noMode)}개 / ${fmt(sessions.length)}개 (정보 카드의 🛡)`);
   if (problems.length) {
     console.log('\n  ⚠ 문제:');
     for (const p of problems) console.log('     ' + p);

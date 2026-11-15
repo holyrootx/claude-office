@@ -571,6 +571,9 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail("Permission for this action was denied by the Claude Code auto mode classifier. Reason: [Modify Shared Resources]. If you have other tasks that don't depend on this action, continue working on those."), '자동 모드가 이 작업을 막았어요 (Modify Shared Resources)');
   assert.match(fail('The server-side auto mode classifier gave no verdict (the response ended before its verdict arrived), so auto mode cannot determine the safety of Bash.'), /^자동 모드가 안전한지 판단하지 못해서/);
   assert.equal(fail('Tool permission request aborted'), '권한 확인이 취소됐어요');
+  assert.equal(fail('Permission for this command was denied by a built-in Claude Code safety check, not by the user.'), 'Claude Code의 안전 검사가 이 명령을 막았어요');
+  assert.equal(fail('The tool call was interrupted before a result was received. It may or may not have completed.'), '결과를 받기 전에 끊겼어요 (실행은 됐을 수도 있어요)');
+  assert.equal(fail('<tool_use_error>File does not exist. Note: your current working directory is /x.</tool_use_error>'), '파일이 없어요');
   assert.equal(fail('<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>'), '읽은 뒤에 파일이 바뀌어서 다시 읽어야 해요');
   assert.equal(fail('InputValidationError: AskUserQuestion was called with input that could not be parsed'), 'AskUserQuestion에 맞지 않는 값을 넘겼어요');
   assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), 'Exit code 1 · npm ERR! missing script: lint'); // 나머지는 그대로

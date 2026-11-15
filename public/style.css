@@ -769,3 +769,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 
 /* 키보드로 연 정보 카드: 초점이 카드에 있다는 표시 */
 .card:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
+
+/* 정보 카드의 권한 모드: 마우스를 올리면 설명, '모든 권한 허용'은 눈에 띄게 */
+.card-mode { cursor: help; }
+.card-mode.risky { color: var(--text-warn, #f59e0b); font-weight: 600; }

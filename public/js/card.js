@@ -4,6 +4,13 @@ import { esc, clip, resumeCommand, secs, fmtWorked, modelName } from './util.js'
 
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
+// 마우스를 올리면 보이는 설명: 그 모드에서 무엇을 묻고 무엇을 안 묻는지
+const MODE_HELP = {
+  plan: '파일을 고치거나 명령을 실행하지 않고 계획만 세워요. 계획을 받아들이면 일을 시작해요',
+  acceptEdits: '파일 편집은 묻지 않고 하고, 명령 실행 같은 다른 일은 물어봐요',
+  auto: '안전하다고 판단한 일은 묻지 않고 하고, 위험해 보이는 일은 막거나 물어봐요',
+  bypassPermissions: '아무것도 묻지 않고 다 해요. 믿을 수 있는 곳에서만 쓰세요',
+};
 
 // a: 캐릭터 { intern, name, desc, now: { icon, title, time, sub } }
 // s: 세션 { sid, info, color, stats, interns, main }
@@ -46,7 +53,9 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
     const lines = info.cost.added || info.cost.removed ? ` · +${info.cost.added} −${info.cost.removed}줄` : '';
     extras.push(`<span title="Claude Code가 남긴 API 요금 기준이에요. 구독 요금제라면 실제로 낸 돈과 달라요">💵 $${info.cost.usd.toFixed(2)}${lines}</span>`);
   }
-  if (!a.intern && info.mode && MODE_NAMES[info.mode]) extras.push(`🛡 ${MODE_NAMES[info.mode]}`);
+  if (!a.intern && info.mode && MODE_NAMES[info.mode]) {
+    extras.push(`<span class="card-mode${info.mode === 'bypassPermissions' ? ' risky' : ''}" title="${esc(MODE_HELP[info.mode])}">${info.mode === 'bypassPermissions' ? '⚠' : '🛡'} ${MODE_NAMES[info.mode]}</span>`);
+  }
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
   const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';

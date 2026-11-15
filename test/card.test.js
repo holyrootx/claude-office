@@ -105,3 +105,12 @@ test('컨텍스트 색: 60%부터 노랑, 85%부터 빨강, 100%를 넘지 않�
   assert.equal(ctxOf({ info: {} }), null);
   assert.equal(ctxOf(null), null);
 });
+
+test('직원 카드: 세션을 언제 시작했는지 (오늘이면 시각, 전이면 날짜와 며칠째)', () => {
+  const now = new Date(2026, 10, 16, 15, 0).getTime();
+  const today = cardHtml(main, session({ started: new Date(2026, 10, 16, 9, 5).getTime() }), { clock: now });
+  assert.match(today, /· 09:05부터<\/div>/);
+  const old = cardHtml(main, session({ started: new Date(2026, 9, 24, 18, 28).getTime() }), { clock: now });
+  assert.match(old, /· 10\/24부터 · 24일째<\/div>/);
+  assert.doesNotMatch(cardHtml(main, session({}), { clock: now }), /부터/); // 모르면 안 쓴다
+});

@@ -1094,7 +1094,10 @@ loadSessions(saved).then(() => {
   if (new URLSearchParams(location.search).has('demo')) startDemo();
   else connect();
 });
-setInterval(() => { if ($('conn').dataset.state !== 'off') loadSessions(); }, 15000); // 서버가 꺼져 있으면 쉰다
+// 서버가 꺼져 있거나 탭이 가려져 있으면 쉰다 (가려진 탭에서는 목록을 볼 일이 없는데, 묻는 때마다 서버가 세션 30개를 살핀다).
+// 다시 보이면 바로 한 번 받아 온다. 실시간 따라 읽기(SSE)와 알림은 가려져 있어도 그대로 돈다
+setInterval(() => { if ($('conn').dataset.state !== 'off' && !document.hidden) loadSessions(); }, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && $('conn').dataset.state !== 'off') loadSessions(); });
 checkHooks();
 setInterval(checkHooks, 5 * 60 * 1000); // 켜 두는 사이에 hooks를 넣었을 수도 있으니 가끔 다시 본다
 

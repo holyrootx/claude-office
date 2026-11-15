@@ -134,3 +134,18 @@ test('화면 밝기 버튼: 컴퓨터 설정 따라가기 → 밝게 → 어둡�
   assert.deepEqual([nextTheme(''), nextTheme('light'), nextTheme('dark')], ['light', 'dark', '']);
   for (const t of ['', 'light', 'dark']) assert.ok(THEMES[t].icon && THEMES[t].name, t);
 });
+
+test("모델 이름: 'claude-opus-5-5' → 'Opus 5.5', 날짜·예전 꼴·[1m]도", async () => {
+  const { modelName } = await import('../public/js/util.js');
+  assert.equal(modelName('claude-opus-5-5'), 'Opus 5.5');
+  assert.equal(modelName('claude-opus-5'), 'Opus 5');
+  assert.equal(modelName('claude-fable-5-2'), 'Fable 5.2');
+  assert.equal(modelName('claude-sonnet-4-5-20250929'), 'Sonnet 4.5');
+  assert.equal(modelName('claude-haiku-4-5-20251001'), 'Haiku 4.5');
+  assert.equal(modelName('claude-3-5-sonnet-20241022'), 'Sonnet 3.5');
+  assert.equal(modelName('claude-3-opus-20240229'), 'Opus 3');
+  assert.equal(modelName('claude-opus-4-6[1m]'), 'Opus 4.6 (1M)');
+  assert.equal(modelName('gpt-x'), 'gpt-x'); // 모르는 꼴은 그대로
+  assert.equal(modelName(''), '');
+  assert.equal(modelName(undefined), '');
+});

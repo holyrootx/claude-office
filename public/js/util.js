@@ -96,6 +96,21 @@ export function trapTab(box, e) {
   return false;
 }
 
+// 모델 ID → 사람이 읽는 이름: 'claude-opus-5-5' → 'Opus 5.5', 'claude-sonnet-4-5-20250929' → 'Sonnet 4.5',
+// 예전 꼴 'claude-3-5-sonnet-20241022' → 'Sonnet 3.5', 'claude-opus-4-6[1m]' → 'Opus 4.6 (1M)'. 모르는 꼴은 'claude-'만 떼고 그대로
+export function modelName(id) {
+  const s = String(id || '');
+  if (!s) return '';
+  const big = /\[1m\]$/i.test(s) ? ' (1M)' : '';
+  const t = s.replace(/\[1m\]$/i, '').replace(/^claude-/, '');
+  const cap = w => w[0].toUpperCase() + w.slice(1);
+  let m = t.match(/^(opus|sonnet|haiku|fable)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$/);
+  if (m) return `${cap(m[1])} ${m[2]}${m[3] ? '.' + m[3] : ''}${big}`;
+  m = t.match(/^(\d+)(?:-(\d))?-(opus|sonnet|haiku)(?:-\d{8})?$/);
+  if (m) return `${cap(m[3])} ${m[1]}${m[2] ? '.' + m[2] : ''}${big}`;
+  return t + big;
+}
+
 // 화면 밝기 버튼: 컴퓨터 설정 따라가기('') → 밝게 → 어둡게 → 다시 따라가기
 export const THEMES = {
   '': { icon: '🌓', name: '컴퓨터 설정을 따라가요' },

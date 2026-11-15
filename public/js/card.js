@@ -1,6 +1,6 @@
 // 캐릭터 정보 카드에 들어갈 내용(HTML). 어디에 띄울지는 app.js가 정한다.
 // 화면(DOM) 없이 글자만 만들어서 테스트할 수 있다.
-import { esc, clip, resumeCommand, secs, fmtWorked } from './util.js';
+import { esc, clip, resumeCommand, secs, fmtWorked, modelName } from './util.js';
 
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
@@ -25,7 +25,7 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
   let tree = info.worktree || '';
   const wt = sub.match(/^\.claude[\\/]worktrees[\\/]([^\\/]+)[\\/]?(.*)$/);
   if (wt) { tree = wt[1]; sub = wt[2]; }
-  const where = [info.project, (info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : '', tree ? '🌿 ' + tree : '', sub ? '📂 ' + sub : ''].filter(Boolean).map(esc).join(' · ');
+  const where = [info.project, modelName(info.model), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : '', tree ? '🌿 ' + tree : '', sub ? '📂 ' + sub : ''].filter(Boolean).map(esc).join(' · ');
   const head = a.intern
     ? `<b><em>인턴</em> ${esc(a.name)}</b><small>${esc(a.desc || '')}${a.desc ? ' · ' : ''}${esc(s.main.name)}의 인턴</small>`
     : `<b>${esc(info.title || s.main.name)}</b><small>${where}</small>`;

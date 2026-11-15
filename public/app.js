@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -545,7 +545,7 @@ function renderHeader(focus) {
   if (sessions.size) {
     const s = sessions.get(focus ? focus.sid : '') || [...sessions.values()].find(x => x.floor === current) || [...sessions.values()][0];
     const info = s.info;
-    const where = [(info.model || '').replace(/^claude-/, ''), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : ''];
+    const where = [modelName(info.model), info.branch && info.branch !== 'HEAD' ? '⎇ ' + info.branch : ''];
     if (viewMode === 'all' || viewMode === 'demo') {
       const interns = [...actors].filter(a => a.intern && !a.leaving).length;
       project = viewMode === 'demo' ? '🏢 데모 빌딩' : '🏢 빌딩';

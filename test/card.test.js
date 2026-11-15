@@ -25,7 +25,7 @@ test('직원 카드: 제목·위치·숫자·PR·비용·권한 모드·기다�
     mode: 'plan',
     queue: ['하나', '둘', '셋', '넷'],
   }), { ctx: { p: 72, level: 'mid', text: '14.4만 / 20만 토큰' }, live: true });
-  assert.match(html, /<b>로그인 401 고치기<\/b><small>shop · opus-5-5 · ⎇ fix\/auth<\/small>/);
+  assert.match(html, /<b>로그인 401 고치기<\/b><small>shop · Opus 5.5 · ⎇ fix\/auth<\/small>/); // 모델은 사람이 읽는 이름으로
   assert.match(html, /12초째/);
   assert.match(html, /도구 7 · <button[^>]*data-act="fails"[^>]*>실패 1<\/button> · 내 메시지 2 · 인턴 1명/);
   assert.match(html, /href="https:\/\/github.com\/o\/r\/pull\/86"/);

@@ -64,6 +64,8 @@ if (args.includes('--help') || args.includes('-h')) {
     -v, --version        버전
     -h, --help           이 도움말
 
+  환경 변수로도 돼요: PORT=4800 · NO_OPEN=1 · CLAUDE_OFFICE_ACTIVE_MINUTES=60 (자세한 건 README의 실행 옵션)
+
   예: ${runCmd('--port 4800')}
       ${runCmd('--journal 지난 주 --md')}
 `);

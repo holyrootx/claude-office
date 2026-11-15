@@ -34,3 +34,11 @@ test('README 안의 #링크는 모두 있는 제목을 가리킨다 (제목을 �
   const broken = [...md.matchAll(/\]\(#([^)]+)\)/g)].map(m => decodeURIComponent(m[1])).filter(a => !anchors.has(a));
   assert.deepEqual(broken, []);
 });
+
+test('코드가 읽는 환경 변수는 README에 적혀 있다 (테스트용 CLAUDE_OFFICE_DEFAULT_PORT는 빼고)', () => {
+  const src = ['server.js', 'lib/config.js', 'lib/runtime.js', 'lib/sessions.js', 'lib/hookcheck.js', 'hooks/notify.js'].map(read).join('\n');
+  const used = new Set([...src.matchAll(/process\.env\.([A-Z_]+)/g)].map(m => m[1]));
+  used.delete('CLAUDE_OFFICE_DEFAULT_PORT');
+  const md = read('README.md');
+  assert.deepEqual([...used].filter(v => !md.includes('`' + v)), []);
+});

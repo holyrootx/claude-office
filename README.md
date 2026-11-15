@@ -216,6 +216,16 @@ node server.js --port 4800 --no-open
 
 Claude 설정 폴더 위치를 바꿔 쓰고 있다면(`CLAUDE_CONFIG_DIR` 환경 변수) 자동으로 그 안의 `projects` 폴더를 읽어요.
 
+옵션 대신 환경 변수로 정할 수도 있어요. 로그인할 때 뒤에서 켜 두거나 서비스로 띄울 때 편해요.
+
+| 환경 변수 | 설명 |
+|---|---|
+| `PORT=4800` | `--port 4800`과 같아요. |
+| `NO_OPEN=1` | `--no-open`과 같아요. 브라우저를 열지 않아요. |
+| `CLAUDE_OFFICE_ACTIVE_MINUTES=60` | `--active 60`과 같아요. |
+| `CLAUDE_CONFIG_DIR` | Claude Code 설정 폴더. 세션 기록은 그 아래 `projects`에서 읽고, hooks도 그 안의 `settings.json`에 넣어요. |
+| `CLAUDE_OFFICE_RUNTIME` | 켜져 있는 사무실의 포트·토큰을 적어 두는 파일이에요(기본은 임시 폴더의 `claude-office-<사용자>.json`). 사무실을 둘 따로 띄울 때 서로 다른 파일을 주면 `--stop`과 hooks가 섞이지 않아요. |
+
 ## 도구가 가는 방 바꾸기
 
 MCP 도구는 처음에 모두 정보 검색실로 가요. 원하는 방으로 보내고 싶다면 Claude 설정 폴더(`~/.claude`)에 `claude-office.json` 파일을 만들고 이렇게 적어 주세요.

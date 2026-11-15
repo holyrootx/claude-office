@@ -2,6 +2,7 @@
 
 ## 다음 버전 (아직 버전을 올리지 않았어요)
 
+- README 실행 옵션에 환경 변수 표를 넣었어요: `PORT`·`NO_OPEN=1`·`CLAUDE_OFFICE_ACTIVE_MINUTES`·`CLAUDE_CONFIG_DIR`·`CLAUDE_OFFICE_RUNTIME`(사무실을 둘 띄울 때). 전에는 코드가 읽는데도 `NO_OPEN`·`CLAUDE_OFFICE_ACTIVE_MINUTES`·`CLAUDE_OFFICE_RUNTIME`은 어디에도 안 적혀 있었어요. `--help` 끝에도 한 줄 넣고, 코드가 읽는 환경 변수가 README에서 빠지면 테스트가 알려 줘요.
 - README 맨 위에 바로 가기 줄(보여 주는 것·시작하기·화면 사용법·실행 옵션·hooks·자주 묻는 질문·동작 방식)을 넣었어요. README 안의 #링크가 모두 있는 제목을 가리키는지 보는 테스트도 붙였어요.
 - 폰 브라우저 주소창 색이 화면 배경과 같아요(어두우면 어둡게, 밝으면 밝게). 🌓 화면 밝기 버튼으로 고르면 주소창도 따라 바뀌어요. 전에는 어두운 사무실 위에 흰 주소창이 떴어요.
 - claude.ai에서 연결한 커넥터 도구가 'MCP.addCommentToJiraIssue'·'MCP.batch'처럼 나오던 것을 서비스 이름으로 보여 줘요: 세션 처음에 Claude Code가 남기는 커넥터 안내 글('Claude Docs: …', 'provided by Gmail API')로 'Docs.batch'·'Gmail.search_threads'처럼, 그 글을 못 읽었으면 도구 이름으로 짐작해 'Atlassian.addCommentToJiraIssue'·'Notion.search'처럼요. 둘 다 모르면 전처럼 'MCP'예요.

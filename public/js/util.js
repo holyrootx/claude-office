@@ -56,10 +56,10 @@ export const setStyle = (el, k, v) => { if (el.style.getPropertyValue(k) !== v) 
 // 화면 가운데 짧은 안내를 얼마나 띄울지: 글이 길수록 오래 (읽을 틈을 주게), 1.4초~4초
 export const toastMs = text => Math.min(4000, Math.max(1400, 600 + String(text || '').length * 70));
 
-// 일한 시간: '45분', '1시간', '3시간 34분'
+// 일한 시간: '45분', '1시간', '3시간 34분'. 조금이라도 일했는데 반올림해서 0분이면 '1분 미만' (lib/report.js와 같은 꼴)
 export const fmtWorked = ms => {
   const m = Math.round((ms || 0) / 60000);
-  return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
+  return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : !m && ms > 0 ? '1분 미만' : `${m}분`;
 };
 export const secs = s => (s >= 60 ? `${Math.floor(s / 60)}분 ${s % 60}초째` : `${s}초째`);
 // 얼마나 지났는지: '방금', '12분 전', '3시간 전', '2일 전'

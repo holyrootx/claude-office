@@ -213,8 +213,10 @@ button, select { font: inherit; color: inherit; }
 .journal { position: fixed; inset: 0; z-index: 500; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .journal[hidden] { display: none; }
 .journal-box { width: min(680px, 100%); max-height: 90vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--float-shadow); }
-.journal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.journal-head b { font-size: 18px; }
+/* 좁은 화면에서는 버튼 줄이 제목 아래로 내려간다 (제목이 한두 글자씩 쪼개져 세로로 늘어서지 않게) */
+.journal-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.journal-head b { font-size: 18px; word-break: keep-all; }
+.journal-head .journal-nav { margin-left: auto; }
 .journal-head b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
 .journal-nav { display: flex; gap: 6px; }
 .journal-nav button:disabled { opacity: .3; cursor: default; }
@@ -225,7 +227,7 @@ button, select { font: inherit; color: inherit; }
 .journal-hours { display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: 42px auto; column-gap: 2px; margin: -4px 0 14px; }
 .journal-hours[hidden] { display: none; }
 .journal-hours.week { grid-template-columns: repeat(var(--n, 7), 1fr); column-gap: 8px; grid-template-rows: 52px auto; }
-.journal-hours.week span { grid-column: var(--c) / span 1; text-align: center; line-height: 1.35; }
+.journal-hours.week span { grid-column: var(--c) / span 1; text-align: center; line-height: 1.35; word-break: keep-all; } /* '1분 미만'이 '1분 미 / 만'으로 끊기지 않게 */
 .journal-hours.week span b { display: block; font: 600 11.5px var(--ui); color: var(--muted); }
 .journal-hours.week [data-day], .journal-hours.week [data-week] { cursor: pointer; }
 .journal-hours.week i:hover { filter: brightness(1.25); }

@@ -135,3 +135,9 @@ test('업무 일지 API의 날·주·달: 0, -1 …과 지난 날짜만, 없는 
   assert.equal(apiDay('1990-01-01', now), null);
   assert.equal(apiDay('어제', now), -1);
 });
+
+test("일지 글: 도구를 썼는데 반올림해서 0분이면 '1분 미만'", () => {
+  const short = { ...j, projects: [{ ...j.projects[0], sessions: [{ title: '잠깐 확인', workedMs: 20000 }] }] };
+  assert.match(journalMarkdown(short), /- 잠깐 확인 \(1분 미만\)/);
+  assert.match(journalText(short), /- 잠깐 확인 \(1분 미만\)/);
+});

@@ -4,9 +4,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-let resumeCommand, fmtTokens, compactHow, codeNotice, ago;
+let resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked;
 test.before(async () => {
-  ({ resumeCommand, fmtTokens, compactHow, codeNotice, ago } = await import('../public/js/util.js'));
+  ({ resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked } = await import('../public/js/util.js'));
 });
 
 test('이어 하기 명령: 그 폴더로 가서 claude --resume', () => {
@@ -91,4 +91,14 @@ test("얼마나 지났는지: 반올림해서 단위가 넘어가면 윗단위�
   assert.equal(before(23 * 3600 + 50 * 60), '1일 전');
   assert.equal(before(2 * 86400), '2일 전');
   assert.equal(before(-30), '방금'); // 시계가 조금 어긋나 앞날이어도
+});
+
+test("일한 시간: 조금이라도 일했으면 '0분'이 아니라 '1분 미만', 1시간 0분은 '1시간'", () => {
+  assert.equal(fmtWorked(0), '0분');
+  assert.equal(fmtWorked(undefined), '0분');
+  assert.equal(fmtWorked(20000), '1분 미만');
+  assert.equal(fmtWorked(40000), '1분');
+  assert.equal(fmtWorked(45 * 60000), '45분');
+  assert.equal(fmtWorked(60 * 60000), '1시간');
+  assert.equal(fmtWorked(214 * 60000), '3시간 34분');
 });

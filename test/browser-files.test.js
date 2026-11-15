@@ -93,3 +93,10 @@ test('app.js가 끝까지 불러와지면 준비됐다고 알리고, boot.js는 
   assert.match(app.split('\n').pop(), /window\.__officeReady = true;/); // 맨 끝 줄이어야 중간에 멈춘 걸 알아본다
   assert.match(fs.readFileSync(path.join(PUBLIC, 'js', 'boot.js'), 'utf8'), /if \(window\.__officeReady/);
 });
+
+test("화면·스킬이 사용자에게 'npx claude-office'라고 하지 않는다 (npm의 claude-office는 다른 사람 패키지)", () => {
+  const skills = path.join(__dirname, '..', 'skills');
+  const docs = [...files, path.join(PUBLIC, 'index.html')];
+  for (const d of fs.readdirSync(skills)) docs.push(path.join(skills, d, 'SKILL.md'));
+  assert.deepEqual(docs.filter(f => /npx claude-office\b/.test(fs.readFileSync(f, 'utf8'))).map(rel), []);
+});

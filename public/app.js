@@ -722,7 +722,12 @@ function setConn(state, text) {
   $('conn').dataset.state = state;
   $('conn').querySelector('span').textContent = text;
   $('conn').title = state === 'off' ? `다시 켜려면: ${startCmd}` : '';
+  // 꺼진 게 확실하면(재연결 중이 아니면) 다시 켜는 명령을 복사하는 버튼도: 폰에서는 마우스를 올려 title을 볼 수 없다
+  setHidden($('connCopy'), !(state === 'off' && /꺼져/.test(text)));
 }
+$('connCopy').addEventListener('click', () => {
+  copyText(startCmd).then(ok => toast(ok ? `📋 복사했어요 · 터미널에 붙여 넣어 실행하세요: ${startCmd}` : `다시 켜려면: ${startCmd}`));
+});
 
 // 서버가 꺼졌으면(--stop, 컴퓨터를 껐다 켬 등) 브라우저가 1.5초마다 다시 붙으려는 걸 멈추고
 // 점점 뜸하게(최대 30초) 다시 해 본다. 서버를 다시 켜면 알아서 이어진다.

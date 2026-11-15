@@ -761,3 +761,8 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 
 /* 화면 코드를 불러오지 못했을 때 boot.js가 띄우는 안내 */
 .boot-fail { position: sticky; top: 0; z-index: 1000; padding: 12px 16px; background: #7f1d1d; color: #fff; font-size: 14px; line-height: 1.5; }
+
+/* 서버가 꺼졌을 때 연결 표시 옆 '📋 켜는 명령 복사' */
+.conn-copy { margin-left: 6px; font: 500 11px var(--ui); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; cursor: pointer; }
+.conn-copy[hidden] { display: none; }
+.conn-copy:hover, .conn-copy:focus-visible { border-color: var(--muted); }

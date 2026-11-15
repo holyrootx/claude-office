@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -491,7 +491,7 @@ function renderFloorbar() {
     return `<button type="button" class="fl${f.key === current ? ' active' : ''}${wait ? ' wait' : ''}${busy ? ' busy' : ''}" data-floor="${esc(f.key)}">`
       + `<b>${i + 1}F</b>${esc(floorName(f.key))}<small>${on.length}명</small>${wait ? '<i>🔐</i>' : ''}</button>`;
   }).join('');
-  if (html !== floorbarHtml) $('floorTabs').innerHTML = floorbarHtml = html;
+  if (html !== floorbarHtml) morph($('floorTabs'), floorbarHtml = html);
 }
 
 let lobbyHtml = '';
@@ -501,7 +501,7 @@ function renderLobby() {
     // 다시 그려도 키보드로 고르던 줄은 그대로 고른 채로
     const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('#lobby [data-actor]');
     const key = focused && focused.dataset.actor;
-    $('lobby').innerHTML = lobbyHtml = html;
+    morph($('lobby'), lobbyHtml = html); // 같은 줄은 그대로 두고 바뀐 글자만 (누르는 사이에 줄이 바뀌어 클릭이 사라지지 않게)
     if (key) {
       const again = [...$('lobby').querySelectorAll('[data-actor]')].find(li => li.dataset.actor === key);
       if (again) again.focus({ preventScroll: true });
@@ -633,7 +633,7 @@ function renderCard() {
     today: viewMode !== 'demo' && viewMode !== 'replay' ? todayBySession.get(a.sid) || 0 : 0,
   });
   const card = $('card');
-  if (html !== cardHtml) card.innerHTML = cardHtml = html;
+  if (html !== cardHtml) morph(card, cardHtml = html); // 1초마다 바뀌는 시간 때문에 버튼이 새로 만들어지지 않게
   setHidden(card, false);
   // 작은 무대에서는 다시 키우되 무대 높이는 넘지 않게
   const k = Math.min(cardK, (H - 16) / card.offsetHeight);

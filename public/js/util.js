@@ -53,6 +53,31 @@ export const setHidden = (el, h) => { if (el.hidden !== !!h) el.hidden = !!h; };
 export const setAttr = (el, k, v) => { v = String(v); if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
 export const setStyle = (el, k, v) => { if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); };
 
+// el 안을 html로 바꾸되, 같은 요소는 그대로 두고 바뀐 글자·속성만 고친다.
+// 로비 안내판·정보 카드는 '12초째'처럼 1초마다 글자가 바뀌는데, innerHTML로 통째로 갈아 끼우면 버튼과 줄이 새 요소가 돼서
+// 누르는 사이(마우스를 누르고 떼는 사이)에 바뀌면 클릭이 사라지고, 키보드로 고른 버튼도 초점을 잃었다.
+export function morph(el, html) {
+  const t = document.createElement('template');
+  t.innerHTML = html;
+  syncChildren(el, t.content);
+}
+function syncChildren(cur, next) {
+  const a = [...cur.childNodes], b = [...next.childNodes];
+  b.forEach((y, i) => {
+    const x = a[i];
+    if (!x) return cur.appendChild(y);
+    if (x.isEqualNode(y)) return;
+    if (x.nodeType === 1 && y.nodeType === 1 && x.tagName === y.tagName) {
+      for (const { name } of [...x.attributes]) if (!y.hasAttribute(name)) x.removeAttribute(name);
+      for (const { name, value } of [...y.attributes]) if (x.getAttribute(name) !== value) x.setAttribute(name, value);
+      return syncChildren(x, y);
+    }
+    if (x.nodeType === 3 && y.nodeType === 3) { x.nodeValue = y.nodeValue; return; }
+    cur.replaceChild(y, x);
+  });
+  for (let i = a.length - 1; i >= b.length; i--) cur.removeChild(a[i]);
+}
+
 // 창(업무 일지·도움말)이 떠 있는 동안 Tab이 창 밖(뒤의 사무실 화면)으로 빠져나가지 않게 한다.
 // 마지막 버튼에서 Tab이면 처음으로, 처음에서 Shift+Tab이면 마지막으로. 초점이 창 밖에 있으면 창 안으로 데려온다.
 const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])';

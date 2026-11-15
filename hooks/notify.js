@@ -19,9 +19,18 @@ function slim(input) {
   return out;
 }
 
+const alive = pid => {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+};
+
 async function send(raw) {
   const rt = runtime.read();
   if (!rt) return; // 사무실이 꺼져 있다
+  // 사무실이 강제로 꺼지면(kill -9·전원) 실행 정보 파일이 남는다. 그 포트를 다른 프로그램이 쓰고 있으면
+  // 실행하려던 명령과 토큰을 그쪽에 보내게 되니, 그 프로세스가 살아 있고 그 포트의 서버가 바로 그 사무실(같은 pid)일 때만 보낸다
+  if (rt.pid && !alive(rt.pid)) return;
+  const who = await runtime.health(rt.port);
+  if (!who || (rt.pid && who.pid !== rt.pid)) return;
   const h = JSON.parse(raw);
   const body = {};
   for (const k of KEEP) if (h[k] != null) body[k] = h[k];

@@ -54,7 +54,7 @@ export const DEMO_SCRIPT = [
   [300, shop, { k: 'tool', id: 's4', name: 'Bash', tool: 'Bash', room: 'server', label: 'npm test', detail: 'npm test -- auth' }],
   [800, blog, { k: 'tool', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' }],
   [1300, blog, { wait: { kind: 'permission', id: 'b5', name: 'Bash', tool: 'Bash', room: 'server', label: '블로그에 미리보기 배포', detail: 'npm run deploy -- --preview' } }],
-  [900, shop, { k: 'result', id: 's4', ok: false, error: 'Exit code 1 · FAIL auth.spec.ts › refresh: expected 200, received 401' }],
+  [900, shop, { k: 'result', id: 's4', ok: false, error: '종료 코드 1 · FAIL auth.spec.ts › refresh: expected 200, received 401' }],
   // 컨텍스트가 꽉 차서(88%) 자동 압축: 요약하는 동안 구름을 띄우고, 끝나면 서류 더미가 줄어든다
   [2400, shop, { compacting: { trigger: 'auto' } }],
   [4800, shop, { k: 'compact', trigger: 'auto', pre: 176000, post: 31000, ms: 4800, ctx: { tokens: 31000, window: 200000 } }],

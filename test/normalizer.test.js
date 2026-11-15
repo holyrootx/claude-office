@@ -113,7 +113,7 @@ test('도구 사용과 결과, 실패 이유를 이벤트로 바꾼다', () => {
   assert.equal(evs[0].text, '빌드 고쳐줘');
   assert.equal(evs[1].room, 'server');
   assert.equal(evs[2].ok, false);
-  assert.equal(evs[2].error, 'Exit code 1 · FAIL auth.spec.ts');
+  assert.equal(evs[2].error, '종료 코드 1 · FAIL auth.spec.ts');
   assert.equal(evs[4].ok, true);
   assert.equal(norm.stats.tools, 2);
   assert.equal(norm.stats.errors, 1);
@@ -549,9 +549,10 @@ test('말에 든 마크다운 표는 짧은 목록으로 (구분 줄·머리 줄
 test('실패 내용은 무슨 일인지 알 수 있는 줄로: 파이썬은 맨 끝 줄, 자바스크립트는 at 줄 빼고, 색 코드도 빼고', () => {
   const err = content => feed(new Normalizer(), toolUse('t1', 'Bash', { command: 'x' }), toolResult('t1', content, true))[1].error;
   assert.equal(err('Exit code 1\nTraceback (most recent call last):\n  File "a.py", line 3, in <module>\n    open("x")\nFileNotFoundError: [Errno 2] No such file: "x"'),
-    'Exit code 1 · FileNotFoundError: [Errno 2] No such file: "x"');
+    '종료 코드 1 · FileNotFoundError: [Errno 2] No such file: "x"');
   assert.equal(err('TypeError: Cannot read properties of null\n    at <anonymous>:7:6\n    at async run'), 'TypeError: Cannot read properties of null');
-  assert.equal(err('Exit code 127\n\u001b[31mcommand not found: timeout\u001b[0m'), 'Exit code 127 · command not found: timeout');
+  assert.equal(err('Exit code 127\n\u001b[31mcommand not found: timeout\u001b[0m'), '종료 코드 127(명령 없음) · command not found: timeout');
+  assert.equal(err('Exit code 137'), '종료 코드 137(강제로 끝남)');
 });
 
 
@@ -576,7 +577,7 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail('<tool_use_error>File does not exist. Note: your current working directory is /x.</tool_use_error>'), '파일이 없어요');
   assert.equal(fail('<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>'), '읽은 뒤에 파일이 바뀌어서 다시 읽어야 해요');
   assert.equal(fail('InputValidationError: AskUserQuestion was called with input that could not be parsed'), 'AskUserQuestion에 맞지 않는 값을 넘겼어요');
-  assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), 'Exit code 1 · npm ERR! missing script: lint'); // 나머지는 그대로
+  assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), '종료 코드 1 · npm ERR! missing script: lint'); // 명령이 낸 글은 그대로
 });
 
 test("커넥터 도구는 세션 처음의 안내 글로 어느 서비스인지 알아내서 'MCP.batch' 대신 'Docs.batch'로", () => {

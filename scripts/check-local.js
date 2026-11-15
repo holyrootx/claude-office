@@ -49,8 +49,8 @@ async function scanFile(file, sidechain) {
     events += evs.length;
     for (const e of evs) {
       if (e.k === 'apierr' && english(e.text || '')) apiEnglish++;
-      // 영어 문장 그대로인 실패 안내 (명령의 Exit code 줄은 빼고)
-      if (e.k === 'result' && !e.ok) { fails++; if (/^[A-Z][a-z]+ [a-z]/.test(e.error || '') && !/^Exit code/.test(e.error) && !/[가-힣]/.test(e.error)) failEnglish++; }
+      // 영어 문장 그대로인 실패 안내 (명령이 실패한 '종료 코드 N' 줄은 빼고)
+      if (e.k === 'result' && !e.ok) { fails++; if (/^[A-Z][a-z]+ [a-z]/.test(e.error || '') && !/^(Exit code|종료 코드)/.test(e.error) && !/[가-힣]/.test(e.error)) failEnglish++; }
       if (e.k !== 'tool') continue;
       tools++;
       if (/^MCP\./.test(e.tool)) mcpUnknown++;

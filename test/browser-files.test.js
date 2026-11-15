@@ -59,3 +59,19 @@ test('import { … }로 가져오는 이름이 그 파일에 정말 있다', () 
   }
   assert.deepEqual(bad, []);
 });
+
+test("$('아이디')로 찾는 화면 요소가 index.html(또는 화면 코드가 만드는 HTML)에 있다", () => {
+  // 없으면 그 순간 null이라 오류가 나서 그 기능(창 열기·버튼 등)이 통째로 멈춘다
+  const ids = new Set();
+  for (const src of [fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8'), ...files.map(f => fs.readFileSync(f, 'utf8'))]) {
+    for (const m of src.matchAll(/\bid="([^"$]+)"/g)) ids.add(m[1]);
+  }
+  const bad = [];
+  for (const f of files) {
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/\$\('([^']+)'\)|getElementById\('([^']+)'\)/g)) {
+      const id = m[1] || m[2];
+      if (!ids.has(id)) bad.push(`${rel(f)}: #${id}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});

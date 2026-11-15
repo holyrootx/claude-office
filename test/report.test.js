@@ -110,3 +110,28 @@ test('월간 일지: 주마다(월요일부터) 묶고, 프로젝트는 그 달�
   // 하루뿐인 주는 날짜 하나로
   assert.match(monthMarkdown([day(4, 30), day(5, 60)], '2026년 10월'), /- 10\/4: 30분 · 1일 · 도구 5\n- 10\/5: 1시간 · 1일/);
 });
+
+test('업무 일지 API의 날·주·달: 0, -1 …과 지난 날짜만, 없는 날·앞날·너무 먼 옛날은 null', () => {
+  const { pastOffset, apiDay } = require('../lib/report');
+  const now = new Date(2026, 10, 15, 12);
+  assert.equal(pastOffset('', 'week'), 0);
+  assert.equal(pastOffset(null, 'month'), 0);
+  assert.equal(pastOffset('-1', 'week'), -1);
+  assert.equal(pastOffset('-0', 'day'), 0);
+  assert.equal(pastOffset('1', 'week'), null); // 앞날
+  assert.equal(pastOffset('xyz', 'week'), null);
+  assert.equal(pastOffset('-1.5', 'month'), null);
+  assert.equal(pastOffset('-120', 'month'), -120);
+  assert.equal(pastOffset('-99999', 'month'), null); // '-6307년 8월'이 나오던 값
+  assert.equal(apiDay('0', now), 0);
+  assert.equal(apiDay(undefined, now), 0);
+  assert.equal(apiDay('-3', now), -3);
+  assert.equal(apiDay('99', now), null);
+  assert.equal(apiDay('abc', now), null);
+  assert.equal(apiDay('2026-10-31', now), '2026-10-31');
+  assert.equal(apiDay('2026-11-15', now), '2026-11-15'); // 오늘
+  assert.equal(apiDay('2026-11-16', now), null); // 내일
+  assert.equal(apiDay('2026-13-45', now), null); // 전에는 2027년 2월 14일 일지가 나왔다
+  assert.equal(apiDay('1990-01-01', now), null);
+  assert.equal(apiDay('어제', now), -1);
+});

@@ -26,11 +26,17 @@ export function createJournal({ toast, onPick, copy }) {
     const q = query();
     $('journalBox').classList.add('busy'); // 받아 오는 동안 흐리게 (한 주는 조금 더 걸린다)
     let j;
-    try { j = await (await fetch('/api/journal?' + q)).json(); } catch {
+    let why = '';
+    try {
+      const r = await fetch('/api/journal?' + q);
+      j = await r.json();
+      if (!r.ok) why = j.error || '업무 일지를 읽지 못했어요';
+    } catch { why = '업무 일지를 읽지 못했어요'; }
+    if (why) {
       if (ask !== asked) return;
       loading = false;
       $('journalBox').classList.remove('busy');
-      return toast('업무 일지를 읽지 못했어요');
+      return toast(why);
     }
     if (ask !== asked) return;
     loading = false;
@@ -100,7 +106,11 @@ export function createJournal({ toast, onPick, copy }) {
   async function copyMarkdown() {
     let text = md && md.q === query() ? md.text : null;
     if (text == null) {
-      try { text = await (await fetch(`/api/journal?${query()}&format=md`)).text(); } catch { return toast('업무 일지를 읽지 못했어요'); }
+      try {
+        const r = await fetch(`/api/journal?${query()}&format=md`);
+        text = await r.text();
+        if (!r.ok) return toast(text || '업무 일지를 읽지 못했어요'); // 안내 글을 복사하지 않게
+      } catch { return toast('업무 일지를 읽지 못했어요'); }
     }
     toast((await copy(text)) ? '📋 일지를 마크다운으로 복사했어요' : '복사하지 못했어요');
   }

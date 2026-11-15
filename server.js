@@ -24,7 +24,7 @@ const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
-  parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown,
+  parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay,
 } = require('./lib/report');
 // 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1, project: 그 프로젝트만)
 // 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
@@ -190,9 +190,15 @@ const server = http.createServer((req, res) => {
       res.writeHead(500);
       res.end();
     };
+    // 없는 날(13월 45일)·앞날·너무 먼 옛날을 물으면 엉뚱한 날 일지 대신 무엇이 틀렸는지 알려 준다
+    const bad = text => {
+      res.writeHead(400, { 'Content-Type': md ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(md ? text : JSON.stringify({ error: text }));
+    };
     // ?month=0 (이번 달) · -1 (지난 달) …: 한 달을 주마다·프로젝트마다 모아서
     if (url.searchParams.has('month')) {
-      const month = Math.min(0, Math.trunc(Number(url.searchParams.get('month'))) || 0);
+      const month = pastOffset(url.searchParams.get('month'), 'month');
+      if (month == null) return bad('어느 달인지 모르겠어요: month=0(이번 달), -1(지난 달)처럼 10년 안으로 적어 주세요');
       const r = monthRange(month);
       weekDays(r, project).then(days => {
         if (md) {
@@ -205,7 +211,8 @@ const server = http.createServer((req, res) => {
     }
     // ?week=0 (이번 주) · -1 (지난 주) …: 한 주를 날마다·프로젝트마다 모아서
     if (url.searchParams.has('week')) {
-      const week = Math.min(0, Math.trunc(Number(url.searchParams.get('week'))) || 0);
+      const week = pastOffset(url.searchParams.get('week'), 'week');
+      if (week == null) return bad('어느 주인지 모르겠어요: week=0(이번 주), -1(지난 주)처럼 10년 안으로 적어 주세요');
       weekDays(weekRange(week), project).then(days => {
         if (!md) {
           const daysOut = days.map(j => ({ since: j.since, workedMs: (j.totals && j.totals.workedMs) || 0, tools: (j.totals && j.totals.tools) || 0 }));
@@ -216,7 +223,9 @@ const server = http.createServer((req, res) => {
       }, fail);
       return;
     }
-    journal(url.searchParams.get('day') || 0, null, project).then(j => {
+    const day = apiDay(url.searchParams.get('day'));
+    if (day == null) return bad('어느 날인지 모르겠어요: day=0(오늘), -1(어제)이나 2026-10-31처럼, 앞날이 아닌 10년 안의 날로 적어 주세요');
+    journal(day, null, project).then(j => {
       if (!md) return json(res, { ...j, md: journalMarkdown(j) });
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(journalMarkdown(j));

@@ -303,6 +303,15 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   assert.equal(m.days, new Date().getDate());
   assert.equal(m.weeks.reduce((n, x) => n + x.tools, 0), m.totals.tools);
   assert.match((await get('/api/journal?month=-1&format=md')).body, /^## \d{4}년 \d{1,2}월 업무 일지/);
+  // 없는 날·앞날·모르는 값은 엉뚱한 날 일지 대신 400과 무엇이 틀렸는지
+  for (const q of ['day=2026-13-45', 'day=abc', 'day=1', 'week=1', 'week=xyz', 'month=-99999']) {
+    const r = await get('/api/journal?' + q);
+    assert.equal(r.status, 400, q);
+    assert.match(JSON.parse(r.body).error, /모르겠어요/, q);
+  }
+  const badMd = await get('/api/journal?day=abc&format=md');
+  assert.equal(badMd.status, 400);
+  assert.match(badMd.headers['content-type'], /^text\/plain/);
   // 파일을 한 번만 읽어 날마다 나눠 세도 하루씩 따로 본 것과 같다
   for (const [i, d] of w.days.entries()) {
     const one = JSON.parse((await get('/api/journal?day=' + (i - w.days.length + 1))).body);

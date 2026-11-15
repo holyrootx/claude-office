@@ -97,7 +97,8 @@ export function monthView(j, { month = 0, project = '', now = Date.now() } = {})
     hours: {
       week: true, n: j.weeks.length, label: '주마다 일한 시간', hidden: false,
       html: j.weeks.map(w => `<i class="${weekOff(w) === 0 ? 'now' : ''}" data-week="${weekOff(w)}" style="--h:${Math.round((w.workedMs / maxW) * 100)}%" title="${span(w)} · ${w.workedMs ? `${fmtWorked(w.workedMs)} · ${w.worked}일 · 도구 ${w.tools}번` : '쉼'} · 누르면 그 주 일지"></i>`).join('')
-        + j.weeks.map((w, i) => `<span style="--c:${i + 1}" data-week="${weekOff(w)}" role="button" tabindex="0" aria-label="${span(w)} 주간 일지 보기"><b>${span(w)}</b>${w.workedMs ? fmtWorked(w.workedMs) : '·'}</span>`).join(''),
+        // 좁은 칸에서는 '10/5~' 다음에서 줄을 바꿀 수 있게 (<wbr>, 안 그러면 막대가 옆으로 넘친다)
+        + j.weeks.map((w, i) => `<span style="--c:${i + 1}" data-week="${weekOff(w)}" role="button" tabindex="0" aria-label="${span(w)} 주간 일지 보기"><b>${span(w).replace('~', '~<wbr>')}</b>${w.workedMs ? fmtWorked(w.workedMs) : '·'}</span>`).join(''),
     },
     list: rangeProjects(j, j.today ? '이번 달에는 아직 일한 기록이 없어요' : '이 달에는 일한 기록이 없어요', project),
   };

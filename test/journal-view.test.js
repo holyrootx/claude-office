@@ -51,6 +51,8 @@ test('한 달: 주 막대는 이번 주를 0으로 그 주를 가리킨다', () 
   const v = monthView(j, { month: 0, now: NOW });
   assert.deepEqual([...v.hours.html.matchAll(/<span[^>]*data-week="(-?\d+)"/g)].map(m => Number(m[1])), [-2, -1, 0]);
   assert.match(v.hours.html, /<b>11\/1<\/b>/); // 하루뿐인 주는 날짜 하나
+  assert.match(v.hours.html, /<b>11\/2~<wbr>11\/8<\/b>/); // 좁은 칸에서는 ~ 다음에서 줄을 바꾼다
+  assert.match(v.hours.html, /aria-label="11\/2~11\/8 주간 일지 보기"/);
   assert.equal(v.hours.n, 3);
   assert.equal(v.list, '<p class="jp-empty">이번 달에는 아직 일한 기록이 없어요</p>');
 });

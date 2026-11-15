@@ -27,11 +27,10 @@ const {
   parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay,
 } = require('./lib/report');
 // 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1, project: 그 프로젝트만)
-// 파일은 한 번만 읽고 날마다 나눠 센다 (cache)
+// 파일은 한 번만 읽고 날마다 나눠 센다 (읽은 기록은 lib/sessions.js가 요청 사이에도 들고 있는다)
 async function weekDays({ from, to }, project = '') {
   const days = [];
-  const cache = new Map();
-  for (let d = from; d <= to; d++) days.push(await journal(d, cache, project));
+  for (let d = from; d <= to; d++) days.push(await journal(d, project));
   return days;
 }
 if (args.includes('--help') || args.includes('-h')) {
@@ -225,7 +224,7 @@ const server = http.createServer((req, res) => {
     }
     const day = apiDay(url.searchParams.get('day'));
     if (day == null) return bad('어느 날인지 모르겠어요: day=0(오늘), -1(어제)이나 2026-10-31처럼, 앞날이 아닌 10년 안의 날로 적어 주세요');
-    journal(day, null, project).then(j => {
+    journal(day, project).then(j => {
       if (!md) return json(res, { ...j, md: journalMarkdown(j) });
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(journalMarkdown(j));
@@ -476,7 +475,7 @@ async function printJournal() {
     process.exitCode = 1;
     return;
   }
-  const j = await journal(day, null, project);
+  const j = await journal(day, project);
   console.log(args.includes('--md') ? journalMarkdown(j) : journalText(j));
 }
 

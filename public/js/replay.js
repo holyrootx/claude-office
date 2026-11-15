@@ -175,14 +175,18 @@ export function createReplay(office) {
   }
 
   function renderBtns() {
+    // 아이콘만 바뀌면 화면 읽기 프로그램은 늘 같은 이름으로 읽으니 aria-label도 같이 바꾼다
     $('replayBtn').textContent = r ? '⏹' : '⏪';
     $('replayBtn').title = r ? '다시 보기 끝내고 실시간으로 돌아가기' : '고른 세션(없으면 지금 보는 직원)을 처음부터 빠르게 다시 보기';
+    $('replayBtn').setAttribute('aria-label', r ? '다시 보기 끝내기' : '다시 보기');
     $('replayBtn').classList.toggle('on', !!r);
     $('speedBtn').hidden = $('pauseBtn').hidden = !r;
     if (r) {
       $('speedBtn').textContent = r.speed + '×';
+      $('speedBtn').setAttribute('aria-label', `빠르기 ${r.speed}배, 누르면 바꿔요`);
       $('pauseBtn').textContent = r.paused ? '▶' : '⏸';
       $('pauseBtn').title = r.paused ? '이어 보기 (Space)' : '멈추기 (Space)';
+      $('pauseBtn').setAttribute('aria-label', r.paused ? '이어 보기' : '멈추기');
     }
     renderBar();
   }

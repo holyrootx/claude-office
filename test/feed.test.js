@@ -139,3 +139,12 @@ test('답이 끊겨 이어 쓰면 ✂️, 사용 한도가 거의 다 되면 ⏳
   assert.match(list.children[0].innerHTML, /<span class="ic">⏳<\/span>[\s\S]*거의 다 됐어요/);
   assert.equal(feed.failCount(), 0);
 });
+
+test('Claude Code를 닫으면 🚪 줄 (실패로 세지 않는다)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  feed.add(A.s, A.a, { k: 'closed', ts: Date.now() });
+  assert.match(list.children[0].innerHTML, /<span class="ic">🚪<\/span>[\s\S]*Claude Code를 닫았어요/);
+  assert.equal(feed.failCount(), 0);
+});

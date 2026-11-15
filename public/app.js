@@ -235,7 +235,7 @@ function addSession(snap) {
   s.main.load(snap.history || [], w && !(w.on && internIds.has(w.on)) ? w : null);
   for (const a of snap.agents || []) addIntern(s, a).load(a.history || [], w && w.on === a.id ? w : null);
   if (snap.compacting) s.main.setCompacting(snap.compacting);
-  if (snap.ended) setEnded(s, snap.ended);
+  if (snap.ended) setEnded(s, snap.ended, false); // 활동 기록 줄은 지난 기록과 시간 순으로 섞어서 (onHello·onJoin)
   if (w) seenWaits.add(waitId(s.sid, w));
   return s;
 }
@@ -291,7 +291,7 @@ function removeSession(sid) {
 function retireSession(sid, why) {
   const s = sessions.get(sid);
   if (!s) return;
-  feed.add(s, s.main, { k: 'leave', ts: Date.now(), why });
+  if (!(why === 'ended' && s.main.ended)) feed.add(s, s.main, { k: 'leave', ts: Date.now(), why }); // 닫았다는 🚪 줄을 이미 남겼으면 또 쓰지 않는다
   if (s.floor !== current) {
     removeSession(sid);
     render();
@@ -349,7 +349,9 @@ function applyUpdate(u) {
 
 // Claude Code를 닫았다(SessionEnd hook): 하던 일·질문을 접고 쉰다. 일하던 인턴은 퇴근한다.
 // 빌딩에서는 곧 퇴근하지만, 이 세션만 보거나 빌딩의 마지막 한 명이면 그대로 남아 있어서
-function setEnded(s, ts) {
+// 활동 기록에도 한 줄 남긴다 (이 세션만 볼 때는 퇴근 줄이 없으니까. 빌딩에서는 이 줄이 퇴근 줄을 대신한다)
+function setEnded(s, ts, log = true) {
+  if (log && ts && s.main.ended !== ts) feed.add(s, s.main, { k: 'closed', ts });
   s.main.setEnded(ts);
   if (ts) for (const a of s.interns.values()) if (!a.leaving) a.walkOut();
 }
@@ -670,6 +672,7 @@ function onHello(d) {
     for (const ev of (snap.history || []).slice(-90)) items.push([s, s.main, ev]);
     for (const ag of snap.agents || []) for (const ev of (ag.history || []).slice(-20)) items.push([s, s.interns.get(ag.id), ev]);
     if (s.wait) items.push([s, s.main, { ...s.wait, k: 'wait' }]);
+    if (snap.ended) items.push([s, s.main, { k: 'closed', ts: snap.ended }]);
   }
   items.sort((x, y) => (x[2].ts || 0) - (y[2].ts || 0));
   for (const [s, a, ev] of items.slice(-150)) feed.add(s, a, ev);
@@ -682,6 +685,7 @@ function onHello(d) {
 function onJoin(snap) {
   const s = addSession(snap);
   for (const ev of (snap.history || []).slice(-20)) feed.add(s, s.main, ev);
+  if (snap.ended) feed.add(s, s.main, { k: 'closed', ts: snap.ended });
   if (!current) current = s.floor;
   if (s.wait) {
     // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우

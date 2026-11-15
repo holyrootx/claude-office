@@ -235,6 +235,7 @@ function addSession(snap) {
   s.main.load(snap.history || [], w && !(w.on && internIds.has(w.on)) ? w : null);
   for (const a of snap.agents || []) addIntern(s, a).load(a.history || [], w && w.on === a.id ? w : null);
   if (snap.compacting) s.main.setCompacting(snap.compacting);
+  if (snap.ended) setEnded(s, snap.ended);
   if (w) seenWaits.add(waitId(s.sid, w));
   return s;
 }
@@ -343,6 +344,14 @@ function applyUpdate(u) {
   for (const [a, evs] of batches) a.ingest(evs);
   if ('wait' in u) setWait(s, u.wait);
   if ('compacting' in u) s.main.setCompacting(u.compacting);
+  if ('ended' in u) setEnded(s, u.ended);
+}
+
+// Claude Code를 닫았다(SessionEnd hook): 하던 일·질문을 접고 쉰다. 일하던 인턴은 퇴근한다.
+// 빌딩에서는 곧 퇴근하지만, 이 세션만 보거나 빌딩의 마지막 한 명이면 그대로 남아 있어서
+function setEnded(s, ts) {
+  s.main.setEnded(ts);
+  if (ts) for (const a of s.interns.values()) if (!a.leaving) a.walkOut();
 }
 
 const waitId = (sid, w) => `${sid}|${w.ts}`;

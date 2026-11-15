@@ -479,9 +479,28 @@ test('Claude Code를 닫으면(SessionEnd) 30분을 기다리지 않고 바로 �
   hook({ session_id: BYE, transcript_path: file, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' });
   const leave = await until(() => s.log.find(x => x.ev === 'leave' && x.sid === BYE), 4000);
   assert.equal(leave.why, 'ended');
+  assert.ok(s.updates(BYE).some(u => u.ended > 0), '닫았다고 화면에도 알린다 (이 세션만 보거나 마지막 한 명이면 남아 있으니까)');
   await sleep(2500);
   userMsg(file, '이어서 하자'); // claude --resume으로 이어 하면 기록이 다시 는다
-  assert.ok(await until(() => s.log.find(x => x.ev === 'join' && x.sid === BYE && s.log.indexOf(x) > s.log.indexOf(leave)), 5000), '다시 출근한다');
+  const back = await until(() => s.log.find(x => x.ev === 'join' && x.sid === BYE && s.log.indexOf(x) > s.log.indexOf(leave)), 5000);
+  assert.ok(back, '다시 출근한다');
+  assert.equal(back.ended, 0);
+  s.close();
+});
+
+test('이 세션만 볼 때 Claude Code를 닫으면 나가지는 않고 닫았다고 알려 준다', async () => {
+  const PIN = 'ffffffff-7777-0000-0000-000000000007';
+  const file = path.join(PROJ2, PIN + '.jsonl');
+  userMsg(file, '배포 스크립트 봐 줘');
+  toolUse(file, 'q1', 'AskUserQuestion', { questions: [{ question: '어디에 배포할까요?', options: [] }] });
+  const s = stream(file);
+  const hello = await until(() => s.log.find(x => x.ev === 'hello'));
+  assert.equal(hello.sessions[0].ended, 0);
+  hook({ session_id: PIN, transcript_path: file, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' });
+  const u = await until(() => s.updates(PIN).find(x => x.ended > 0), 4000);
+  assert.ok(u, '닫은 시각이 온다');
+  await sleep(300);
+  assert.ok(!s.log.some(x => x.ev === 'leave'), '이 세션만 보는 중이면 나가지 않는다');
   s.close();
 });
 

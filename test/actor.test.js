@@ -99,6 +99,19 @@ test('권한 대기는 무엇보다 먼저 보이고, 풀리면 하던 일로 �
   assert.equal(a.status, 'work'); // 서버실로 다시 걸어가는 중
 });
 
+test('Claude Code를 닫으면(SessionEnd) 하던 도구·질문을 접고 쉬고, 이어 하면 다시 일한다', () => {
+  const a = actor(office());
+  a.load([{ k: 'user', ts: ago(2), text: 'x' }, tool('q', 'AskUserQuestion', 'desk', 1, { ask: '어느 쪽?' })]);
+  assert.equal(a.status, 'ask'); // 닫기 전에는 12시간까지 내 답을 기다리는 중
+  a.setEnded(Date.now());
+  assert.equal(a.status, 'sleep');
+  assert.equal(a.pending.size, 0);
+  assert.equal(a.now.title, 'Claude Code를 닫았어요');
+  a.setEnded(0); // claude --resume으로 이어 하면
+  a.ingest([{ k: 'user', ts: Date.now(), text: '이어서 하자' }]);
+  assert.equal(a.status, 'work');
+});
+
 test('마지막 답이 오면 하던 일과 턴이 끝난다', () => {
   const a = actor(office());
   a.bookkeep(tool('t', 'Edit', 'dev', 0));

@@ -56,6 +56,7 @@ export class Actor {
     this.signTool = null;
     this.waitState = null;
     this.shownWait = 0;
+    this.ended = 0; // Claude Code를 닫은 시각 (SessionEnd hook)
     this.leaving = false;
     this.now = { icon: '☕', title: '준비 중', sub: '', room: this.home, mode: '', time: '' };
     this.hl = this.home;
@@ -613,6 +614,15 @@ export class Actor {
     this.rest();
   }
 
+  // Claude Code를 닫았다 (SessionEnd hook이 알려 준다. 이어 하면 0): 하던 도구·질문은 끝난 일로 본다
+  setEnded(ts) {
+    ts = ts || 0;
+    if (this.ended === ts) return;
+    this.ended = ts;
+    if (ts) { this.turnOpen = false; this.pending.clear(); }
+    this.rest();
+  }
+
   // 대화 압축 중 (PreCompact hook이 알려 준다. 끝나면 null)
   setCompacting(c) {
     if ((this.compacting && this.compacting.ts) === (c && c.ts)) return;
@@ -649,6 +659,17 @@ export class Actor {
       if (this.bubbleKind !== 'think' || this.shownCompact !== c.ts) { this.thinkCloud('지난 대화를 요약하는 중…'); this.shownCompact = c.ts; }
       this.setNow('🗜', '대화를 압축하는 중', c.trigger === 'manual' ? '내가 요청한 압축 · 지난 대화를 요약하고 있어요' : '대화가 길어져서 지난 대화를 요약하고 있어요', this.room, 'think');
       this.now.time = secs(Math.round((Date.now() - c.ts) / 1000));
+      return;
+    }
+    if (this.ended) {
+      // Claude Code를 닫았다: 자리로 돌아가 쉰다 (일하던 도구·나에게 한 질문은 접는다)
+      this.turnOpen = false;
+      this.pending.clear();
+      this.hideSign();
+      if (!this.atSpot(this.home)) { this.hideBubble(); this.stroll(this.home); return; }
+      if (this.mode !== 'sleep') { this.setMode('sleep'); this.hideBubble(); }
+      this.setNow('🚪', 'Claude Code를 닫았어요', '이어 하면 다시 일해요 (정보 카드의 📋 이어 하기 명령)', this.home);
+      this.highlight(this.home);
       return;
     }
     if (this.stale()) {
@@ -731,6 +752,7 @@ export class Actor {
   get status() {
     if (this.waitState) return 'wait';
     if (this.compacting) return 'think';
+    if (this.ended) return 'sleep';
     const p = this.lastPending();
     if (p && p.ask) return 'ask';
     const h = !p && !this.running && !this.turnOpen && this.activeHalt();

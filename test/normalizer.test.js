@@ -87,6 +87,11 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(labelOf('WebFetch', { url: 'https://example.com/a/b' }), 'example.com');
   assert.equal(displayName('mcp__claude-in-chrome__navigate'), 'Chrome.navigate');
   assert.equal(displayName('mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__batch'), 'MCP.batch');
+  // 도구 이름이 서버 이름을 되풀이하면 한 번만, 데스크톱 앱의 iOS 시뮬레이터는 짧게
+  assert.equal(displayName('mcp__Claude_Browser__browser_batch'), 'Browser.batch');
+  assert.equal(displayName('mcp__Claude_Browser__javascript_tool'), 'Browser.javascript_tool');
+  assert.equal(displayName('mcp__Claude_Code_iOS_Simulator__control'), 'Simulator.control');
+  assert.equal(displayName('mcp__ccd_session__start_session'), 'session.start_session');
 });
 
 test('도구 사용과 결과, 실패 이유를 이벤트로 바꾼다', () => {

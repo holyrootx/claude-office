@@ -1109,3 +1109,6 @@ window.officeDebug = {
     })),
   }),
 };
+
+// 여기까지 왔으면 화면 코드를 다 불러왔다 (boot.js가 몇 초 뒤에 보고, 없으면 '불러오지 못했어요'를 띄운다)
+window.__officeReady = true;

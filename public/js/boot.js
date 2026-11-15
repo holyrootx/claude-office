@@ -15,3 +15,15 @@
   add({ rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' });
   add({ rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Nanum+Pen+Script&display=swap' });
 })();
+// 화면 코드(app.js)를 끝까지 불러오지 못하면(아주 오래된 브라우저, 중간에 끊긴 파일 등) '연결 중…'만 남아서
+// 무슨 일인지 알 수 없었다. 몇 초 안에 app.js가 준비됐다고 알리지 않으면 무엇을 해 보면 되는지 띄운다.
+(function () {
+  setTimeout(function () {
+    if (window.__officeReady || !document.body) return;
+    var d = document.createElement('div');
+    d.className = 'boot-fail';
+    d.setAttribute('role', 'alert');
+    d.textContent = '⚠ 화면을 다 불러오지 못했어요. 새로 고침해 보고, 그래도 안 되면 최신 Chrome·Edge·Safari·Firefox로 열어 주세요. (사무실을 켠 터미널에 오류가 있는지도 봐 주세요)';
+    document.body.insertBefore(d, document.body.firstChild);
+  }, 8000);
+})();

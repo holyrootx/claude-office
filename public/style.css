@@ -758,3 +758,6 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* 화면 코드를 불러오지 못했을 때 boot.js가 띄우는 안내 */
+.boot-fail { position: sticky; top: 0; z-index: 1000; padding: 12px 16px; background: #7f1d1d; color: #fff; font-size: 14px; line-height: 1.5; }

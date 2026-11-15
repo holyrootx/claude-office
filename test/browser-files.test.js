@@ -87,3 +87,9 @@ test('화면과 hook이 부르는 서버 주소(/api/…, /hook)가 서버에 �
   assert.ok(used.size >= 6, [...used].join(' '));
   assert.deepEqual([...used].filter(p => !served.has(p)), []);
 });
+
+test('app.js가 끝까지 불러와지면 준비됐다고 알리고, boot.js는 그 표시가 없을 때만 안내를 띄운다', () => {
+  const app = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8').trimEnd();
+  assert.match(app.split('\n').pop(), /window\.__officeReady = true;/); // 맨 끝 줄이어야 중간에 멈춘 걸 알아본다
+  assert.match(fs.readFileSync(path.join(PUBLIC, 'js', 'boot.js'), 'utf8'), /if \(window\.__officeReady/);
+});

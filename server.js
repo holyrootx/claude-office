@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argValue, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
+  args, argValue, argProblem, envProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 // 안내에 보여 줄 설정 파일 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 쓰면 그 경로, 홈 폴더 아래면 ~로 줄여서)
 const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.slice(os.homedir().length) : f))(path.join(CLAUDE_DIR, 'settings.json'));
@@ -503,6 +503,13 @@ if (require.main === module) {
   const problem = argProblem();
   if (problem) {
     console.log(`\n  ⚠ ${problem}\n    쓸 수 있는 옵션은 ${runCmd('--help')} 로 볼 수 있어요.\n`);
+    process.exit(1);
+  }
+  // 사무실을 켤 때(그냥 실행·--background)만 쓰는 환경 변수가 잘못됐으면 켜기 전에 알려 준다
+  const starting = !['--journal', '--print-hooks', '--install-hooks', '--uninstall-hooks', '--stop'].some(o => args.includes(o));
+  const envBad = starting && envProblem();
+  if (envBad) {
+    console.log(`\n  ⚠ ${envBad}\n    환경 변수를 고치거나 지운 뒤 다시 실행해 주세요.\n`);
     process.exit(1);
   }
   if (args.includes('--journal')) printJournal();

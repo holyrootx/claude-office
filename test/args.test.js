@@ -46,3 +46,32 @@ test('--md·--project만 쓰면 사무실을 켜지 않고 --journal과 같이 �
   assert.equal(argProblem(['--no-open', '--project', 'blog', '--md']), '--md는 --journal과 같이 써요 (예: --journal 지난 주 --md)');
   assert.equal(argProblem(['--journal', '--md', '--project', 'blog']), null);
 });
+
+test('환경 변수 PORT·CLAUDE_OFFICE_ACTIVE_MINUTES가 잘못됐으면 무엇이 틀렸는지 알려 준다 (명령줄에 적었으면 그쪽을 쓴다)', () => {
+  const { envProblem } = require('../lib/config');
+  assert.equal(envProblem({}, []), null);
+  assert.equal(envProblem({ PORT: '4800', CLAUDE_OFFICE_ACTIVE_MINUTES: '60' }, []), null);
+  for (const p of ['99999', '-1', '1.5', 'abc']) assert.match(envProblem({ PORT: p }, []), new RegExp(`PORT=${p.replace('.', '\\.')}는 포트 번호로 쓸 수 없어요`), p);
+  assert.equal(envProblem({ PORT: '99999' }, ['--port', '4800']), null);
+  for (const m of ['-5', '0', 'abc']) assert.match(envProblem({ CLAUDE_OFFICE_ACTIVE_MINUTES: m }, []), /CLAUDE_OFFICE_ACTIVE_MINUTES=.*0보다 큰 분으로/, m);
+  assert.equal(envProblem({ CLAUDE_OFFICE_ACTIVE_MINUTES: '-5' }, ['--active', '60']), null);
+});
+
+test('PORT=99999로 켜면 Node 오류 글 대신 우리말로 알려 주고 켜지 않는다 (일지는 PORT와 상관없이 된다)', () => {
+  const { spawnSync } = require('child_process');
+  const os = require('os');
+  const path = require('path');
+  const fs = require('fs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-env-'));
+  try {
+    const env = { ...process.env, PORT: '99999', NO_OPEN: '1', CLAUDE_CONFIG_DIR: tmp, CLAUDE_OFFICE_RUNTIME: path.join(tmp, 'rt.json') };
+    const run = (...a) => spawnSync(process.execPath, [path.join(__dirname, '..', 'server.js'), ...a], { env, encoding: 'utf8', timeout: 20000 });
+    const r = run();
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /환경 변수 PORT=99999는 포트 번호로 쓸 수 없어요/);
+    assert.doesNotMatch(r.stderr, /RangeError|ERR_SOCKET_BAD_PORT/);
+    assert.equal(run('--journal').status, 0);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});

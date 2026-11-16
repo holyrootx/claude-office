@@ -577,16 +577,18 @@ test.describe('따로 띄운 사무실', { concurrency: true }, () => {
     const P = path.join(cfg, 'projects', '-tmp-leave');
     fs.mkdirSync(P, { recursive: true });
     const fa = path.join(P, 'leave-a.jsonl'), fb = path.join(P, 'leave-b.jsonl');
-    userMsg(fa, '첫 번째');
-    await sleep(50);
-    userMsg(fb, '두 번째');
     const port = PORT + 7;
     const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-leave.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
     const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
     const log = [];
     let req;
     try {
-      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 10000));
+      // 기록은 서버가 뜬 뒤에 쓴다: 빌딩에 머무는 시간이 3초라, 컴퓨터가 바빠 서버가 늦게 뜨면 미리 써 둔 기록은
+      // 첫 화면 전에 이미 '오래 조용한' 세션이 돼서 hello가 하나만 오는 일이 있었다
+      userMsg(fa, '첫 번째');
+      await sleep(50);
+      userMsg(fb, '두 번째');
       req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
         let buf = '';
         res.setEncoding('utf8');
@@ -624,17 +626,18 @@ test.describe('따로 띄운 사무실', { concurrency: true }, () => {
     const fl = path.join(P, 'limit-a.jsonl'), fq = path.join(P, 'quiet-b.jsonl');
     const d = new Date(Date.now() + 2 * 3600 * 1000);
     const clock = `${(d.getHours() % 12) || 12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`;
-    userMsg(fl, '계속해 줘');
-    put(fl, { type: 'assistant', cwd: '/tmp/limit', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock} (Asia/Seoul)` }] } });
-    await sleep(50);
-    userMsg(fq, '그냥 조용한 세션');
     const port = PORT + 8;
     const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-limit.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
     const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
     const log = [];
     let req;
     try {
-      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 4000));
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 10000));
+      // 기록은 서버가 뜬 뒤에 (위 퇴근 테스트와 같은 까닭)
+      userMsg(fl, '계속해 줘');
+      put(fl, { type: 'assistant', cwd: '/tmp/limit', message: { model: '<synthetic>', content: [{ type: 'text', text: `You've hit your session limit · resets ${clock} (Asia/Seoul)` }] } });
+      await sleep(50);
+      userMsg(fq, '그냥 조용한 세션');
       req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
         let buf = '';
         res.setEncoding('utf8');

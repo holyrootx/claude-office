@@ -497,12 +497,14 @@ function renderFloorbar() {
   setHidden(bar, floors.size < 2);
   if (bar.hidden) return;
   $('floorAuto').classList.toggle('on', floorAuto);
+  setAttr($('floorAuto'), 'aria-pressed', floorAuto); // 화면 읽기 프로그램: '자동, 눌림'
   const html = [...floors.values()].map((f, i) => {
     const on = [...actors].filter(a => a.floor === f.key && !a.leaving);
     const wait = on.some(a => a.waitState || a.status === 'ask');
     const busy = on.some(a => a.status === 'work' || a.status === 'think');
-    return `<button type="button" class="fl${f.key === current ? ' active' : ''}${wait ? ' wait' : ''}${busy ? ' busy' : ''}" data-floor="${esc(f.key)}">`
-      + `<b>${i + 1}F</b>${esc(floorName(f.key))}<small>${on.length}명</small>${wait ? '<i>🔐</i>' : ''}</button>`;
+    // 지금 보는 층은 색만이 아니라 aria-current로도, 🔐은 '나를 기다리는 사람이 있어요'로 읽어 준다
+    return `<button type="button" class="fl${f.key === current ? ' active' : ''}${wait ? ' wait' : ''}${busy ? ' busy' : ''}" data-floor="${esc(f.key)}"${f.key === current ? ' aria-current="true"' : ''}>`
+      + `<b>${i + 1}F</b>${esc(floorName(f.key))}<small>${on.length}명</small>${wait ? '<i role="img" aria-label="나를 기다리는 사람이 있어요">🔐</i>' : ''}</button>`;
   }).join('');
   if (html !== floorbarHtml) morph($('floorTabs'), floorbarHtml = html);
 }

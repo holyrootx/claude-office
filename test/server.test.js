@@ -539,6 +539,14 @@ test('이 세션만 볼 때 Claude Code를 닫으면 나가지는 않고 닫았�
   s.close();
 });
 
+test('--help는 hooks를 넣을 실제 설정 파일 경로를 알려 준다 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 써도)', () => {
+  assert.ok(server('--help').includes(path.join(CFG, 'settings.json')), '--install-hooks 줄에 그 경로');
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'server.js'), '--print-hooks'], { env: ENV, encoding: 'utf8' });
+  assert.ok(r.stderr.includes(path.join(CFG, 'settings.json')), '--print-hooks 안내도');
+  assert.ok(JSON.parse(r.stdout).hooks, '출력(stdout)은 JSON만이라 파일로 받아도 된다');
+});
+
 test("세션 목록에 다시 켜는 명령을 실어 준다 ('npx claude-office'는 다른 사람 패키지라 쓰지 않는다)", async () => {
   const d = JSON.parse((await get('/api/sessions')).body);
   assert.match(d.start, /server\.js|\/office:open|main\.tar\.gz/);

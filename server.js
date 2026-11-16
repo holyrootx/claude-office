@@ -18,6 +18,8 @@ const runtime = require('./lib/runtime');
 const {
   args, argValue, argProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
+// 안내에 보여 줄 설정 파일 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 쓰면 그 경로, 홈 폴더 아래면 ~로 줄여서)
+const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.slice(os.homedir().length) : f))(path.join(CLAUDE_DIR, 'settings.json'));
 const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
@@ -56,7 +58,7 @@ if (args.includes('--help') || args.includes('-h')) {
     --project <이름>     위 일지를 이름이 든 프로젝트만 (예: --journal 지난 주 --project blog)
 
   hooks (권한 확인 대기·대화 압축 중·닫으면 바로 퇴근하는 모습까지 보기)
-    --install-hooks      ~/.claude/settings.json에 넣기 (다른 hooks는 그대로, 전 내용은 남겨요)
+    --install-hooks      ${SETTINGS_SHOWN}에 넣기 (다른 hooks는 그대로, 전 내용은 남겨요)
     --uninstall-hooks    넣어 둔 사무실 hooks만 빼기
     --print-hooks        설정을 출력만 하기 (직접 합치고 싶을 때)
 
@@ -444,7 +446,7 @@ async function stopServer() {
 
 // 플러그인 없이 hooks만 쓰고 싶을 때: 이 폴더의 hooks/notify.js를 가리키는 설정을 출력한다
 function printHooks() {
-  console.error('  아래 "hooks" 내용을 ~/.claude/settings.json 에 합쳐 넣으세요. (이 폴더를 옮기면 다시 출력해야 해요)');
+  console.error(`  아래 "hooks" 내용을 ${SETTINGS_SHOWN} 에 합쳐 넣으세요. (이 폴더를 옮기면 다시 출력해야 해요)`);
   console.error('  알아서 넣어 주길 바라면 --install-hooks를 쓰세요.\n');
   console.log(JSON.stringify({ hooks: ourHooks(__dirname) }, null, 2));
 }

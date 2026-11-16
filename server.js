@@ -178,7 +178,9 @@ function handle(req, res) {
 
   if (url.pathname === '/api/sessions') {
     const all = scanSessions();
-    const top = all.slice(0, 30);
+    // 파일이 바뀐 차례로 40개를 고른 뒤 마지막 기록 시각 차례로 다시 세워 30개 (장부 줄만 붙은 옛 세션이
+    // 어제 일한 세션들보다 위에 오지 않게. 마지막 기록은 파일이 바뀐 때보다 늦을 수 없어서 40개 안에서 고르면 된다)
+    const top = all.slice(0, 40).sort((a, b) => activeAt(b) - activeAt(a)).slice(0, 30);
     // 화면에서 고정해 둔 세션은 오래돼서 30개 밖으로 밀려도 목록에 남긴다
     const keep = url.searchParams.get('keep');
     if (keep && insideProjects(keep)) {

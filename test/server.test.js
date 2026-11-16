@@ -252,6 +252,9 @@ test('시각 없는 장부 줄만 붙은 옛 세션은 방금 움직인 걸로 �
     assert.deepEqual(first.sessions.map(x => x.sid), [SHOP], '자동 모드는 파일만 새로워진 옛 세션으로 가지 않는다');
     const listed = JSON.parse((await get('/api/sessions')).body).sessions.find(x => x.id === LEDGER);
     assert.ok(listed && listed.active < Date.now() - 86400000, `목록의 '… 전'은 마지막 기록 시각으로 (${listed && listed.active})`);
+    // 목록 차례도 마지막 기록 시각으로: 한 시간 전에 멈춘 세션보다 아래
+    const ids = JSON.parse((await get('/api/sessions')).body).sessions.map(x => x.id);
+    assert.ok(ids.indexOf(LEDGER) > ids.indexOf(OLD), ids.join(' '));
   } finally {
     fs.rmSync(file, { force: true });
   }

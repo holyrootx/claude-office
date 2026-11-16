@@ -158,7 +158,8 @@ export function createReplay(office) {
     const at = r.events[Math.min(r.i, r.events.length - 1)];
     bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
     const t = ts => stamp(ts, r.multiDay);
-    bar.querySelector('span').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)} · 누르면 그 지점으로 가요`;
+    // 시각만 바꾼다. '누르면 그 지점으로 가요'는 따로 두어 좁은 화면(폰)에서는 CSS로 숨긴다 (전에는 끝이 '누르면 그…'로 잘렸다)
+    $('replayTime').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)}`;
   }
 
   // 진행 막대 아래쪽에 일을 시킨 자리를 짧은 눈금으로: 🙋 내 말(노랑), ⏰ 예약 작업(보라), 📨 다른 세션이 보낸 말(파랑)

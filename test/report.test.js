@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown, parseMonth, monthMarkdown } = require('../lib/report');
 
 const since = new Date(2026, 10, 2).getTime();
+const NOW = new Date(2026, 10, 3, 12).getTime(); // 제목에 연도를 붙일지 정하는 '지금' (다른 해에 돌려도 같게)
 const at = (h, m) => new Date(2026, 10, 2, h, m).getTime();
 const hours = Array(24).fill(0);
 hours[9] = 4; hours[14] = 10;
@@ -20,16 +21,16 @@ const j = {
 };
 
 test('마크다운: 날짜 제목, 하루 합계, 프로젝트마다 시간과 세션 목록', () => {
-  const md = journalMarkdown(j);
+  const md = journalMarkdown(j, NOW);
   assert.match(md, /^## 11월 2일 업무 일지\n/);
   assert.match(md, /일한 시간 1시간 35분 · 프로젝트 1 · 세션 2 · 내 메시지 5 · 도구 14 · 실패 1 · 인턴 1 · 출력 토큰 12.3만/);
   assert.match(md, /### shop\n09:05~14:40 · 1시간 35분 · 메시지 5 · 도구 14 · 실패 1 · 인턴 1명 · 출력 토큰 12.3만/);
   assert.match(md, /- 로그인 401 고치기 \(1시간 20분\)\n- 테스트 정리 \(15분\)/);
-  assert.equal(journalMarkdown({ since, today: true, projects: [] }), '## 11월 2일 업무 일지\n\n오늘은 아직 일한 기록이 없어요\n');
+  assert.equal(journalMarkdown({ since, today: true, projects: [] }, NOW), '## 11월 2일 업무 일지\n\n오늘은 아직 일한 기록이 없어요\n');
 });
 
 test('터미널: 시간대 막대와 방별 사용량도 나온다', () => {
-  const t = journalText(j);
+  const t = journalText(j, NOW);
   assert.match(t, /📓 11월 2일 업무 일지/);
   assert.match(t, /시간대  ·········▄····█·········/);
   assert.match(t, /📚 6  💻 4  🖥️ 3/);
@@ -160,6 +161,13 @@ test('--journal에 적은 날이 앞날·10년보다 옛날이면 빈 일지 대
   for (const v of ['1990-01-01', '-99999', '5000일 전']) assert.match(dayProblem(v, tue) || '', /10년보다 오래된 날/, v);
   // 지난 날·오늘·모르는 말은 여기서 막지 않는다 (모르는 말은 parseDay가 null로 따로 알려 준다)
   for (const v of ['', '오늘', '어제', '-3', '금요일', '지난 주 금요일', '2026-11-17', '10/31', '12월 25일', 'abc']) assert.equal(dayProblem(v, tue), null, v);
+});
+
+test('하루 일지 제목: 올해가 아닌 날은 연도도 붙인다', () => {
+  const lastYear = { ...j, since: new Date(2025, 11, 25).getTime() };
+  assert.match(journalMarkdown(lastYear, NOW), /^## 2025년 12월 25일 업무 일지\n/);
+  assert.match(journalText(lastYear, NOW), /📓 2025년 12월 25일 업무 일지/);
+  assert.match(journalMarkdown(j, NOW), /^## 11월 2일 업무 일지/);
 });
 
 test("일지 글: 도구를 썼는데 반올림해서 0분이면 '1분 미만'", () => {

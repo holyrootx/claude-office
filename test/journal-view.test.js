@@ -18,6 +18,8 @@ test('하루: 제목·오늘 시간 진하게·예약 작업 칸은 있을 때�
   const j = { since: at(11, 15), today: true, hours, totals: { workedMs: 3600000, projects: 2, sessions: 2, prompts: 4, tools: 8, errors: 0, interns: 0, tokens: 0 }, projects: [proj('blog'), proj('shop')] };
   const v = dayView(j, { day: 0, now: NOW });
   assert.match(v.title, /^📓 11월 15일 업무 일지<small>오늘<\/small>$/);
+  // 올해가 아닌 날은 연도도 (◀로 한참 거슬러 간 날)
+  assert.match(dayView({ ...j, today: false, since: new Date(2025, 11, 25).getTime() }, { day: -325, now: NOW }).title, /^📓 2025년 12월 25일 업무 일지<small>325일 전<\/small>/);
   assert.equal(v.nextDisabled, true);
   assert.equal(v.since, at(11, 15));
   assert.ok(!v.totals.includes('예약 작업'));

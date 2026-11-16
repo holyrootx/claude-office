@@ -33,7 +33,8 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
   return {
     since: j.since,
     nextDisabled: !!j.today,
-    title: `📓 ${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지${project ? ` · ${esc(project)}` : ''}<small>${rel}</small>${clearBtn(project)}`,
+    // 올해가 아닌 날은 연도도 (◀로 한참 거슬러 가면 '12월 25일'이 몇 년 것인지 알 수 없다)
+    title: `📓 ${d.getFullYear() !== new Date(now).getFullYear() ? `${d.getFullYear()}년 ` : ''}${d.getMonth() + 1}월 ${d.getDate()}일 업무 일지${project ? ` · ${esc(project)}` : ''}<small>${rel}</small>${clearBtn(project)}`,
     totals: totalsHtml([
       ['일한 시간', fmtWorked(t.workedMs)], ['프로젝트', t.projects], ['세션', t.sessions],
       ['내 메시지', t.prompts], ...(t.scheduled ? [['예약 작업', t.scheduled]] : []), ['도구', t.tools], ['실패', t.errors], ['인턴', t.interns], ['출력 토큰', fmtTokens(t.tokens || 0)],

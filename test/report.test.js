@@ -46,6 +46,17 @@ test('--journal 뒤에 적은 날: 오늘·어제·그저께, -3·3일 전, 10/3
   assert.equal(parseDay('10.31', now), '2026-10-31');
   assert.equal(parseDay('10월 31일', now), '2026-10-31');
   assert.equal(parseDay('12월 25일', now), '2025-12-25'); // 아직 안 온 날은 작년
+  // 요일: 그냥 쓰면 오늘을 넣어 가장 가까운 그 요일, '지난'은 오늘을 빼고, '지난 주'·'이번 주'는 그 주(월~일)의 그 요일
+  const tue = new Date(2026, 10, 17, 12), sat = new Date(2026, 10, 21, 12);
+  for (const [v, onTue, onSat] of [
+    ['금요일', -4, -1], ['지난 금요일', -4, -1], ['지난 주 금요일', -4, -8], ['지난주 금요일', -4, -8], ['저번 주 금요일', -4, -8],
+    ['화요일', 0, -4], ['지난 화요일', -7, -4], ['이번 주 월요일', -1, -5], ['이번 금요일', null, -1], ['이번 주 일요일', null, null],
+    ['friday', -4, -1], ['last friday', -4, -1], ['this monday', -1, -5],
+  ]) {
+    assert.equal(parseDay(v, tue), onTue, `화요일에 ${v}`);
+    assert.equal(parseDay(v, sat), onSat, `토요일에 ${v}`);
+  }
+  assert.ok(!Object.is(parseDay('화요일', tue), -0));
   // 모르는 말·없는 날은 오늘로 넘기지 않고 null (터미널에 무엇이 틀렸는지 알려 준다)
   for (const v of ['abc', '2026-13-45', '2/30', '내일']) assert.equal(parseDay(v, now), null, v);
 });

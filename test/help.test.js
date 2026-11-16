@@ -23,6 +23,21 @@ test('주요 기능과 캐릭터 모습이 빠지지 않았다', () => {
   }
 });
 
+test('🔔 알림 설명: 실제로 보내는 알림(오류로 멈춤·한도 풀림 포함)과 누르면 정보 카드가 열린다는 것', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = helpHtml();
+  assert.match(html, /<dt>🔔 알림<\/dt><dd>[^<]*오류로 멈춤[^<]*정보 카드가 열려요<\/dd>/);
+  // 화면이 실제로 보내는 알림 제목마다 도움말에 그 말이 있다
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+  const { NOTIFY_WHAT } = await import('../public/js/help.js');
+  const said = { '물어볼 게': '질문', '응답 완료': '응답 완료', '사용 한도에 걸렸어요': '사용 한도', '오류로 일이 멈췄어요': '오류로 멈춤', '사용 한도가 풀렸어요': '풀림' };
+  for (const [title, word] of Object.entries(said)) {
+    assert.ok(app.includes(title), `app.js에 '${title}' 알림이 없어요`);
+    assert.ok(NOTIFY_WHAT.includes(word), `도움말에 '${word}'이(가) 없어요`);
+  }
+});
+
 test('도움말 맨 위 hooks 한 줄: 꺼져 있으면 무엇을 실행할지, 켜져 있으면 짧게', async () => {
   const { hooksLine } = await import('../public/js/help.js');
   const off = hooksLine({ state: 'off', text: '권한 확인 대기·대화 압축 중까지 보려면 hooks를 켜 주세요', cmd: 'node server.js --install-hooks' });

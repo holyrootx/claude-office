@@ -1,6 +1,7 @@
 // 알림과 탭 아이콘: 다른 창을 보고 있을 때 누가 나를 기다리면 브라우저 알림을 띄우고,
 // 탭 아이콘에 기다리는 사람 수를 빨간 숫자로 단다.
 import { $, clip } from './util.js';
+import { NOTIFY_WHAT } from './help.js';
 
 // 🔔 버튼으로 켜고 끄며 기본은 꺼져 있다.
 // toast: 화면 가운데 짧은 안내, show(s, w): 알림을 누르면 그 층으로 가서 그 사람의 카드를 연다, quiet(): 데모·다시 보기처럼 알리면 안 될 때 true
@@ -47,7 +48,7 @@ export function createAlerts({ toast, show, quiet }) {
     b.textContent = on ? '🔔' : '🔕';
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', String(on)); // 화면 읽기 프로그램: '알림, 눌림/안 눌림'
-    b.title = why || (on ? '알림 켜짐: 다른 창을 볼 때 권한 대기·질문·응답 완료(예약 작업은 빼고)·사용 한도를 알려요 (누르면 끔)' : '알림 꺼짐: 누르면 켜요');
+    b.title = why || (on ? `알림 켜짐: 다른 창을 볼 때 ${NOTIFY_WHAT}을 알려요. 알림을 누르면 그 사람의 정보 카드가 열려요 (누르면 끔)` : '알림 꺼짐: 누르면 켜요');
     if (why) toast(why);
   }
 

@@ -992,9 +992,9 @@ function showActor(li, focus = false) {
   if (a) openCard(a, true, focus);
 }
 $('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
-// 키보드로도: Tab으로 줄을 고르고 Enter
+// 키보드로도: Tab으로 줄을 고르고 Enter나 Space (버튼처럼)
 $('lobby').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
+  if (e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault();
   showActor(e.target.closest('[data-floor]'), true); // 키보드로 열면 초점이 카드로
 });
@@ -1107,7 +1107,10 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === '?') return openHelp();
   if (isJ(e)) return journal.open(0);
-  if (replay.isOn() && e.key === ' ') {
+  // 버튼·로비 줄에 초점이 있으면 Space는 그걸 누르는 키다 (전에는 다시 보기 중 10× 버튼에서 Space를 누르면
+  // 빠르기는 그대로고 다시 보기만 멈췄다: 여기서 preventDefault를 해서 버튼이 눌리지 않았다)
+  const onControl = e.target.closest && e.target.closest('button, a[href], [role="button"]');
+  if (replay.isOn() && e.key === ' ' && !onControl) {
     e.preventDefault();
     replay.togglePause();
   } else if (replay.isOn() && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {

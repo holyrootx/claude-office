@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argValue, argProblem, envProblem, VERSION, PORT_GIVEN, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
+  args, argValue, argProblem, envProblem, VERSION, PORT_GIVEN, PORT_FROM, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 // 안내에 보여 줄 설정 파일 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 쓰면 그 경로, 홈 폴더 아래면 ~로 줄여서)
 const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.slice(os.homedir().length) : f))(path.join(CLAUDE_DIR, 'settings.json'));
@@ -43,7 +43,7 @@ if (args.includes('--help') || args.includes('-h')) {
 
   켜기·끄기
     --port <번호>        사용할 포트 (기본 4777, 쓰이고 있으면 4778·4779… 차례로.
-                         직접 정하면 그 포트만 써요. 환경 변수 PORT로도 돼요)
+                         직접 정하면 그 포트만 써요. 환경 변수 CLAUDE_OFFICE_PORT로도 돼요)
     --no-open            브라우저를 자동으로 열지 않기
     --background         터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기,
                          켜져 있는 게 예전 버전이면 끄고 새 버전으로)
@@ -66,7 +66,7 @@ if (args.includes('--help') || args.includes('-h')) {
     -v, --version        버전
     -h, --help           이 도움말
 
-  환경 변수로도 돼요: PORT=4800 · NO_OPEN=1 · CLAUDE_OFFICE_ACTIVE_MINUTES=60 (자세한 건 README의 실행 옵션)
+  환경 변수로도 돼요: CLAUDE_OFFICE_PORT=4800 · NO_OPEN=1 · CLAUDE_OFFICE_ACTIVE_MINUTES=60 (자세한 건 README의 실행 옵션)
 
   예: ${runCmd('--port 4800')}
       ${runCmd('--journal 지난 주 --md')}
@@ -361,6 +361,7 @@ function serve() {
     process.on('exit', () => runtime.remove(process.pid));
     for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
     console.log(`\n  🏢 Claude 사무실이 열렸어요 → ${url}`);
+    if (portNote()) console.log(portNote());
     console.log(`  📂 세션 기록 폴더: ${PROJECTS}${fs.existsSync(PROJECTS) ? '' : '  (아직 없음 — claude를 한 번 실행하면 생겨요)'}`);
     const rules = roomRules.get(true);
     if (rules.length) console.log(`  🗂  내 방 설정 ${rules.length}개를 읽었어요 (${ROOM_CONFIG})`);
@@ -372,6 +373,11 @@ function serve() {
     if (OPEN_BROWSER) openBrowser(url);
   });
 }
+
+// 다른 앱용일 수도 있는 환경 변수 PORT를 따라 켰으면 알려 준다 (켜는 터미널과 /office:open 결과에)
+const portNote = () => (PORT_FROM === 'PORT'
+  ? `  ℹ 환경 변수 PORT=${PORT}를 따라 이 포트로 열었어요. 개발 중인 다른 앱의 PORT라면 그 앱이 이 포트를 못 쓰니, 사무실 포트는 CLAUDE_OFFICE_PORT=4777처럼 따로 정해 주세요.`
+  : '');
 
 // 터미널 창 없이 뒤에서 켠다. 이미 켜져 있으면 화면만 연다. (플러그인의 /office:open이 쓰는 방법)
 // 켜져 있는 사무실 { port, version, pid }. 실행 정보 파일을 먼저 보고, 없거나 맞지 않으면 쓸 수 있는 포트에 차례로 물어본다.
@@ -436,6 +442,7 @@ async function startBackground() {
     if (rt && rt.pid === child.pid) {
       const url = `http://localhost:${rt.port}`;
       console.log(`  🏢 Claude 사무실을 뒤에서 켰어요 → ${url}`);
+      if (portNote()) console.log(portNote());
       console.log(`     끄려면: node "${__filename}" --stop`);
       if (OPEN_BROWSER) openBrowser(url);
       return;

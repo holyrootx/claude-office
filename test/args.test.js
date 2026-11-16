@@ -75,3 +75,37 @@ test('PORT=99999로 켜면 Node 오류 글 대신 우리말로 알려 주고 켜
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('포트: CLAUDE_OFFICE_PORT가 PORT보다 먼저고, 다른 앱용일 수 있는 PORT를 따라 켜면 그렇다고 알려 준다', async () => {
+  const { spawn } = require('child_process');
+  const os = require('os');
+  const path = require('path');
+  const fs = require('fs');
+  const net = require('net');
+  const { envProblem } = require('../lib/config');
+  assert.match(envProblem({ CLAUDE_OFFICE_PORT: '0' }, []), /CLAUDE_OFFICE_PORT=0는 포트 번호로/);
+  assert.equal(envProblem({ CLAUDE_OFFICE_PORT: '4800', PORT: 'abc' }, []), null); // 사무실 것이 있으면 PORT는 안 본다
+  const free = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-port-'));
+  // 켜서 '열렸어요' 줄이 나오면 출력을 돌려주고 끈다
+  const open = env => new Promise((resolve, reject) => {
+    const c = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, CLAUDE_OFFICE_PORT: '', PORT: '', ...env, NO_OPEN: '1', CLAUDE_CONFIG_DIR: tmp, CLAUDE_OFFICE_RUNTIME: path.join(tmp, 'rt.json') } });
+    let out = '';
+    const t = setTimeout(() => { c.kill(); reject(new Error('20초 안에 켜지지 않았어요: ' + out)); }, 20000);
+    c.stdout.on('data', d => {
+      out += d;
+      if (/열렸어요[^\n]*\n/.test(out)) { clearTimeout(t); c.kill(); c.on('exit', () => resolve(out)); }
+    });
+  });
+  try {
+    const [a, b] = [await free(), await free()];
+    const viaPort = await open({ PORT: String(a) });
+    assert.match(viaPort, new RegExp(`열렸어요 → http://[^:]+:${a}`));
+    assert.match(viaPort, new RegExp(`환경 변수 PORT=${a}를 따라 이 포트로 열었어요[^\\n]*CLAUDE_OFFICE_PORT`));
+    const viaOffice = await open({ PORT: String(a), CLAUDE_OFFICE_PORT: String(b) });
+    assert.match(viaOffice, new RegExp(`열렸어요 → http://[^:]+:${b}`));
+    assert.doesNotMatch(viaOffice, /환경 변수 PORT=/);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});

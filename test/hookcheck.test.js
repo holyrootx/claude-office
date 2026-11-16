@@ -74,9 +74,11 @@ test('--install-hooks: 다른 hook은 두고, 예전 사무실 hook은 바꾸고
     assert.ok(!JSON.stringify(after).includes('/old/'), '예전 경로는 빠진다');
     assert.ok(JSON.stringify(after.hooks.PermissionRequest).includes('echo also-here'), '같은 묶음의 다른 hook은 남는다');
     assert.deepEqual(JSON.parse(fs.readFileSync(file + '.before-claude-office', 'utf8')), before);
-    // 다시 넣어도 같은 모습 (두 번 들어가지 않는다)
-    run();
+    // 다시 넣어도 같은 모습 (두 번 들어가지 않는다). 바꿀 게 없으면 아무것도 쓰지 않아서
+    // 백업에는 처음 넣기 전의 원래 설정이 그대로 남는다 (전에는 두 번째 실행이 백업을 덮었다)
+    assert.match(run(), /이미 다 들어 있어요/);
     assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), after);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file + '.before-claude-office', 'utf8')), before);
     // --uninstall-hooks: 사무실 hooks만 빼고 다른 hook·설정은 그대로, 두 번째는 뺄 게 없다고 한다
     const unrun = () => execFileSync(process.execPath, [path.join(ROOT, 'server.js'), '--uninstall-hooks'], { env: { ...process.env, CLAUDE_CONFIG_DIR: dir } }).toString();
     assert.match(unrun(), /뺐어요/);

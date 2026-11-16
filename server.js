@@ -26,7 +26,7 @@ const { roomRules, ROOM_CONFIG } = normalize;
 const { scanSessions, describe, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
-  parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay,
+  parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay, dayProblem,
 } = require('./lib/report');
 // 여러 날(한 주·한 달)의 날마다 일지 (from·to: 오늘이 0, 어제가 -1, project: 그 프로젝트만)
 // 파일은 한 번만 읽고 날마다 나눠 센다 (읽은 기록은 lib/sessions.js가 요청 사이에도 들고 있는다)
@@ -494,6 +494,14 @@ async function printJournal() {
   if (month) {
     const days = await weekDays(month, project);
     console.log(args.includes('--md') ? monthMarkdown(days, month.month) : monthText(days, month.month));
+    return;
+  }
+  // 앞날·너무 먼 옛날은 빈 일지('이날은 일한 기록이 없어요') 대신 그렇다고 알려 준다
+  const problem = dayProblem(v);
+  if (problem) {
+    const hint = /안 온/.test(problem) ? '업무 일지는 오늘까지만 있어요. 지난 날은 어제·지난 금요일·10월 31일처럼 적어 주세요.' : '10년 안의 날로 적어 주세요.';
+    console.log(`\n  ⚠ ${problem}: ${v}\n    ${hint}\n`);
+    process.exitCode = 1;
     return;
   }
   const day = parseDay(v);

@@ -151,6 +151,17 @@ test('업무 일지 API의 날·주·달: 0, -1 …과 지난 날짜만, 없는 
   assert.equal(apiDay('어제', now), -1);
 });
 
+test('--journal에 적은 날이 앞날·10년보다 옛날이면 빈 일지 대신 그렇다고 알려 준다', () => {
+  const { dayProblem } = require('../lib/report');
+  const tue = new Date(2026, 10, 17, 12); // 화요일
+  for (const v of ['내일', '모레', 'tomorrow', '+3', '3일 후', '3일 뒤', '이번 주 일요일', '이번 금요일', '2026-11-20', '2027-01-01']) {
+    assert.match(dayProblem(v, tue) || '', /아직 안 온 날이에요/, v);
+  }
+  for (const v of ['1990-01-01', '-99999', '5000일 전']) assert.match(dayProblem(v, tue) || '', /10년보다 오래된 날/, v);
+  // 지난 날·오늘·모르는 말은 여기서 막지 않는다 (모르는 말은 parseDay가 null로 따로 알려 준다)
+  for (const v of ['', '오늘', '어제', '-3', '금요일', '지난 주 금요일', '2026-11-17', '10/31', '12월 25일', 'abc']) assert.equal(dayProblem(v, tue), null, v);
+});
+
 test("일지 글: 도구를 썼는데 반올림해서 0분이면 '1분 미만'", () => {
   const short = { ...j, projects: [{ ...j.projects[0], sessions: [{ title: '잠깐 확인', workedMs: 20000 }] }] };
   assert.match(journalMarkdown(short), /- 잠깐 확인 \(1분 미만\)/);

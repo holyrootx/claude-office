@@ -584,6 +584,11 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail('<tool_use_error>File does not exist. Note: your current working directory is /x.</tool_use_error>'), '파일이 없어요');
   assert.equal(fail('<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>'), '읽은 뒤에 파일이 바뀌어서 다시 읽어야 해요');
   assert.equal(fail('InputValidationError: AskUserQuestion was called with input that could not be parsed'), 'AskUserQuestion에 맞지 않는 값을 넘겼어요');
+  // Edit·Read가 내는 안내 (고치려던 글 'String: …'은 보여 주지 않는다)
+  assert.equal(fail('<tool_use_error>String to replace not found in file.\nString: const a = 1;</tool_use_error>'), '고칠 글을 파일에서 찾지 못했어요');
+  assert.equal(fail('<tool_use_error>Found 3 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true.\nString: x</tool_use_error>'), '고칠 글이 파일에 3군데 있어서 어디를 고칠지 몰라요');
+  assert.equal(fail('<tool_use_error>No changes to make: old_string and new_string are exactly the same.</tool_use_error>'), '바꿀 글이 원래 글과 똑같아요');
+  assert.equal(fail('File content (31337 tokens) exceeds maximum allowed tokens (25000). Please use offset and limit parameters to read specific portions of the file.'), '파일이 너무 커서 한 번에 읽지 못했어요 (나눠 읽어요)');
   assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), '종료 코드 1 · npm ERR! missing script: lint'); // 명령이 낸 글은 그대로
 });
 

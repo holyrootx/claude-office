@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown, parseMonth, monthMarkdown } = require('../lib/report');
+const { journalText, journalMarkdown, parseDay, parseWeek, weekText, weekMarkdown, parseMonth, monthMarkdown, monthText } = require('../lib/report');
 
 const since = new Date(2026, 10, 2).getTime();
 const NOW = new Date(2026, 10, 3, 12).getTime(); // 제목에 연도를 붙일지 정하는 '지금' (다른 해에 돌려도 같게)
@@ -123,6 +123,15 @@ test('월간 일지: 주마다(월요일부터) 묶고, 프로젝트는 그 달�
   assert.match(md, /### blog\n2시간 · 3일 · 메시지 3 · 도구 15/);
   // 1일에 본 이번 달: '(10/1~10/1)'이 아니라 '(10/1)'
   assert.match(monthMarkdown([day(1, 30)], '2026년 10월'), /^## 2026년 10월 업무 일지 \(10\/1\)\n/);
+  // 터미널: 주마다 막대(가장 많이 일한 주가 12칸)·쉰 주는 '·'와 '-', 프로젝트마다 세션 목록
+  const text = monthText([day(1, 30), day(4, 30), day(5, 60), day(12, 0)], '2026년 10월');
+  assert.match(text, /📓 2026년 10월 업무 일지 \(10\/1~10\/12\)/);
+  assert.match(text, /10\/1~10\/4 {3}█{12} {2}1시간 · 2일 · 도구 10/);
+  assert.match(text, /10\/5 {8}█{12} {2}1시간 · 1일 · 도구 5/); // 그 주에 받은 날이 하루뿐이면 날짜 하나
+  assert.match(text, /10\/12 {7}· {13}-/);
+  assert.match(text, /blog {2}2시간 · 3일 · 메시지 3 · 도구 15/);
+  assert.match(text, /- 글쓰기 \(2시간\)/);
+  assert.match(monthText([day(2, 0)], '2026년 10월'), /이 달에는 일한 기록이 없어요/);
   // 하루뿐인 주는 날짜 하나로
   assert.match(monthMarkdown([day(4, 30), day(5, 60)], '2026년 10월'), /- 10\/4: 30분 · 1일 · 도구 5\n- 10\/5: 1시간 · 1일/);
 });

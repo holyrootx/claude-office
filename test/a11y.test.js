@@ -18,3 +18,9 @@ test('아이콘만 있는 버튼에는 aria-label이 있다', () => {
   }
   assert.deepEqual(bad, []);
 });
+
+test('무대의 장식(캐릭터·방 표지판·말풍선·"나")은 화면 읽기 프로그램에서 숨기고, 정보 카드·안내는 숨기지 않는다', () => {
+  for (const id of ['signs', 'userBubble', 'actors']) assert.match(html, new RegExp(`id="${id}"[^>]*aria-hidden="true"`), id);
+  assert.match(html, /class="me-tag" aria-hidden="true"/);
+  for (const id of ['card', 'floorToast', 'board']) assert.doesNotMatch(html, new RegExp(`id="${id}"[^>]*aria-hidden`), id);
+});

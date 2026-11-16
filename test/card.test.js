@@ -62,7 +62,7 @@ test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에
   assert.doesNotMatch(cardHtml(main, session(), { live: true, pinned: true }), /data-act="pin"/);
   assert.doesNotMatch(cardHtml(main, session(), { live: false }), /card-acts/);
   // Windows면 PowerShell 꼴
-  assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true, win: true }), /cd &quot;C:\\code\\shop&quot;; claude --resume sid-1/);
+  assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true, win: true }), /cd -LiteralPath &#39;C:\\code\\shop&#39;; claude --resume sid-1/);
 });
 
 test('인턴 카드: 누구의 인턴인지와 얼마나 일했는지, 버튼·비용은 없다', () => {

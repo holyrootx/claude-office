@@ -13,7 +13,9 @@ test('이어 하기 명령: 그 폴더로 가서 claude --resume', () => {
   assert.equal(resumeCommand('/Users/me/shop', 'abc-1', false), "cd '/Users/me/shop' && claude --resume abc-1");
   // 폴더 이름의 작은따옴표도 셸에서 깨지지 않게
   assert.equal(resumeCommand("/tmp/it's", 'abc-1', false), "cd '/tmp/it'\\''s' && claude --resume abc-1");
-  assert.equal(resumeCommand('C:\\code\\shop', 'abc-1', true), 'cd "C:\\code\\shop"; claude --resume abc-1');
+  // Windows(PowerShell): [ ]·$·`·'가 든 폴더도 글자 그대로 가게 -LiteralPath와 작은따옴표
+  assert.equal(resumeCommand('C:\\code\\shop', 'abc-1', true), "cd -LiteralPath 'C:\\code\\shop'; claude --resume abc-1");
+  assert.equal(resumeCommand("C:\\code\\shop [old] $x `y it's", 'abc-1', true), "cd -LiteralPath 'C:\\code\\shop [old] $x `y it''s'; claude --resume abc-1");
   assert.equal(resumeCommand('', 'abc-1', false), 'claude --resume abc-1');
 });
 

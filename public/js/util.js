@@ -141,11 +141,13 @@ export function ago(ms, now = Date.now()) {
 }
 
 // 터미널에서 이 세션을 이어서 하는 명령: 그 폴더로 가서 claude --resume <세션 id>
-// win이면 PowerShell 꼴 (cd "C:\x"; …), 아니면 sh 꼴 (cd '/x' && …)
+// win이면 PowerShell 꼴 (cd -LiteralPath 'C:\x'; …), 아니면 sh 꼴 (cd '/x' && …)
 export function resumeCommand(cwd, sid, win) {
   const resume = `claude --resume ${sid}`;
   if (!cwd) return resume;
-  return win ? `cd "${cwd}"; ${resume}` : `cd '${String(cwd).replace(/'/g, `'\\''`)}' && ${resume}`;
+  // PowerShell: 큰따옴표 안에서는 $·` 가 풀리고, cd는 [ ]를 와일드카드로 봐서 'shop [old]' 같은 폴더로 못 갔다.
+  // -LiteralPath와 작은따옴표(안의 '는 ''로)를 쓰면 글자 그대로다
+  return win ? `cd -LiteralPath '${String(cwd).replace(/'/g, "''")}'; ${resume}` : `cd '${String(cwd).replace(/'/g, `'\\''`)}' && ${resume}`;
 }
 
 // 컨텍스트가 얼마나 찼는지 (초록 → 노랑 60% → 빨강 85%). 세션 정보에 ctx가 없으면 null

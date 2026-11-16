@@ -257,6 +257,13 @@ test("권한 모드: 내가 보낸 줄의 permissionMode를 읽고, type: 'mode'
   assert.equal(norm.meta.mode, 'acceptEdits');
   feed(norm, line({ type: 'user', isMeta: true, permissionMode: 'auto', message: { role: 'user', content: '예약된 작업' } }));
   assert.equal(norm.meta.mode, 'auto'); // 가장 최근 것
+  // 이어 하기·모드 바꾸기 때 남는 'permission-mode' 줄(timestamp·uuid 없이 모드만): 내가 아직 아무것도 안 보냈어도 바로 안다
+  const fresh = new Normalizer();
+  assert.deepEqual(feed(fresh, JSON.stringify({ type: 'permission-mode', permissionMode: 'plan', sessionId: 's' })), []);
+  assert.equal(fresh.meta.mode, 'plan');
+  // 계정·조직 id만 든 'session-owner' 줄은 화면에 보일 게 없다
+  assert.deepEqual(feed(fresh, JSON.stringify({ type: 'session-owner', accountUuid: 'a', organizationUuid: 'o', sessionId: 's' })), []);
+  assert.equal(fresh.meta.mode, 'plan');
 });
 
 test('압축 전후 토큰을 읽고, 같은 압축은 한 번만 알린다', () => {

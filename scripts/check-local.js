@@ -22,6 +22,8 @@ const KNOWN_TYPES = new Set([
   'api-request', 'api-request-blob', 'api-request-shape', // 디버그용 API 요청 기록 (화면에 보일 게 없다)
   'relocated', // 데스크톱 앱이 남기는 '이 세션의 폴더'(relocatedCwd). 층을 정할 때 힌트로 쓴다
   'tools-used', // 이번까지 쓴 도구 이름 목록 (도구는 assistant 줄에서 이미 센다)
+  'permission-mode', // 이어 하기·모드를 바꿀 때 남는 권한 모드(permissionMode). 정보 카드의 🛡에 쓴다
+  'session-owner', // 세션을 쓴 계정·조직 id (화면에 보일 게 없고, 보여 주지도 않는다)
 ]);
 // informational: '자리 비운 동안 쓴 요약으로 압축했어요' 같은 안내. 압축은 compact_boundary(precomputed)로 이미 안다
 const KNOWN_SYSTEM = new Set(['compact_boundary', 'stop_hook_summary', 'turn_duration', 'api_error', 'informational']);

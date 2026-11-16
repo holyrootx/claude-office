@@ -12,7 +12,7 @@ const path = require('path');
 const readline = require('readline');
 const { PROJECTS } = require('../lib/config');
 const { Normalizer } = require('../lib/normalize');
-const { scanSessions, replayOf, journal } = require('../lib/sessions');
+const { scanSessions, replayOf, journal, describe } = require('../lib/sessions');
 
 // 화면에 쓰거나, 일부러 쓰지 않기로 한 기록 종류
 const KNOWN_TYPES = new Set([
@@ -113,6 +113,10 @@ async function scanFile(file, sidechain) {
   console.log(`  화면에 안 보이는 숨김 user 줄: ${fmt(sum(hidden))}개${hidden.size ? ` (어디서: ${top(hidden, 5)})` : ''}`);
   console.log(`  이름을 모르는 커넥터 도구(MCP.…): ${fmt(mcpUnknown)}번 · 영어 그대로인 API 오류: ${fmt(apiEnglish)}줄 · 영어 문장 그대로인 실패 안내: ${fmt(failEnglish)}건 / 실패 ${fmt(fails)}건 (도구가 낸 오류도 있어요)`);
   console.log(`  권한 모드를 모르는 세션: ${fmt(noMode)}개 / ${fmt(sessions.length)}개 (정보 카드의 🛡)`);
+  // 세션 목록에 '(제목 없음)'이나 기록 폴더 이름(-Users-…)으로 나오는 세션 (끝부분만 읽어서 놓친 것일 수 있어요)
+  const named = sessions.map(s => describe(s));
+  const noTitle = named.filter(d => d.title === '(제목 없음)').length, noProject = named.filter(d => /^-/.test(d.project)).length;
+  console.log(`  제목을 못 찾은 세션: ${fmt(noTitle)}개 · 프로젝트 이름 대신 기록 폴더 이름인 세션: ${fmt(noProject)}개`);
   if (problems.length) {
     console.log('\n  ⚠ 문제:');
     for (const p of problems) console.log('     ' + p);

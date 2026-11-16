@@ -25,6 +25,9 @@ test('하루: 제목·오늘 시간 진하게·예약 작업 칸은 있을 때�
   assert.equal((v.hours.html.match(/<i /g) || []).length, 24);
   assert.match(v.hours.html, /<i class="now" style="--h:33%" title="14시 · 도구 1번">/);
   assert.equal((v.list.match(/class="jp-only"/g) || []).length, 2);
+  assert.match(v.list, /<small>09:00 ~ 10:00 · /);
+  // 처음과 마지막이 같은 분이면(잠깐 한 일) 시각 하나만
+  assert.match(dayView({ ...j, projects: [proj('blog', { last: at(11, 15, 9) + 30000 })] }, { now: NOW }).list, /<small>09:00 · /);
   // 프로젝트를 골라 봤으면: 제목 옆 풀기 버튼, 고르기 버튼은 없다, 비었을 때 그 이름으로
   const one = dayView({ ...j, projects: [proj('blog')] }, { project: 'blog', now: NOW });
   assert.match(one.title, /^📓 11월 15일 업무 일지 · blog<small>오늘<\/small><button type="button" class="jp-clear"[^>]*>✕ blog만<\/button>$/);

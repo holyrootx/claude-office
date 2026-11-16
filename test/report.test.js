@@ -144,4 +144,8 @@ test("일지 글: 도구를 썼는데 반올림해서 0분이면 '1분 미만'",
   const short = { ...j, projects: [{ ...j.projects[0], sessions: [{ title: '잠깐 확인', workedMs: 20000 }] }] };
   assert.match(journalMarkdown(short), /- 잠깐 확인 \(1분 미만\)/);
   assert.match(journalText(short), /- 잠깐 확인 \(1분 미만\)/);
+  // 처음과 마지막이 같은 분이면 '09:05~09:05' 대신 '09:05'
+  const once = { ...j, projects: [{ ...j.projects[0], first: at(9, 5), last: at(9, 5) + 20000 }] };
+  assert.match(journalMarkdown(once), /### shop\n09:05 · /);
+  assert.match(journalText(once), /shop {2}09:05 · /);
 });

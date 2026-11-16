@@ -18,6 +18,8 @@ const sessionLi = (s, hidden = false) => `<li data-file="${esc(s.file)}" tabinde
 const onlyBtn = (p, many, project) => (many && !project ? ` <button type="button" class="jp-only" data-project="${esc(p.project)}" title="이 프로젝트만 모아 봐요 (📋 복사도 이 프로젝트만)">이 프로젝트만</button>` : '');
 const clearBtn = project => (project ? `<button type="button" class="jp-clear" title="모든 프로젝트 다시 보기">✕ ${esc(project)}만</button>` : '');
 const midnight = t => new Date(t).setHours(0, 0, 0, 0);
+// 프로젝트 줄의 시각: 처음과 마지막이 같은 분이면(잠깐 한 일) '09:05 ~ 09:05' 대신 '09:05'
+const hmSpan = (a, b) => { const x = hhmmss(a).slice(0, 5), y = hhmmss(b).slice(0, 5); return x === y ? x : `${x} ~ ${y}`; };
 
 // 하루: 합계, 시간대 막대 24개(오늘이면 지금 시각은 진하게), 프로젝트마다 시간·방별 사용량·세션
 export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
@@ -42,7 +44,7 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
         + [0, 6, 12, 18].map(h => `<span style="--c:${h + 1}">${h}시</span>`).join(''),
     },
     list: j.projects.length ? j.projects.map(p =>
-      `<section class="jp"><h3>${esc(p.project)} <small>${hhmmss(p.first).slice(0, 5)} ~ ${hhmmss(p.last).slice(0, 5)} · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, many, project)}</h3>`
+      `<section class="jp"><h3>${esc(p.project)} <small>${hmSpan(p.first, p.last)} · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, many, project)}</h3>`
         + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.map(sessionLi).join('')}</ul></section>`).join('')
       : `<p class="jp-empty">${project ? `'${esc(project)}'에서 ` : ''}${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`,
   };

@@ -234,6 +234,29 @@ test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함�
   assert.deepEqual(snap.session.ctx, { tokens: 125010, window: 1000000 }); // 컨텍스트 크기
 });
 
+test('시각 없는 장부 줄만 붙은 옛 세션은 방금 움직인 걸로 보지 않는다 (빌딩·자동 모드·세션 목록)', async () => {
+  // 데스크톱 앱은 며칠 지난 세션에도 artifact-autoreact-ledger 줄을 덧붙여서 파일이 바뀐 시각만 새로워진다
+  const LEDGER = 'dddddddd-4444-0000-0000-000000000004';
+  const file = path.join(PROJ, LEDGER + '.jsonl');
+  const twoDays = new Date(Date.now() - 2 * 86400000).toISOString();
+  try {
+    fs.writeFileSync(file, JSON.stringify({ type: 'user', uuid: 'old-1', timestamp: twoDays, cwd: '/tmp/shop', message: { role: 'user', content: '옛날 일' } }) + '\n');
+    fs.appendFileSync(file, JSON.stringify({ type: 'artifact-autoreact-ledger', v: 1, sessionId: LEDGER, artifacts: [] }) + '\n'); // mtime은 지금
+    const all = stream('all');
+    const hello = await until(() => all.log.find(x => x.ev === 'hello'));
+    all.close();
+    assert.ok(!hello.sessions.some(x => x.sid === LEDGER), '빌딩에 들어오지 않는다');
+    const auto = stream('auto');
+    const first = await until(() => auto.log.find(x => x.ev === 'hello'));
+    auto.close();
+    assert.deepEqual(first.sessions.map(x => x.sid), [SHOP], '자동 모드는 파일만 새로워진 옛 세션으로 가지 않는다');
+    const listed = JSON.parse((await get('/api/sessions')).body).sessions.find(x => x.id === LEDGER);
+    assert.ok(listed && listed.active < Date.now() - 86400000, `목록의 '… 전'은 마지막 기록 시각으로 (${listed && listed.active})`);
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
+});
+
 test('자동 모드는 가장 최근 세션 하나만 따라간다', async () => {
   const s = stream('auto');
   const hello = await until(() => s.log.find(x => x.ev === 'hello'));

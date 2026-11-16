@@ -23,7 +23,7 @@ const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.sl
 const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
-const { scanSessions, describe, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
+const { scanSessions, describe, activeAt, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
 const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
   parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay, dayProblem,
@@ -189,7 +189,9 @@ function handle(req, res) {
     // waiting: 권한 확인 대기(🔐), ended: Claude Code를 닫은 시각(🚪, 닫았다는 hook을 받았고 그 뒤로 이어 하지 않았을 때)
     const list = top.map(s => {
       const sid = path.basename(s.file, '.jsonl');
-      return { ...describe(s), waiting: waits.has(sid), ended: endedAt(sid, s.mtime) };
+      // active: 마지막으로 시각이 적힌 기록 (장부 줄만 붙은 옛 세션이 '방금'으로 보이지 않게, 목록의 '… 전'에 쓴다)
+      const active = activeAt(s);
+      return { ...describe(s), active, waiting: waits.has(sid), ended: endedAt(sid, active) };
     });
     // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
     // start: 사무실이 꺼졌을 때 화면이 '다시 켜려면 …'으로 보여 줄 명령 (꺼진 뒤에는 물어볼 수 없어서 미리 받아 둔다)

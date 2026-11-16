@@ -134,6 +134,9 @@ test('보안: 잘못된 주소·다른 사이트 주소·폴더 밖 파일·토�
   assert.equal((await get('/%E0%A4%A')).status, 400);
   assert.equal((await get('/api/sessions', { Host: 'evil.example.com' })).status, 403);
   assert.equal((await get('/..%2fserver.js')).status, 403);
+  // 파일 이름에 NUL이 든 주소: 전에는 fs가 바로 오류를 던져서 이 요청 하나로 서버가 꺼졌다 (다른 사이트의 그림 태그로도 부를 수 있다)
+  for (const p of ['/%00', '/js/%00.js', '/index.html%00']) assert.equal((await get(p)).status, 400, p);
+  assert.equal((await get('/api/health')).status, 200);
   const r = await new Promise(resolve => {
     const req = http.request({ host: '127.0.0.1', port: PORT, method: 'POST', path: '/hook' }, res => resolve(res.statusCode));
     req.end('{}');

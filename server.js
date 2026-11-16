@@ -154,7 +154,17 @@ const codeInfo = () => ({ restart: serverStamp() > SERVER_STAMP, ui: newest(PUBL
 // npm의 'claude-office'는 다른 사람 패키지라 'npx claude-office'라고 하면 안 된다
 const START_CMD = path.resolve(__dirname).startsWith(path.resolve(CLAUDE_DIR, 'plugins') + path.sep) ? 'Claude Code에서 /office:open' : runCmd('', true).trim();
 
+// 요청 하나를 처리하다 예상 못 한 오류가 나도 서버 전체가 꺼지지 않게 그 요청에만 500으로 답한다.
+// (다른 사이트도 그림 태그 하나로 localhost 주소를 부를 수 있어서, 요청 하나로 꺼지면 보던 화면이 모두 끊긴다)
 const server = http.createServer((req, res) => {
+  try { handle(req, res); } catch (e) {
+    console.error('[요청]', req.url, e.message);
+    if (!res.headersSent) res.writeHead(500);
+    res.end();
+  }
+});
+
+function handle(req, res) {
   for (const [k, v] of Object.entries(API_HEADERS)) res.setHeader(k, v); // writeHead에 준 머리글이 있으면 그쪽이 이긴다
   // DNS 리바인딩 막기: 다른 사이트 주소로 들어온 요청은 받지 않는다
   if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden'); }
@@ -272,6 +282,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(400);
     return res.end('bad request');
   }
+  // 파일 이름에 NUL(%00)이 있으면 fs가 바로 오류를 던진다 (전에는 이 요청 하나로 서버가 꺼졌다)
+  if (rel.includes('\0')) { res.writeHead(400); return res.end('bad request'); }
   const file = path.join(PUBLIC, rel);
   const inside = path.relative(PUBLIC, file);
   if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) { res.writeHead(403); return res.end(); }
@@ -282,7 +294,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, headers);
     res.end(body);
   });
-});
+}
 
 function openBrowser(url) {
   const cmd = process.platform === 'win32' ? 'cmd' : process.platform === 'darwin' ? 'open' : 'xdg-open';

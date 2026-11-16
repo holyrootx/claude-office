@@ -1,5 +1,9 @@
 # 바뀐 것들
 
+## 다음 버전 (아직 버전을 올리지 않았어요)
+
+- 커넥터 이름을 한 번 알아보면(Jira 도구 → Atlassian) 같은 세션에서 같은 커넥터의 다른 도구에도 써요: 'MCP.createIssueLink' → 'Atlassian.createIssueLink'. 소문자 `atlassianUserInfo`도 알아봐요. 내 기록에서 이름을 모르는 커넥터 도구가 3번에서 0번이 됐어요.
+
 ## 1.12.0
 
 ### 고친 것 (꼭 받으세요)

@@ -597,3 +597,15 @@ test("커넥터 도구는 세션 처음의 안내 글로 어느 서비스인지 
   const [other] = feed(new Normalizer(), toolUse('d2', `mcp__${DOCS}__batch`, {}));
   assert.equal(other.tool, 'MCP.batch');
 });
+
+test('커넥터 이름을 한 번 알아보면 같은 커넥터의 다른 도구에도 쓴다 (createIssueLink → Atlassian.createIssueLink)', () => {
+  const norm = new Normalizer();
+  const A = '9be74c07-6424-43bb-ba00-725d536ca1b7';
+  const [first] = feed(norm, toolUse('c1', `mcp__${A}__createIssueLink`, {}));
+  assert.equal(first.tool, 'MCP.createIssueLink'); // 아직 모름
+  feed(norm, toolUse('j1', `mcp__${A}__getJiraIssue`, {}));
+  const [later] = feed(norm, toolUse('c2', `mcp__${A}__createIssueLink`, {}));
+  assert.equal(later.tool, 'Atlassian.createIssueLink');
+  const [user] = feed(new Normalizer(), toolUse('u1', `mcp__${A}__atlassianUserInfo`, {}));
+  assert.equal(user.tool, 'Atlassian.atlassianUserInfo'); // 소문자 atlassian도
+});

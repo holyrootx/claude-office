@@ -120,3 +120,12 @@ test("권한 모드 '모든 권한 허용'은 ⚠로 눈에 띄게, 기본 모�
   assert.match(cardHtml(main, session({ mode: 'auto' })), /🛡 자동 모드/);
   assert.doesNotMatch(cardHtml(main, session({ mode: 'default' })), /card-mode/);
 });
+
+test("며칠째 이어지는 세션이면 '⏪ 오늘부터' 버튼도 (오늘 시작한 세션·인턴·데모에는 없다)", () => {
+  const clock = new Date(2026, 10, 16, 15, 0).getTime();
+  const old = cardHtml(main, session({ started: new Date(2026, 9, 24, 18, 28).getTime() }), { live: true, clock });
+  assert.match(old, /data-act="replay"[^>]*>⏪ 다시 보기<\/button><button type="button" data-act="replay-today"[^>]*>⏪ 오늘부터<\/button>/);
+  const today = cardHtml(main, session({ started: new Date(2026, 10, 16, 9, 0).getTime() }), { live: true, clock });
+  assert.doesNotMatch(today, /replay-today/);
+  assert.doesNotMatch(cardHtml(main, session({ started: new Date(2026, 9, 24).getTime() }), { live: false, clock }), /replay-today/);
+});

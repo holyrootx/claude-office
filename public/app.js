@@ -998,6 +998,7 @@ $('card').addEventListener('click', e => {
   if (act.dataset.act === 'close') return closeCard();
   closeCard();
   if (act.dataset.act === 'replay') replay.start(s.info.file);
+  if (act.dataset.act === 'replay-today') replay.start(s.info.file, { since: new Date().setHours(0, 0, 0, 0) });
   if (act.dataset.act === 'fails') {
     // 활동 기록을 '실패만'으로 바꾸고 보이는 곳으로
     if (!feedFails) $('feedFails').click();

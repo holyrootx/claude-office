@@ -63,8 +63,12 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win =
   const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
   const nums = a.intern ? internNums(a) : `<div class="card-nums">도구 ${s.stats.tools} · ${s.stats.errors ? `<button type="button" class="card-fails" data-act="fails" title="활동 기록에서 실패만 모아 봐요">실패 ${s.stats.errors}</button>` : '실패 0'} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}${today >= 60000 ? ` · 오늘 ${fmtWorked(today)}` : ''}${info.started ? ` · ${sinceText(info.started, clock)}` : ''}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
+  const multiDay = !a.intern && info.started && info.started < new Date(clock).setHours(0, 0, 0, 0);
   const acts = !a.intern && live
-    ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>${pinned ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`
+    ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>`
+      // 며칠째 이어지는 세션이면 오늘 한 일만 보기 (처음부터면 지난 며칠을 한참 넘겨야 해서)
+      + (multiDay ? '<button type="button" data-act="replay-today" title="오늘 0시부터 빠르게 다시 봐요">⏪ 오늘부터</button>' : '')
+      + `${pinned ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`
       + `<button type="button" data-act="resume" title="${esc(resumeCommand(info.cwd, s.sid, win))}">📋 이어 하기 명령 복사</button></div>`
     : '';
   const now = a.now || {};

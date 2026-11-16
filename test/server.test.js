@@ -26,8 +26,19 @@ const userMsg = (file, text, extra = {}) => put(file, { type: 'user', cwd: path.
 const toolUse = (file, id, name, input, extra = {}) => put(file, { type: 'assistant', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id, name, input }] }, ...extra });
 const toolResult = (file, id, isError, extra = {}) => put(file, { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: isError ? "The user doesn't want to proceed" : 'ok', is_error: !!isError }] }, ...extra });
 const finalSay = (file, text, extra = {}) => put(file, { type: 'assistant', message: { model: 'claude-opus-5-5', stop_reason: 'end_turn', content: [{ type: 'text', text }] }, ...extra });
-const hook = h => execFileSync(process.execPath, [path.join(ROOT, 'hooks', 'notify.js')], { input: JSON.stringify(h), env: ENV });
-const server = (...args) => execFileSync(process.execPath, [path.join(ROOT, 'server.js'), ...args], { env: ENV }).toString();
+// 서버·hook을 실행하고 끝나기를 기다릴 때는 시간 제한을 둔다. 테스트 서버가 꺼진 채로 'server.js --port …'를 부르면
+// '이미 켜져 있어요' 대신 새 사무실이 켜져서 끝나지 않고, 테스트 전체가 실패 없이 몇십 분씩 멈춰 있었다
+const LIMIT = 20000;
+const hook = h => execFileSync(process.execPath, [path.join(ROOT, 'hooks', 'notify.js')], { input: JSON.stringify(h), env: ENV, timeout: LIMIT });
+function server(...args) {
+  try {
+    return execFileSync(process.execPath, [path.join(ROOT, 'server.js'), ...args], { env: ENV, timeout: LIMIT }).toString();
+  } catch (e) {
+    if (e.code !== 'ETIMEDOUT') throw e;
+    const dead = srv && srv.exitCode !== null ? ` 테스트 서버가 꺼져 있어요(종료 코드 ${srv.exitCode}, 신호 ${srv.signalCode}).` : '';
+    throw new Error(`server.js ${args.join(' ')}가 ${LIMIT / 1000}초 안에 끝나지 않았어요.${dead}`);
+  }
+}
 
 function get(pathname, headers = {}) {
   return new Promise(resolve => {
@@ -117,14 +128,23 @@ test.before(async () => {
   assert.equal(JSON.parse((await get('/api/health')).body).pid, srv.pid, `${PORT} 포트에 이 테스트가 띄우지 않은 서버가 떠 있어요`);
 });
 
+// 테스트가 중간에 실패해서 --background로 켠 사무실이 남았으면 그것도 끈다 (이 테스트의 실행 정보 파일에 적힌 것만)
+function stopLeftover() {
+  try {
+    const { pid } = JSON.parse(fs.readFileSync(ENV.CLAUDE_OFFICE_RUNTIME, 'utf8'));
+    if (pid && pid !== process.pid && (!srv || pid !== srv.pid)) process.kill(pid);
+  } catch { /* 없으면 그만 */ }
+}
 test.after(() => {
   if (srv && srv.exitCode === null) srv.kill();
+  stopLeftover();
   fs.rmSync(TMP, { recursive: true, force: true });
 });
 // 테스트를 Ctrl+C나 kill로 중간에 끊어도 띄워 둔 사무실 서버가 남지 않게 (남으면 며칠씩 혼자 돈다)
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.once(sig, () => {
     if (srv && srv.exitCode === null) srv.kill();
+    stopLeftover();
     fs.rmSync(TMP, { recursive: true, force: true });
     process.exit(130);
   });
@@ -681,7 +701,7 @@ test.describe('따로 띄운 사무실', { concurrency: true }, () => {
     await new Promise(r => busy.once('listening', r));
     const env = { ...ENV, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-bg-fail.json') };
     // 같이 도는 테스트를 멈추지 않게 기다리는 동안 이벤트 루프를 비워 둔다 (execFileSync 대신)
-    const out = await new Promise(resolve => execFile(process.execPath, [path.join(ROOT, 'server.js'), '--background', '--port', String(busy.address().port)], { env }, (e, stdout) => resolve(String(stdout))));
+    const out = await new Promise(resolve => execFile(process.execPath, [path.join(ROOT, 'server.js'), '--background', '--port', String(busy.address().port)], { env, timeout: LIMIT }, (e, stdout) => resolve(String(stdout))));
     busy.close();
     assert.match(out, /켜지 못했어요/);
     assert.match(out, /다른 프로그램이 쓰고 있어요/);
@@ -852,7 +872,7 @@ test('뒤에서 켤 때 예전 버전 사무실이 켜져 있으면 끄고 같�
   const port = fake.address().port;
   const writeRt = () => fs.writeFileSync(ENV.CLAUDE_OFFICE_RUNTIME, JSON.stringify({ pid: process.pid, port, token, version }), { mode: 0o600 });
   // 이 테스트 안에서 예전 사무실이 답해야 하니 기다리지 않고 실행한다
-  const run = (...a) => new Promise((resolve, reject) => execFile(process.execPath, [path.join(ROOT, 'server.js'), ...a], { env: ENV }, (e, out) => (e ? reject(e) : resolve(out))));
+  const run = (...a) => new Promise((resolve, reject) => execFile(process.execPath, [path.join(ROOT, 'server.js'), ...a], { env: ENV, timeout: LIMIT }, (e, out) => (e ? reject(e) : resolve(out))));
   try {
     version = '99.0.0'; // 더 새 버전이 켜져 있으면 건드리지 않는다
     writeRt();

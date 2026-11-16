@@ -90,7 +90,16 @@ const office = {
 const el = { stage: $('stage'), box: $('stageBox'), wrap: $('stageWrap'), feed: $('feed'), board: $('board') };
 const signs = {}, statRows = {};
 const feed = createFeed(el.feed, { manyPeople: () => sessions.size > 1, onFails: n => renderFeedFails(n) });
-const alerts = createAlerts({ toast: (...a) => toast(...a), goFloor: key => goFloor(key), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
+// 알림을 누르면 그 층으로 가서 기다리는(또는 일을 끝낸) 사람의 정보 카드를 연다. 활동 기록을 보느라 스크롤해 두었어도
+// 카드가 보이는 데까지 올라간다 (전에는 층만 바꿔서, 돌아와도 누가 무엇을 기다리는지 화면에 없을 때가 많았다)
+function showFromAlert(s, w) {
+  const cur = sessions.get(s.sid);
+  if (!cur) return; // 그 사이 빌딩을 나갔다
+  goFloor(cur.floor);
+  const a = (w && w.on && cur.interns.get(w.on)) || cur.main;
+  if (a && !a.leaving && a.floor === current) openCard(a, true);
+}
+const alerts = createAlerts({ toast: (...a) => toast(...a), show: (s, w) => showFromAlert(s, w), quiet: () => viewMode === 'demo' || viewMode === 'replay' });
 // 나를 기다리거나 일이 끝났을 때: 브라우저 알림(켜 두었으면) + 화면 읽기 프로그램에 읽어 주기.
 // 탭 제목이 바뀌는 건 화면 읽기 프로그램이 읽어 주지 않아서 따로 알린다 (데모·다시 보기 중에는 조용히).
 function announce(text) {
@@ -643,11 +652,14 @@ function openCard(a, keep, focus = false) {
 }
 // 카드는 무대 위 캐릭터 옆에 뜬다. 로비 안내판·활동 기록 줄을 눌러 열면 그 줄을 보느라 무대가 화면 위로 지나가 있을 때가 많아서
 // (폰, 낮은 창) 카드가 화면 밖에 열려 아무 일도 안 난 것처럼 보였다: 다 보이지 않으면 보이는 데까지만 스크롤한다
+const cardInView = () => { const r = $('card').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
 function revealCard() {
-  const card = $('card'), r = card.getBoundingClientRect();
-  if (r.top >= 0 && r.bottom <= innerHeight) return;
+  if (cardInView()) return;
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  card.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
+  $('card').scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
+  // 활동 기록에 새 줄이 붙으면 브라우저가 스크롤 위치를 붙잡느라(scroll anchoring) 부드러운 스크롤이 중간에 멈출 수 있다:
+  // 조금 뒤에도 안 보이면 바로 옮긴다
+  if (!calm) setTimeout(() => { if (cardActor && !$('card').hidden && !cardInView()) $('card').scrollIntoView({ block: 'nearest' }); }, 700);
 }
 function closeCard() {
   cardActor = null;

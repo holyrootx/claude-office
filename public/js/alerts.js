@@ -3,28 +3,28 @@
 import { $, clip } from './util.js';
 
 // 🔔 버튼으로 켜고 끄며 기본은 꺼져 있다.
-// toast: 화면 가운데 짧은 안내, goFloor: 알림을 누르면 그 층으로, quiet(): 데모·다시 보기처럼 알리면 안 될 때 true
-export function createAlerts({ toast, goFloor, quiet }) {
+// toast: 화면 가운데 짧은 안내, show(s, w): 알림을 누르면 그 층으로 가서 그 사람의 카드를 연다, quiet(): 데모·다시 보기처럼 알리면 안 될 때 true
+export function createAlerts({ toast, show, quiet }) {
   const NOTIFY_KEY = 'claude-office-notify';
   let notifyOn = false;
   try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장소 없음 */ }
   const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
 
-  function notify(s, title, body) {
+  // w: 권한·입력을 기다리는 알림이면 그 기다림 (인턴이 기다리면 그 인턴의 카드를 연다)
+  function notify(s, title, body, w = null) {
     if (!notifyOn || !canNotify() || quiet()) return;
     if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
-    const floor = s.floor;
     // 같은 세션 알림은 tag로 하나만 남긴다
     const n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
     n.onclick = () => {
       window.focus();
-      goFloor(floor);
+      show(s, w);
       n.close();
     };
   }
   function notifyWait(s, w) {
     const what = w.tool ? `${w.tool} ${w.label || ''}` : w.text || '';
-    notify(s, w.kind === 'input' ? '🔐 입력을 기다려요' : '🔐 실행 허락을 기다려요', what);
+    notify(s, w.kind === 'input' ? '🔐 입력을 기다려요' : '🔐 실행 허락을 기다려요', what, w);
   }
 
   async function toggleNotify() {

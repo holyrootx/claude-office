@@ -634,10 +634,20 @@ function openCard(a, keep, focus = false) {
   cardActor = cardActor === a && !keep ? null : a; // 같은 캐릭터를 다시 누르면 닫는다
   cardHtml = '';
   renderCard();
-  if (focus && cardActor && !$('card').hidden) {
+  if (!cardActor || $('card').hidden) return;
+  if (focus) {
     cardReturn = document.activeElement;
     $('card').focus({ preventScroll: true });
   }
+  revealCard();
+}
+// 카드는 무대 위 캐릭터 옆에 뜬다. 로비 안내판·활동 기록 줄을 눌러 열면 그 줄을 보느라 무대가 화면 위로 지나가 있을 때가 많아서
+// (폰, 낮은 창) 카드가 화면 밖에 열려 아무 일도 안 난 것처럼 보였다: 다 보이지 않으면 보이는 데까지만 스크롤한다
+function revealCard() {
+  const card = $('card'), r = card.getBoundingClientRect();
+  if (r.top >= 0 && r.bottom <= innerHeight) return;
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  card.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
 }
 function closeCard() {
   cardActor = null;

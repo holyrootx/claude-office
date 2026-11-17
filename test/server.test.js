@@ -97,6 +97,7 @@ const old = path.join(PROJ, OLD + '.jsonl');
 const subDir = path.join(PROJ, SHOP, 'subagents');
 let srv;
 let srvAt = 0; // 테스트 서버를 띄운 시각 (아래 '서버 쪽 파일이 바뀌면' 테스트가 실패할 때 보여 준다)
+let fixtureHour = 0; // 처음 기록(도구)을 쓴 시간대: 확인할 때의 시각으로 보면 정각을 넘길 때(22:59 → 23:00) 엇갈린다
 
 test.before(async () => {
   fs.mkdirSync(PROJ, { recursive: true });
@@ -120,6 +121,7 @@ test.before(async () => {
   userMsg(busy, '찾아 줘', { isSidechain: true, agentId: 'busy1' });
   toolUse(busy, 'k1', 'Grep', { pattern: 'verifyToken' }, { isSidechain: true, agentId: 'busy1' });
 
+  fixtureHour = new Date().getHours();
   srv = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(PORT)], { env: ENV, stdio: 'ignore' });
   srvAt = Date.now();
   for (let i = 0; i < 50 && (await get('/api/health')).status !== 200; i++) await sleep(100);
@@ -317,7 +319,7 @@ test('업무 일지: 오늘 움직인 세션을 프로젝트별로 모은다', a
   assert.equal(j.totals.tokens, j.projects.reduce((n, p) => n + p.tokens, 0));
   assert.equal(j.hours.length, 24); // 시간대별 도구 사용
   assert.equal(j.hours.reduce((a, b) => a + b, 0), j.totals.tools);
-  assert.ok(j.hours[new Date().getHours()] >= 2); // 방금 쓴 도구는 지금 시간대에
+  assert.ok(j.hours[fixtureHour] >= 2, `${fixtureHour}시: ${j.hours}`); // 방금 쓴 도구는 그 시간대에
   const md = await get('/api/journal?format=md');
   assert.match(md.headers['content-type'], /text\/markdown/);
   assert.match(md.body, /### shop/);

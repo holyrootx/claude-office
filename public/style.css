@@ -381,6 +381,8 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 .feed li.away, .feed.fails > li:not(.err) { display: none; }
 .feed.only:not(:has(> li:not(.away)))::after { content: '이 층에서는 아직 한 일이 없어요'; display: block; color: var(--faint); font-size: 12.5px; text-align: center; padding: 18px 0; }
 .feed.fails:not(:has(> li.err:not(.away)))::after { content: '실패한 일이 없어요'; display: block; color: var(--faint); font-size: 12.5px; text-align: center; padding: 18px 0; }
+/* 아무 기록도 없을 때 (처음 켰을 때·세션이 없을 때): 빈 칸만 있으면 고장 난 줄 안다 */
+.feed:empty::after { content: '아직 기록이 없어요 · Claude가 일을 하면 여기에 쌓여요'; display: block; color: var(--faint); font-size: 12.5px; text-align: center; padding: 18px 0; }
 
 .room-stats { display: grid; gap: 6px; }
 .rs { display: grid; grid-template-columns: 96px 1fr 40px; align-items: center; gap: 8px; font-size: 13px; }

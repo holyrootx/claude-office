@@ -80,7 +80,11 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
     li.dataset.floor = s.floor;
     if (onlyFloor && s.floor !== onlyFloor) li.classList.add('away');
     if (a) li.dataset.actor = a.key;
-    li.innerHTML = `<time>${stamp(ev.at || ev.ts || Date.now(), ev.atDate)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
+    // 오늘이 아닌 기록에는 날짜도 ('11/17 23:15'): 며칠째 이어지는 세션을 열면 어제 기록이 섞여 와서,
+    // 시각만 보면 오늘 아침 09:00 줄 아래의 14:00 줄이 언제 것인지 알 수 없었다
+    const at = ev.at || ev.ts || Date.now();
+    const old = new Date(at).toDateString() !== new Date().toDateString();
+    li.innerHTML = `<time>${stamp(at, ev.atDate || old)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
     if (ev.k === 'tool') items.set(ev.id, li);
     list.prepend(li);
     const before = fails;

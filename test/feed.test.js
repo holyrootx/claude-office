@@ -159,3 +159,14 @@ test('퇴근 줄: Claude Code를 닫았는지, 빌딩이 꽉 차서 자리를 �
   assert.match(leave('quiet'), /한동안 조용해서/);
   assert.match(leave(undefined), /한동안 조용해서/); // 예전 서버는 이유 없이 보냈다
 });
+
+test('오늘이 아닌 기록에는 날짜를 붙이고, 오늘 기록은 시각만', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(14, 5, 9, 0);
+  feed.add(A.s, A.a, { ...say('어제 한 말'), ts: yesterday.getTime() });
+  assert.match(list.children[0].innerHTML, new RegExp(`^<time>${yesterday.getMonth() + 1}/${yesterday.getDate()} 14:05</time>`));
+  feed.add(A.s, A.a, say('지금 한 말'));
+  assert.match(list.children[0].innerHTML, /^<time>\d{2}:\d{2}:\d{2}<\/time>/);
+});

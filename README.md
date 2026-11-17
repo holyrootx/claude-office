@@ -355,7 +355,7 @@ Claude Code ──(기록)──▶ ~/.claude/projects/<프로젝트>/<세션>.j
 | `public/js/journal-view.js` | 업무 일지 창에 들어갈 글(하루·한 주·한 달, 테스트 있음) |
 | `public/js/util.js` · `boot.js` | 여러 곳에서 같이 쓰는 작은 도구들(바뀐 글자만 고치기 morph, 창 안 Tab 가두기 등) · 화면을 그리기 전에 화면 밝기·글꼴 준비 |
 | `public/style.css` | 디자인과 애니메이션 |
-| `test/` | 테스트 (`npm test`, 설치할 것 없음) |
+| `test/` | 테스트 (`npm test`, 설치할 것 없음. `scripts/test.js`가 이 폴더의 테스트만 골라 돌려요) |
 | `scripts/check-local.js` · `screenshot.js` | 내 실제 기록으로 점검(`npm run check-local`) · README 사진 찍기(`npm run screenshot`) |
 | `start.cmd` | Windows에서 더블클릭으로 실행 |
 

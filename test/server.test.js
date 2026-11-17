@@ -863,6 +863,29 @@ test('실행 정보 파일이 지워져도 켜져 있는 사무실을 찾고, �
   assert.deepEqual([after.pid, after.port, after.token], [before.pid, before.port, before.token]);
 });
 
+test('빌딩이 꽉 차면(12명) 가장 오래 조용한 직원이 자리를 내주고, 꽉 차서라고 알린다', async () => {
+  const dir = path.join(CFG, 'projects', '-tmp-crowd');
+  fs.mkdirSync(dir, { recursive: true });
+  const files = [];
+  const s = stream('all');
+  try {
+    const hello = await until(() => s.log.find(x => x.ev === 'hello'));
+    // 12명이 될 때까지 채우고 한 명 더 (처음 채운 사람이 가장 오래 조용하다)
+    for (let i = 0; i < 13 - hello.sessions.length; i++) {
+      const f = path.join(dir, `eeee${String(i).padStart(4, '0')}-0000-0000-0000-000000000000.jsonl`);
+      userMsg(f, `일 ${i}`);
+      files.push(f);
+      await sleep(20);
+    }
+    const leave = await until(() => s.log.find(x => x.ev === 'leave'), 8000);
+    assert.ok(leave, '아무도 나가지 않았어요');
+    assert.deepEqual([leave.why, leave.max], ['full', 12]);
+  } finally {
+    s.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하고, --stop으로 끈다', async () => {
   assert.match(server('--port', String(PORT)), /이미 켜져/);
   assert.match(server('--stop'), /껐어요/);

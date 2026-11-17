@@ -309,11 +309,11 @@ function removeSession(sid) {
 }
 
 // 오래 조용한 세션의 직원(과 인턴)이 퇴근한다: 보이는 층이면 걸어 나가고, 아니면 바로 정리한다
-// why: 'ended'면 Claude Code를 닫아서, 아니면 오래 조용해서
-function retireSession(sid, why) {
+// why: 'ended'면 Claude Code를 닫아서, 'full'이면 빌딩이 꽉 차서(max명) 자리를 내줘서, 아니면 오래 조용해서
+function retireSession(sid, why, max) {
   const s = sessions.get(sid);
   if (!s) return;
-  if (!(why === 'ended' && s.main.ended)) feed.add(s, s.main, { k: 'leave', ts: Date.now(), why }); // 닫았다는 🚪 줄을 이미 남겼으면 또 쓰지 않는다
+  if (!(why === 'ended' && s.main.ended)) feed.add(s, s.main, { k: 'leave', ts: Date.now(), why, max }); // 닫았다는 🚪 줄을 이미 남겼으면 또 쓰지 않는다
   if (s.floor !== current) {
     removeSession(sid);
     render();
@@ -786,7 +786,7 @@ function connect() {
   };
   es.addEventListener('hello', e => { setConn('live', '실시간 · 0.25초 간격'); onHello(JSON.parse(e.data)); });
   es.addEventListener('join', e => onJoin(JSON.parse(e.data)));
-  es.addEventListener('leave', e => { const d = JSON.parse(e.data); retireSession(d.sid, d.why); });
+  es.addEventListener('leave', e => { const d = JSON.parse(e.data); retireSession(d.sid, d.why, d.max); });
   es.addEventListener('events', e => { beat(); for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
 }
 // 꺼져 있는 동안 다시 해 보는 간격은 30초까지 벌어진다. 사무실을 다시 켜고 탭으로 돌아왔는데 30초 동안 '꺼져 있어요'로

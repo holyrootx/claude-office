@@ -148,3 +148,14 @@ test('Claude Code를 닫으면 🚪 줄 (실패로 세지 않는다)', () => {
   assert.match(list.children[0].innerHTML, /<span class="ic">🚪<\/span>[\s\S]*Claude Code를 닫았어요/);
   assert.equal(feed.failCount(), 0);
 });
+
+test('퇴근 줄: Claude Code를 닫았는지, 빌딩이 꽉 차서 자리를 내줬는지, 오래 조용했는지 따로 말한다', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  const leave = (why, max) => { feed.add(A.s, A.a, { k: 'leave', ts: Date.now(), why, max }); return list.children[0].innerHTML; };
+  assert.match(leave('ended'), /Claude Code를 닫아서/);
+  assert.match(leave('full', 12), /빌딩이 꽉 차서\(12명\) 가장 오래 조용한 직원이 자리를 내줬어요/);
+  assert.match(leave('quiet'), /한동안 조용해서/);
+  assert.match(leave(undefined), /한동안 조용해서/); // 예전 서버는 이유 없이 보냈다
+});

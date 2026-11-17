@@ -789,6 +789,15 @@ function connect() {
   es.addEventListener('leave', e => { const d = JSON.parse(e.data); retireSession(d.sid, d.why); });
   es.addEventListener('events', e => { beat(); for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
 }
+// 꺼져 있는 동안 다시 해 보는 간격은 30초까지 벌어진다. 사무실을 다시 켜고 탭으로 돌아왔는데 30초 동안 '꺼져 있어요'로
+// 남아 있지 않게, 탭으로 돌아오거나 창을 고르거나 인터넷이 다시 이어지면 기다리지 않고 바로 다시 해 본다
+function retryNow() {
+  if ($('conn').dataset.state !== 'off' || !retryTimer) return; // 이어져 있거나 브라우저가 알아서 다시 붙는 중(1.5초)
+  connect();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) retryNow(); });
+window.addEventListener('focus', retryNow);
+window.addEventListener('online', retryNow);
 
 // ───────────────────────── 세션 목록 ─────────────────────────
 const isFile = v => v && v !== 'all' && v !== 'auto';

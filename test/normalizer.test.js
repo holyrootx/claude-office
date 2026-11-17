@@ -589,6 +589,14 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail('<tool_use_error>Found 3 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true.\nString: x</tool_use_error>'), '고칠 글이 파일에 3군데 있어서 어디를 고칠지 몰라요');
   assert.equal(fail('<tool_use_error>No changes to make: old_string and new_string are exactly the same.</tool_use_error>'), '바꿀 글이 원래 글과 똑같아요');
   assert.equal(fail('File content (31337 tokens) exceeds maximum allowed tokens (25000). Please use offset and limit parameters to read specific portions of the file.'), '파일이 너무 커서 한 번에 읽지 못했어요 (나눠 읽어요)');
+  // 브라우저 도구(데스크톱 앱 브라우저 창·Claude in Chrome)의 안내
+  assert.equal(fail('No preview is open. Use `preview_start` or `navigate` with {"url": "https://…"} to open a browser tab at a URL'), '브라우저 창에 열린 페이지가 없어요');
+  assert.equal(fail('Preview tab tab-3 is no longer open.'), '브라우저 탭(tab-3)이 이미 닫혔어요');
+  assert.equal(fail('The dev server exited during startup (code 126). Fix the error in the output below, then start the server again.\n> vite'), '개발 서버가 켜지다가 꺼졌어요 (종료 코드 126)');
+  assert.equal(fail('No server named "api" found in .claude/launch.json. Available servers: "web"'), ".claude/launch.json에 'api' 서버가 없어요");
+  assert.equal(fail('Navigation was blocked by a "Leave site?" dialog — the page at https://x.dev has unsaved changes'), "'사이트에서 나가시겠어요?' 창 때문에 이동하지 못했어요");
+  assert.equal(fail('Permission denied for reading page content on this domain'), '이 사이트에서는 허용되지 않은 작업이에요');
+  assert.equal(fail('The hidden tabs_context_mcp lookup did not respond within 8s. The Chrome extension may be slow to start'), 'Chrome 확장 프로그램이 답하지 않았어요 (켜지는 중이거나 연결이 끊겼어요)');
   assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), '종료 코드 1 · npm ERR! missing script: lint'); // 명령이 낸 글은 그대로
 });
 

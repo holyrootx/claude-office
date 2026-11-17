@@ -40,6 +40,8 @@ export function createJournal({ toast, onPick, copy }) {
     }
     if (ask !== asked) return;
     loading = false;
+    loadedAt = Date.now();
+    loadedDay = new Date().toDateString();
     $('journalBox').classList.remove('busy');
     // 📋 복사할 마크다운은 일지와 같이 온다 (누른 순간 바로 복사해야 Safari도 클립보드를 허락한다)
     md = typeof j.md === 'string' ? { q, text: j.md } : null;
@@ -87,6 +89,20 @@ export function createJournal({ toast, onPick, copy }) {
   const drawDay = j => paint(dayView(j, { day, project }));
   const drawWeek = j => paint(weekView(j, { week, project }));
   const drawMonth = j => paint(monthView(j, { month, project }));
+
+  // 열어 둔 창은 연 순간의 일지다. '오늘'(이번 주·이번 달)을 보는 중에 날이 바뀌면 어제 일지가 '오늘'로 남고,
+  // 한참 다른 일을 하다 돌아와도 그사이 한 일이 안 보였다. 날이 바뀌었거나, 10분 넘게 지나 탭으로 돌아왔을 때만
+  // 다시 받는다 (1분마다 새로 그리면 읽던 목록·펼친 '더 보기'가 자꾸 처음으로 돌아간다)
+  let loadedAt = 0, loadedDay = '';
+  function refreshIfStale(back = false) {
+    if ($('journal').hidden || loading) return;
+    const showsToday = month != null ? month === 0 : week != null ? week === 0 : day === 0;
+    if (!showsToday) return;
+    const dayChanged = new Date().toDateString() !== loadedDay;
+    if (dayChanged || (back && Date.now() - loadedAt > 10 * 60000)) openJournal(0, week != null ? 0 : null, month != null ? 0 : null);
+  }
+  setInterval(() => refreshIfStale(false), 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfStale(true); });
 
   let returnFocus = null;
   function closeJournal() {

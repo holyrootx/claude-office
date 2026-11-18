@@ -168,7 +168,11 @@ export function createReplay(office) {
     bar.hidden = !r;
     if (!r) return;
     const at = r.events[Math.min(r.i, r.events.length - 1)];
-    bar.style.setProperty('--p', ((r.i / r.events.length) * 100).toFixed(1) + '%');
+    const pct = (r.i / r.events.length) * 100;
+    bar.style.setProperty('--p', pct.toFixed(1) + '%');
+    // 화면 읽기 프로그램: '다시 보기 진행, 42%, 10/24 18:28' (막대에 초점을 두고 ← →로 옮긴다)
+    bar.setAttribute('aria-valuenow', String(Math.round(pct)));
+    bar.setAttribute('aria-valuetext', `${Math.round(pct)}% · ${stamp(at.ts, r.multiDay)}`);
     const t = ts => stamp(ts, r.multiDay);
     // 시각만 바꾼다. '누르면 그 지점으로 가요'는 따로 두어 좁은 화면(폰)에서는 CSS로 숨긴다 (전에는 끝이 '누르면 그…'로 잘렸다)
     $('replayTime').textContent = `${t(r.events[0].ts)} — ${t(at.ts)} — ${t(r.events[r.events.length - 1].ts)}`;

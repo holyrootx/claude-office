@@ -292,6 +292,7 @@ button, select { font: inherit; color: inherit; }
 /* 폰에서는 시각 셋만 (안내까지 넣으면 끝이 '누르면 그…'로 잘린다. 막대를 누르는 건 ? 도움말에 있어요) */
 @media (max-width: 520px) { .replay-hint { display: none; } }
 .replay-bar:hover i { background: color-mix(in srgb, #fbbf24 50%, transparent); }
+.replay-bar:focus-visible { outline: 2px solid var(--text-amber); outline-offset: -2px; } /* 키보드로 고르면 ← →로 옮겨요 */
 /* 일을 시킨 자리(🙋 내 말 · ⏰ 예약 작업 · 📨 다른 세션): 누르면 바로 그 자리로 */
 .replay-marks { position: absolute; inset: 0; pointer-events: none; }
 .replay-marks u { position: absolute; bottom: 0; height: 8px; width: 3px; margin-left: -1px; border-radius: 1px 1px 0 0; background: var(--text-amber); opacity: .7; pointer-events: auto; cursor: pointer; text-decoration: none; }

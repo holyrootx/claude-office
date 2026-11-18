@@ -33,3 +33,10 @@ test('키보드: 버튼·로비 줄에 초점이 있으면 Space는 그걸 누�
   // role="button"인 로비 줄은 Enter와 Space 둘 다
   assert.match(app, /\$\('lobby'\)\.addEventListener\('keydown', e => \{\n\s+if \(e\.key !== 'Enter' && e\.key !== ' '\) return;/);
 });
+
+test('다시 보기 진행 막대는 화면 읽기 프로그램이 슬라이더로 읽고, 키보드로 고를 수 있다', () => {
+  assert.match(html, /id="replayBar"[^>]*role="slider"[^>]*tabindex="0"[^>]*aria-label="다시 보기 진행[^"]*"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"/);
+  const replay = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'replay.js'), 'utf8');
+  assert.match(replay, /setAttribute\('aria-valuenow'/);
+  assert.match(replay, /setAttribute\('aria-valuetext'/);
+});

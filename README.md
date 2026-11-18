@@ -313,6 +313,9 @@ hooks가 켜져 있으면 Claude Code를 닫을 때 바로 알 수 있어서, 30
 **Q. Mac이나 Linux에서도 되나요?**
 Windows와 macOS에서 테스트했어요. 운영체제와 상관없이 홈 폴더의 `.claude/projects`를 읽도록 만들어서 Linux에서도 같은 방법으로 실행할 수 있어요.
 
+**Q. Codex(OpenAI)도 같이 쓰는데, Codex 세션도 보이나요?**
+이 사무실은 Claude Code 기록만 읽어요. Claude Code와 Codex를 같이 돌린다면(Herdr 같은 도구로 여러 개를 한꺼번에 띄워도) 둘을 한 빌딩에서 보여 주는 [에이전트 사무실(agent-office)](https://github.com/holyrootx/agent-office)을 쓰세요. 이 사무실을 바탕으로 Codex 기록(`~/.codex/sessions`)도 읽게 넓힌 것이고, 포트(4787)·플러그인 이름이 달라서 둘을 같이 켜 둬도 괜찮아요.
+
 ---
 
 ## 어떻게 동작하나요

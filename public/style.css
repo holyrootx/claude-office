@@ -127,6 +127,7 @@ button, select { font: inherit; color: inherit; }
   padding: 7px 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .btn:hover { filter: brightness(1.08); }
+.btn-icon[aria-busy="true"] { opacity: .55; cursor: progress; } /* 다시 보기 기록을 받아 오는 중 */
 .btn.stop { background: #475069; }
 .btn-icon {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;

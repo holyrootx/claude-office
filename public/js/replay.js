@@ -38,15 +38,22 @@ const QUEUE = { 5: 1, 10: 3, 30: 12 };
 //   emptyStats(), countLocal(s, ev), reconnect() 실시간으로 돌아가기
 export function createReplay(office) {
   let r = null;
+  let loading = false; // 기록을 받아 오는 중 (큰 세션은 몇 초 걸린다)
 
   // since: 이 시각부터 보기 (업무 일지에서 고른 날·주·달의 처음, 며칠씩 이어진 세션을 처음부터 다 보지 않게)
   async function start(fileArg, { since = 0 } = {}) {
     // 직접 준 세션(업무 일지·정보 카드), 아니면 보기 메뉴에서 고른 세션이나 지금 보는 직원의 세션
     const file = fileArg || office.pickFile();
     if (!file) return office.toast('다시 볼 세션을 보기 메뉴에서 골라 주세요');
+    // 받아 오는 동안 ⏪를 또 누르면 같은 큰 기록 파일(수십 MB)을 서버가 처음부터 또 읽었다: 한 번만
+    if (loading) return office.toast('⏳ 아직 기록을 읽는 중이에요');
+    loading = true;
+    $('replayBtn').setAttribute('aria-busy', 'true');
     office.toast('⏳ 기록을 처음부터 읽는 중이에요');
     let d;
     try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
+    loading = false;
+    $('replayBtn').removeAttribute('aria-busy');
     if (!d || !d.events || !d.events.length) return office.toast('다시 볼 기록이 없어요');
     // 고른 시각(오늘 0시 등) 뒤로 기록이 하나도 없으면 처음부터 틀지 않고 알려 준다
     // (전에는 findIndex가 -1이라 며칠치 기록을 처음부터 '처음부터 다시 보기'로 틀었다)

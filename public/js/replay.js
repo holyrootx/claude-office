@@ -48,6 +48,11 @@ export function createReplay(office) {
     let d;
     try { d = await (await fetch('/api/replay?file=' + encodeURIComponent(file))).json(); } catch { d = null; }
     if (!d || !d.events || !d.events.length) return office.toast('다시 볼 기록이 없어요');
+    // 고른 시각(오늘 0시 등) 뒤로 기록이 하나도 없으면 처음부터 틀지 않고 알려 준다
+    // (전에는 findIndex가 -1이라 며칠치 기록을 처음부터 '처음부터 다시 보기'로 틀었다)
+    if (since && d.events[d.events.length - 1].ts < since) {
+      return office.toast(`${stamp(since, true)} 뒤로는 기록이 없어요 · 처음부터 보려면 ⏪ 다시 보기를 눌러 주세요`);
+    }
     stop(false);
     office.beforeStart();
     office.hello({ mode: 'replay', root: '', sessions: [{ sid: d.sid, session: d.session, history: [], plan: null, stats: office.emptyStats(), wait: null, agents: [] }] });

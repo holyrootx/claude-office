@@ -216,6 +216,15 @@ export function createReplay(office) {
     const box = e.currentTarget.getBoundingClientRect();
     seek((e.clientX - box.left) / box.width);
   });
+  // 막대에 초점이 있을 때만 (슬라이더처럼): Home·End 처음·끝, PageUp·PageDown 10%씩.
+  // ← →(5%)는 화면 전체 단축키가 맡는다. 막대 밖에서는 Home·End가 원래대로 페이지를 움직인다
+  $('replayBar').addEventListener('keydown', e => {
+    if (!r) return;
+    const jump = { Home: () => seek(0), End: () => seek((r.events.length - 1) / r.events.length), PageUp: () => seek(r.i / r.events.length - 0.1), PageDown: () => seek(r.i / r.events.length + 0.1) }[e.key];
+    if (!jump) return;
+    e.preventDefault();
+    jump();
+  });
   $('pauseBtn').addEventListener('click', togglePause);
   $('speedBtn').addEventListener('click', cycleSpeed);
 

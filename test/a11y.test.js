@@ -39,4 +39,6 @@ test('다시 보기 진행 막대는 화면 읽기 프로그램이 슬라이더�
   const replay = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'replay.js'), 'utf8');
   assert.match(replay, /setAttribute\('aria-valuenow'/);
   assert.match(replay, /setAttribute\('aria-valuetext'/);
+  // 슬라이더 키: 막대에 초점이 있을 때 Home·End·PageUp·PageDown
+  assert.match(replay, /\$\('replayBar'\)\.addEventListener\('keydown'[\s\S]*Home:[\s\S]*End:[\s\S]*PageUp:[\s\S]*PageDown:/);
 });

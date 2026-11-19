@@ -167,6 +167,23 @@ test('보안: 잘못된 주소·다른 사이트 주소·폴더 밖 파일·토�
   assert.equal((await get('/')).status, 200); // 그래도 서버는 살아 있다
 });
 
+test('보안: 다른 사이트의 페이지가 브라우저로 보낸 요청(그림 태그·fetch·iframe)은 받지 않고, 링크로 화면을 여는 건 받는다', async () => {
+  const from = (site, mode, dest) => ({ 'Sec-Fetch-Site': site, 'Sec-Fetch-Mode': mode, 'Sec-Fetch-Dest': dest });
+  // 전에는 다른 사이트의 <img src="http://localhost:4777/api/stream">이 실시간 연결을 열어 두고, 월간 일지를 몇 년 치 훑게 할 수 있었다
+  for (const [p, h] of [
+    ['/api/journal?month=-1', from('cross-site', 'no-cors', 'image')],
+    ['/api/sessions', from('cross-site', 'cors', 'empty')],
+    ['/api/health', from('same-site', 'cors', 'empty')], // 다른 포트의 localhost 페이지
+    ['/', from('cross-site', 'navigate', 'iframe')],
+    ['/api/stream', from('cross-site', 'no-cors', 'image')],
+  ]) assert.equal((await get(p, h)).status, 403, `${p} ${JSON.stringify(h)}`);
+  // 받는 것: 링크를 눌러 화면 열기, 주소창에 쳐서 열기, 화면이 스스로 부르는 API, 머리글 없는 hook·명령
+  assert.equal((await get('/', from('cross-site', 'navigate', 'document'))).status, 200);
+  assert.equal((await get('/', from('none', 'navigate', 'document'))).status, 200);
+  assert.equal((await get('/api/sessions', from('same-origin', 'cors', 'empty'))).status, 200);
+  assert.equal((await get('/api/health')).status, 200);
+});
+
 test('보안: 마크다운 일지·JSON·오류 글은 주소에 적은 글이 들어 있어도 문서로 열려 스크립트가 돌지 않는다', async () => {
   const evil = encodeURIComponent('<script>alert(1)</script>');
   for (const p of [`/api/journal?day=0&format=md&project=${evil}`, `/api/journal?week=0&format=md&project=${evil}`, `/api/journal?day=0&project=${evil}`, '/api/sessions', '/api/replay', '/nothing']) {

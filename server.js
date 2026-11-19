@@ -96,6 +96,16 @@ const CSP = [
 const API_HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; sandbox" };
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
+// 다른 사이트(다른 포트의 localhost도)의 페이지가 브라우저로 보낸 요청은 받지 않는다. 내용을 읽을 수는 없지만
+// 그림 태그 하나로 실시간 연결을 열어 둔 채 0.25초마다 기록을 읽게 하거나, 몇 년 치 월간 일지를 차례로 훑게 해서
+// 내 컴퓨터를 바쁘게 할 수 있었다. 링크를 눌러 이 화면을 여는 것(창 하나를 통째로 여는 이동)은 그대로 받는다.
+// 브라우저가 아닌 hook·터미널 명령(--stop 등)은 이 머리글을 보내지 않아서 상관없다
+function fromOtherSite(req) {
+  const site = req.headers['sec-fetch-site'];
+  if (site !== 'cross-site' && site !== 'same-site') return false;
+  return !(req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document');
+}
+
 function json(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(data));
@@ -168,6 +178,7 @@ function handle(req, res) {
   for (const [k, v] of Object.entries(API_HEADERS)) res.setHeader(k, v); // writeHead에 준 머리글이 있으면 그쪽이 이긴다
   // DNS 리바인딩 막기: 다른 사이트 주소로 들어온 요청은 받지 않는다
   if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden'); }
+  if (fromOtherSite(req)) { res.writeHead(403); return res.end('forbidden'); }
   let url;
   try { url = new URL(req.url, 'http://localhost'); } catch { res.writeHead(400); return res.end(); }
   if (req.method === 'POST') return handlePost(req, res, url.pathname);

@@ -225,6 +225,15 @@ export function createReplay(office) {
     e.preventDefault();
     jump();
   });
+  // 창 크기가 바뀌면(폰을 돌리거나 창을 줄이면) 눈금 수를 막대 폭에 맞춰 다시 고른다.
+  // 전에는 다시 보기를 시작할 때의 폭으로만 골라서, 줄이면 눈금이 빽빽하게 겹쳤다
+  let lastWidth = 0;
+  new ResizeObserver(() => {
+    const w = $('replayBar').clientWidth;
+    if (!r || !w || Math.abs(w - lastWidth) < 40) return;
+    lastWidth = w;
+    renderMarks();
+  }).observe($('replayBar'));
   $('pauseBtn').addEventListener('click', togglePause);
   $('speedBtn').addEventListener('click', cycleSpeed);
 

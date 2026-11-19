@@ -37,6 +37,17 @@ export function weekOffset(ts, now = Date.now()) {
   return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
 }
 
+// then에서 now까지 넘어간 날·주(월요일부터)·달 수. 업무 일지는 '오늘이 0, 어제가 -1'처럼 오늘에서 떨어진 수로 날을 가리켜서,
+// 열어 둔 채 자정을 넘기면 같은 수가 다른 날을 가리킨다. 그만큼 옮겨서 보던 날을 그대로 가리키게 한다
+export function calendarGap(then, now = Date.now()) {
+  const a = new Date(then), b = new Date(now);
+  return {
+    days: Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(then).setHours(0, 0, 0, 0)) / 86400000),
+    weeks: -weekOffset(then, now),
+    months: (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(),
+  };
+}
+
 // 이번 차례를 예약해 둔 작업(크론·/loop)이 시켰는지: ⏰ 예약된 작업으로 시작하면 true, 내 말로 시작하거나 답을 마치면 false.
 // 인턴의 일은 보지 않는다. 예약 작업이 시킨 차례가 끝날 때는 브라우저 알림을 띄우지 않으려고 쓴다
 export function scheduledAfter(prev, ev) {

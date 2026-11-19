@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { argProblem } = require('../lib/config');
+const { argProblem, argWords } = require('../lib/config');
 
 test('아는 옵션과 그 값은 통과한다', () => {
   for (const a of [[], ['--port', '4800', '--no-open'], ['--active', '60'], ['--background'], ['--stop'], ['--print-hooks'], ['--install-hooks'], ['--uninstall-hooks'], ['-v'], ['--help']]) {
@@ -22,6 +22,24 @@ test('모르는 옵션·= 붙여 쓰기·숫자가 아닌 값은 무엇이 틀�
   assert.match(argProblem(['--port', 'abc']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--port', '70000']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--active', '--no-open']), /--active 뒤에 분을/);
+});
+
+test('옵션 없이 홀로 적은 말은 조용히 넘기지 않는다 (전에는 4800이 기본 포트로, journal이 사무실 켜기로 넘어갔다)', () => {
+  assert.equal(argProblem(['4800']), '모르는 말이에요: 4800 (포트라면 --port 4800처럼 적어 주세요)');
+  assert.equal(argProblem(['journal', '어제']), '모르는 말이에요: journal (--journal처럼 앞에 --를 붙여 주세요)');
+  assert.equal(argProblem(['Stop']), '모르는 말이에요: Stop (--stop처럼 앞에 --를 붙여 주세요)');
+  assert.equal(argProblem(['--port', '4800', 'extra']), '모르는 말이에요: extra (업무 일지의 날이라면 --journal extra처럼 적어 주세요)');
+  // 여러 말로 된 날·빈칸이 든 프로젝트 이름은 다음 옵션 앞까지 한 덩어리라 괜찮다
+  for (const a of [['--journal', '지난', '주', '금요일'], ['--journal', '3일', '전', '--project', 'my', 'app', '--md'], ['--journal', '--project', 'my', 'app']]) {
+    assert.equal(argProblem(a), null, a.join(' '));
+  }
+});
+
+test('옵션 값은 다음 옵션 앞까지 모은다: --project my app → my app (전에는 my만 보고 app은 버렸다)', () => {
+  assert.equal(argWords('--project', ['--journal', '어제', '--project', 'my', 'app', '--md']), 'my app');
+  assert.equal(argWords('--journal', ['--journal', '지난', '주', '금요일', '--md']), '지난 주 금요일');
+  assert.equal(argWords('--journal', ['--journal', '--md']), '');
+  assert.equal(argWords('--project', ['--journal']), undefined);
 });
 
 test('쓸 수 있는 옵션은 다 --help에 나온다 (새 옵션을 넣고 도움말을 빠뜨리지 않게)', () => {

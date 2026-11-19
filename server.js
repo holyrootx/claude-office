@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argValue, argProblem, envProblem, VERSION, PORT_GIVEN, PORT_FROM, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
+  args, argValue, argWords, argProblem, envProblem, VERSION, PORT_GIVEN, PORT_FROM, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 // 안내에 보여 줄 설정 파일 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 쓰면 그 경로, 홈 폴더 아래면 ~로 줄여서)
 const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.slice(os.homedir().length) : f))(path.join(CLAUDE_DIR, 'settings.json'));
@@ -488,15 +488,11 @@ function printHooks() {
 // 오늘의 업무 일지를 터미널에 (브라우저의 📓과 같은 내용)
 // --journal 뒤에 어제·그저께·-3·3일 전·금요일·지난 주 금요일·10월 31일·2026-10-31을 붙이면 그날 일지 (lib/report.js parseDay)
 // '10월 31일'처럼 띄어 쓴 날도 받으려고, 다음 --옵션 전까지를 이어 붙인다
-function journalDay() {
-  const rest = args.slice(args.indexOf('--journal') + 1);
-  const end = rest.findIndex(a => a.startsWith('--'));
-  return (end < 0 ? rest : rest.slice(0, end)).join(' ');
-}
+const journalDay = () => argWords('--journal') || '';
 
 async function printJournal() {
   const v = journalDay();
-  const project = argValue('--project') || ''; // --project blog: 그 프로젝트만
+  const project = argWords('--project') || ''; // --project blog: 그 프로젝트만 (--project my app처럼 빈칸이 든 이름도)
   // 이번 주·지난 주: 그 주의 날마다 일지를 모아 주간 일지로
   const week = parseWeek(v);
   if (week) {

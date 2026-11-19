@@ -16,7 +16,17 @@ export function createAlerts({ toast, show, quiet }) {
     if (!notifyOn || !canNotify() || quiet()) return;
     if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
     // 같은 세션 알림은 tag로 하나만 남긴다
-    const n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
+    let n;
+    try {
+      n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
+    } catch {
+      // 안드로이드 Chrome처럼 허락은 받았어도 페이지가 바로 알림을 만들 수 없는 브라우저 (전에는 여기서 던진 오류에
+      // 그 묶음의 장면이 통째로 빠져서 🔐 기다림·말풍선이 안 떴다). 알림을 끄고 버튼에 까닭을 남긴다
+      notifyOn = false;
+      try { localStorage.setItem(NOTIFY_KEY, '0'); } catch { /* 저장소 없음 */ }
+      renderNotifyBtn('이 브라우저에서는 페이지가 알림을 띄울 수 없어서 알림을 껐어요');
+      return;
+    }
     n.onclick = () => {
       window.focus();
       show(s, w);
@@ -32,11 +42,16 @@ export function createAlerts({ toast, show, quiet }) {
     // 화면에 보이는 상태를 뒤집는다 (예전에 켜 두었어도 지금 권한이 없으면 꺼진 것으로 보인다)
     const wasOn = $('notifyBtn').classList.contains('on');
     if (!('Notification' in window)) return renderNotifyBtn('이 브라우저는 알림을 지원하지 않아요');
-    if (Notification.permission === 'default') await Notification.requestPermission();
+    if (!wasOn && Notification.permission === 'default') {
+      // 옛 Safari는 약속(Promise) 대신 콜백으로 답해서 둘 다 받는다
+      try { await new Promise(done => { const p = Notification.requestPermission(done); if (p && p.then) p.then(done, done); }); } catch { /* 묻지 못함: 아래에서 '허락하지 않음'으로 */ }
+    }
     if (Notification.permission === 'denied') {
       notifyOn = false;
       return renderNotifyBtn('브라우저 설정에서 이 페이지의 알림이 막혀 있어요');
     }
+    // 허락 창을 그냥 닫았거나 브라우저가 조용히 넘겼으면 전에는 버튼이 🔕 그대로라 눌린 건지도 알 수 없었다
+    if (!wasOn && Notification.permission === 'default') return renderNotifyBtn('알림을 허락하지 않아서 켜지 않았어요. 다시 누르면 또 물어봐요');
     notifyOn = !wasOn && canNotify();
     try { localStorage.setItem(NOTIFY_KEY, notifyOn ? '1' : '0'); } catch { /* 저장소 없음 */ }
     renderNotifyBtn();

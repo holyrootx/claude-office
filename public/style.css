@@ -521,6 +521,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
   background: #fff7ed; color: #431407; border: 2px solid var(--desk); font: 500 14px/1.35 var(--ui);
   box-shadow: 0 8px 20px rgba(0, 0, 0, .22); opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s;
   pointer-events: none; z-index: 180;
+  overflow-wrap: break-word; /* '<주소> 이거 봐 줘'처럼 주소로 시작하는 내 말도 풍선 안에서 */
 }
 .user-bubble.show { opacity: 1; transform: none; }
 .user-bubble::before {

@@ -597,6 +597,9 @@ test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·�
   assert.equal(fail('Navigation was blocked by a "Leave site?" dialog — the page at https://x.dev has unsaved changes'), "'사이트에서 나가시겠어요?' 창 때문에 이동하지 못했어요");
   assert.equal(fail('Permission denied for reading page content on this domain'), '이 사이트에서는 허용되지 않은 작업이에요');
   assert.equal(fail('The hidden tabs_context_mcp lookup did not respond within 8s. The Chrome extension may be slow to start'), 'Chrome 확장 프로그램이 답하지 않았어요 (켜지는 중이거나 연결이 끊겼어요)');
+  // 커넥터 도구를 부르다 실패: 까닭이 비어 있으면 그 말만, 있으면 붙여서
+  assert.equal(fail('<tool_use_error>Error calling tool (mcp__Claude_Browser__preview_start): </tool_use_error>'), '도구를 부르다 오류가 났어요');
+  assert.equal(fail('Error calling tool (mcp__x__y): MCP error -32001: Request timed out'), '도구를 부르다 오류가 났어요 · MCP error -32001: Request timed out');
   assert.equal(fail('Exit code 1\nnpm ERR! missing script: lint'), '종료 코드 1 · npm ERR! missing script: lint'); // 명령이 낸 글은 그대로
 });
 

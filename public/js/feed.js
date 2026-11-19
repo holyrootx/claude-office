@@ -29,7 +29,7 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         ic = r.icon; room = ev.room;
         known.set(ev.id, ev);
         if (known.size > 1500) known.delete(known.keys().next().value);
-        tx = `${ev.git ? '<b style="color:#f05033">git</b> ' : ''}<b>${esc(ev.tool)}</b> ${esc(ev.label || '')}<span class="st"></span><small>${esc(r.name)}${ev.detail && ev.detail !== ev.label ? ' · ' + esc(ev.detail) : ''}</small>`;
+        tx = `${ev.git ? '<b class="git-mark">git</b> ' : ''}<b>${esc(ev.tool)}</b> ${esc(ev.label || '')}<span class="st"></span><small>${esc(r.name)}${ev.detail && ev.detail !== ev.label ? ' · ' + esc(ev.detail) : ''}</small>`;
         break;
       }
       case 'result': {

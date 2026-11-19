@@ -1,5 +1,9 @@
 # 바뀐 것들
 
+## 다음 버전 (아직 버전을 올리지 않았어요)
+
+- 데스크톱 앱의 도구 이름이 'turn.update_plan', 'session_mgmt.send_message'처럼 앱 안의 그룹 이름으로 나왔어요. 이제 'Desktop.update_plan'처럼 Browser.·Chrome.과 같은 꼴로 어디 도구인지 보여 줘요.
+
 ## 1.16.0
 
 ### 고친 것 (꼭 받으세요)

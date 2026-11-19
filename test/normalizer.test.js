@@ -95,7 +95,10 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(displayName('mcp__Claude_Browser__browser_batch'), 'Browser.batch');
   assert.equal(displayName('mcp__Claude_Browser__javascript_tool'), 'Browser.javascript_tool');
   assert.equal(displayName('mcp__Claude_Code_iOS_Simulator__control'), 'Simulator.control');
-  assert.equal(displayName('mcp__ccd_session__start_session'), 'session.start_session');
+  // 데스크톱 앱의 도구는 그룹(turn·session·session_mgmt) 대신 Desktop으로
+  assert.equal(displayName('mcp__ccd_session__start_session'), 'Desktop.start_session');
+  assert.equal(displayName('mcp__ccd_turn__update_plan'), 'Desktop.update_plan');
+  assert.equal(displayName('mcp__ccd_session_mgmt__send_message'), 'Desktop.send_message');
   assert.equal(displayName('mcp__claude-in-chrome__browser_batch'), 'Chrome.batch'); // 데스크톱 앱 브라우저와 같은 꼴로
   assert.equal(displayName('mcp__claude-in-chrome__tabs_context_mcp'), 'Chrome.tabs_context');
 });

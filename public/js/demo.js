@@ -70,7 +70,7 @@ export const DEMO_SCRIPT = [
   [3600, blog, { ended: true }],
   [2600, blog, { leave: 'ended' }],
   [0, shop, { k: 'result', id: 's6', ok: true }],
-  [300, shop, { k: 'tool', id: 's7', name: 'mcp__ccd_turn__update_plan', tool: 'update_plan', room: 'meeting', label: '진행 상황 갱신', plan: todo('done', 'done', 'done', 'doing') }],
+  [300, shop, { k: 'tool', id: 's7', name: 'mcp__ccd_turn__update_plan', tool: 'Desktop.update_plan', room: 'meeting', label: '진행 상황 갱신', plan: todo('done', 'done', 'done', 'doing') }],
   [500, shop, { k: 'result', id: 's7', ok: true }],
   [300, shop, { k: 'tool', id: 's8', name: 'AskUserQuestion', tool: 'AskUserQuestion', room: 'desk', label: '커밋 방식', ask: '바로 커밋할까요, 아니면 PR로 올릴까요?', options: ['바로 커밋', 'PR로 올리기'] }],
   [4200, shop, { k: 'result', id: 's8', ok: true, answer: '바로 커밋' }],

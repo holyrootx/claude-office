@@ -53,3 +53,32 @@ test('마지막으로 움직인 때: 이어 하기(권한 모드 줄)는 방금�
     + JSON.stringify({ type: 'user', timestamp: now, cwd: '/tmp/shop', message: { role: 'user', content: '다시 시작' } }) + '\n');
   assert.equal(at('55555555-0000-0000-0000-000000000003.jsonl'), Math.min(Date.parse(now), fs.statSync(path.join(dir, '55555555-0000-0000-0000-000000000003.jsonl')).mtimeMs));
 });
+
+test('제목 줄이 없는 기록(예전 Claude Code 등)은 내가 마지막으로 친 말을 제목으로 (전에는 (제목 없음))', () => {
+  const dir = path.join(CFG, 'projects', '-tmp-shop');
+  fs.mkdirSync(dir, { recursive: true });
+  const ts = new Date().toISOString();
+  const U = (content, extra = {}) => ({ type: 'user', timestamp: ts, cwd: '/tmp/shop', message: { role: 'user', content }, ...extra });
+  const d = (name, lines) => {
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, lines.map(l => JSON.stringify(l)).join('\n') + '\n');
+    const st = fs.statSync(file);
+    return describe({ file, mtime: st.mtimeMs, size: st.size, dir: '-tmp-shop' }).title;
+  };
+  // 사람이 친 말이 아닌 user 줄(도구 결과·숨김·인턴·알림·중단)은 건너뛰고 그 앞의 내 말로
+  assert.equal(d('66666666-0000-0000-0000-000000000001.jsonl', [
+    U('로그인 401 고쳐 줘'),
+    { type: 'assistant', timestamp: ts, cwd: '/tmp/shop', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id: 't1', name: 'Read', input: {} }] } },
+    U([{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]),
+    U('<task-notification><summary>빌드 끝</summary></task-notification>'),
+    U('Caveat: 안내', { isMeta: true }),
+    U('인턴에게 준 일', { isSidechain: true }),
+    U([{ type: 'text', text: '[Request interrupted by user]' }]),
+  ]), '로그인 401 고쳐 줘');
+  // 명령은 명령 이름과 인자로
+  assert.equal(d('66666666-0000-0000-0000-000000000002.jsonl', [U('<command-name>/review</command-name><command-args>auth.ts</command-args>')]), '/review auth.ts');
+  // 제목 줄이 있으면 그쪽이 먼저
+  assert.equal(d('66666666-0000-0000-0000-000000000003.jsonl', [U('아무 말'), { type: 'last-prompt', lastPrompt: '마지막 요청' }]), '마지막 요청');
+  // 사람이 친 말이 하나도 없으면 그대로 (제목 없음)
+  assert.equal(d('66666666-0000-0000-0000-000000000004.jsonl', [U([{ type: 'tool_result', tool_use_id: 'x', content: 'ok' }])]), '(제목 없음)');
+});

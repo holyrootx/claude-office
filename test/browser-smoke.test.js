@@ -210,6 +210,20 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await sleep(300);
     const head = await js(`(() => { const t = document.getElementById('sessTitle'); return t.textContent + (t.scrollWidth > t.clientWidth ? ' (잘림 ' + t.clientWidth + '/' + t.scrollWidth + ')' : ''); })()`);
     assert.equal(head, '12개 층 · 직원 12명');
+    // 띄어쓰기 없는 긴 주소·경로가 말풍선·정보 카드 제목·업무 일지 프로젝트 이름을 뚫고 나가지 않는다
+    // (전에는 'PR 올렸어요: https://github.com/…' 말풍선 글자가 풍선 밖으로 방을 가로질렀다)
+    const spills = await js(`(() => {
+      const long = 'https://github.com/holyrootx/claude-office/pull/123/files#diff-4f2a9c1e8b7d6a5f4e3d2c1b0a9f8e7d6c5b4a39';
+      const box = document.createElement('div');
+      box.style.cssText = 'position:absolute;left:0;top:0;width:320px';
+      box.innerHTML = ['bubble show say final', 'bubble show think'].map(c => '<div class="' + c + '">다 했어요: ' + long + '</div>').join('')
+        + '<div class="card-head"><b>' + long + '</b><small>' + long + '</small></div><section class="jp"><h3>' + long.replace(/\\W/g, '_') + '</h3></section>';
+      document.body.appendChild(box);
+      const out = [...box.querySelectorAll('.bubble, .card-head b, .card-head small, .jp h3')].filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.className || e.tagName);
+      box.remove();
+      return out;
+    })()`);
+    assert.deepEqual(spills, [], '긴 주소가 상자 밖으로 삐져나간 곳');
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

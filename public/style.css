@@ -199,9 +199,9 @@ button, select { font: inherit; color: inherit; }
 .card[hidden] { display: none; }
 .card-x { position: absolute; right: 8px; top: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; }
 .card-head { border-left: 4px solid var(--wc); padding-left: 9px; margin-bottom: 8px; padding-right: 18px; }
-.card-head b { display: block; font-size: 15px; }
+.card-head b { display: block; font-size: 15px; overflow-wrap: break-word; } /* 주소를 그대로 제목으로 단 세션도 카드 안에서 */
 .card-head em { font-style: normal; font-size: 11px; color: var(--text-violet); }
-.card-head small { display: block; color: var(--muted); font-size: 11.5px; }
+.card-head small { display: block; color: var(--muted); font-size: 11.5px; overflow-wrap: break-word; }
 .card-now { background: var(--panel-2); border-radius: 9px; padding: 7px 9px; margin-bottom: 8px; }
 .card-now time { float: right; font: 11px var(--mono); color: var(--faint); }
 .card-now small { display: block; color: var(--muted); font: 11.5px/1.35 var(--mono); overflow-wrap: anywhere; margin-top: 2px; }
@@ -259,7 +259,7 @@ button, select { font: inherit; color: inherit; }
 .journal-hours span { grid-row: 2; grid-column: var(--c) / span 3; font: 10.5px var(--mono); color: var(--faint); padding-top: 3px; }
 .journal-totals span { font-size: 11px; color: var(--muted); }
 .jp { border-top: 1px solid var(--line); padding: 12px 0 6px; }
-.jp h3 { margin: 0 0 4px; font-size: 15px; }
+.jp h3 { margin: 0 0 4px; font-size: 15px; overflow-wrap: break-word; } /* 폰에서 긴 프로젝트 이름(밑줄로 이은 것)이 창 밖으로 나가지 않게 */
 .jp h3 small { color: var(--faint); font: 12px var(--mono); margin-left: 6px; }
 .jp-nums { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
 .jp-rooms { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 8px; }
@@ -676,6 +676,8 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
   padding: 10px 14px; border-radius: 16px; background: #fff; color: #1f2430;
   font: 500 14px/1.42 var(--ui); box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
   opacity: 0; transform: translateY(6px) scale(.96); transition: opacity .18s, transform .18s; pointer-events: none;
+  /* 띄어쓰기 없는 긴 주소·경로(PR 링크, 파일 경로)도 풍선 안에서 줄을 바꾼다. 전에는 풍선 밖으로 방을 가로질러 삐져나왔다 */
+  overflow-wrap: break-word;
 }
 .bubble.show { opacity: 1; transform: none; }
 .bubble::after {

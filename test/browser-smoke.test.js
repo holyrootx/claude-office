@@ -38,7 +38,7 @@ async function until(fn, ms, what) {
   }
 }
 
-test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 줄 → 정보 카드 → 다시 보기가 된다', { skip, timeout: 60000 }, async () => {
+test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 줄 → 정보 카드 → 다시 보기, 업무 일지·도움말·테마·폰 크기가 된다', { skip, timeout: 60000 }, async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-smoke-'));
   const procs = [];
   try {
@@ -78,6 +78,10 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
       if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') problems.push(m.params.args.map(a => a.value || a.description).join(' '));
     });
     const send = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+    const key = async k => {
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, text: k.length === 1 ? k : undefined });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k });
+    };
     const js = async expr => {
       const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
       if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.text);
@@ -96,6 +100,34 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.querySelector('#card [data-act="replay"]').click()`);
     await until(() => js(`!document.getElementById('replayBar').hidden`), 10000, '다시 보기 시작');
     assert.match(await js(`document.getElementById('replayBar').getAttribute('aria-valuetext') || ''`), /^\d+% · /);
+    await js(`document.getElementById('replayBtn').click()`); // 다시 보기 끝내고 실시간으로
+    await until(() => js(`document.getElementById('replayBar').hidden`), 5000, '다시 보기 끝내기');
+
+    // 업무 일지: J로 열고 W·M으로 주간·월간, Esc로 닫기
+    const title = () => js(`document.getElementById('journal').hidden ? '' : document.getElementById('journalTitle').textContent`);
+    await key('j');
+    assert.match(await until(title, 8000, '업무 일지 열기'), /업무 일지/);
+    await key('w');
+    await until(async () => /주간 업무 일지/.test(await title()), 8000, '주간 일지');
+    await key('m');
+    await until(async () => /\d{4}년 \d{1,2}월 업무 일지/.test(await title()), 8000, '월간 일지');
+    await key('Escape');
+    await until(() => js(`document.getElementById('journal').hidden`), 3000, '업무 일지 닫기');
+    // 도움말: ?로 열고 Esc로 닫기
+    await key('?');
+    await until(() => js(`!document.getElementById('help').hidden && document.getElementById('helpBody').textContent.includes('단축키')`), 3000, '도움말 열기');
+    await key('Escape');
+    await until(() => js(`document.getElementById('help').hidden`), 3000, '도움말 닫기');
+    // 화면 밝기: 세 번 누르면 한 바퀴 돌아 처음으로
+    const theme = () => js(`document.documentElement.dataset.theme || ''`);
+    const first = await theme();
+    for (let i = 0; i < 3; i++) await js(`document.getElementById('themeBtn').click()`);
+    assert.equal(await theme(), first);
+    // 폰 크기에서도 로비 줄 → 정보 카드
+    await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
+    await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);
+    await until(() => js(`!document.getElementById('card').hidden`), 5000, '폰 크기에서 정보 카드 열기');
+    assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '폰 크기에서 옆으로 넘치지 않는다');
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

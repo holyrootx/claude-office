@@ -295,6 +295,7 @@ function removeSession(sid) {
   const s = sessions.get(sid);
   if (!s) return;
   for (const a of [s.main, ...s.interns.values()]) {
+    if (!a) continue; // 그리다 만 세션(addApart 참고)은 직원이 없을 수 있다
     actors.delete(a);
     a.destroy();
   }
@@ -703,6 +704,24 @@ function resetAll() {
   $('userBubble').classList.remove('show');
 }
 
+// 세션 하나를 그리다 오류가 나도 다른 세션은 그대로 그린다. 전에는 한 세션에서 던지면 첫 장면이면 빌딩이 통째로 비었고,
+// 실시간 묶음이면 같이 온 다른 세션들의 장면이 모두 빠졌다 (알림 하나를 못 띄운 것처럼 그 세션과 상관없는 일로도)
+function apart(list, fn) {
+  for (const x of list || []) {
+    try { fn(x); } catch (e) {
+      console.error('[세션]', x && x.sid, e);
+    }
+  }
+}
+// 첫 장면·새 출근에서 그리다 만 세션은 아예 빼 둔다 (반쯤 그려진 채 남으면 그 뒤에 그 세션을 쓰는 곳마다 또 던진다)
+function addApart(snap) {
+  try { return addSession(snap); } catch (e) {
+    console.error('[세션]', snap && snap.sid, e);
+    try { removeSession(snap.sid); } catch { sessions.delete(snap.sid); }
+    return null;
+  }
+}
+
 function onHello(d) {
   resetAll();
   viewMode = d.mode || viewMode;
@@ -710,19 +729,21 @@ function onHello(d) {
   if (viewMode === 'demo' || viewMode === 'replay') $('todayChip').hidden = true;
   else refreshToday();
   $('emptyRoot').textContent = d.root ? `찾는 위치: ${d.root}` : '';
-  for (const snap of d.sessions || []) addSession(snap);
+  const added = (d.sessions || []).filter(snap => addApart(snap));
   // 활동 기록: 모든 세션의 지난 기록을 시간 순으로 섞어서
   const items = [];
-  for (const snap of d.sessions || []) {
+  apart(added, snap => {
     const s = sessions.get(snap.sid);
-    if (!s) continue;
-    for (const ev of (snap.history || []).slice(-90)) items.push([s, s.main, ev]);
-    for (const ag of snap.agents || []) for (const ev of (ag.history || []).slice(-20)) items.push([s, s.interns.get(ag.id), ev]);
-    if (s.wait) items.push([s, s.main, { ...s.wait, k: 'wait' }]);
-    if (snap.ended) items.push([s, s.main, { k: 'closed', ts: snap.ended }]);
-  }
+    if (!s) return;
+    const mine = [];
+    for (const ev of (snap.history || []).slice(-90)) mine.push([s, s.main, ev]);
+    for (const ag of snap.agents || []) for (const ev of (ag.history || []).slice(-20)) mine.push([s, s.interns.get(ag.id), ev]);
+    if (s.wait) mine.push([s, s.main, { ...s.wait, k: 'wait' }]);
+    if (snap.ended) mine.push([s, s.main, { k: 'closed', ts: snap.ended }]);
+    items.push(...mine);
+  });
   items.sort((x, y) => (x[2].ts || 0) - (y[2].ts || 0));
-  for (const [s, a, ev] of items.slice(-150)) feed.add(s, a, ev);
+  apart(items.slice(-150), ([s, a, ev]) => feed.add(s, a, ev));
   current = busiestFloor();
   refreshBoard();
   render();
@@ -730,7 +751,8 @@ function onHello(d) {
 }
 
 function onJoin(snap) {
-  const s = addSession(snap);
+  const s = addApart(snap);
+  if (!s) return;
   for (const ev of (snap.history || []).slice(-20)) feed.add(s, s.main, ev);
   if (snap.ended) feed.add(s, s.main, { k: 'closed', ts: snap.ended });
   if (!current) current = s.floor;
@@ -787,7 +809,7 @@ function connect() {
   es.addEventListener('hello', e => { setConn('live', '실시간 · 0.25초 간격'); onHello(JSON.parse(e.data)); });
   es.addEventListener('join', e => onJoin(JSON.parse(e.data)));
   es.addEventListener('leave', e => { const d = JSON.parse(e.data); retireSession(d.sid, d.why, d.max); });
-  es.addEventListener('events', e => { beat(); for (const u of JSON.parse(e.data).updates || []) applyUpdate(u); });
+  es.addEventListener('events', e => { beat(); apart(JSON.parse(e.data).updates, applyUpdate); });
 }
 // 꺼져 있는 동안 다시 해 보는 간격은 30초까지 벌어진다. 사무실을 다시 켜고 탭으로 돌아왔는데 30초 동안 '꺼져 있어요'로
 // 남아 있지 않게, 탭으로 돌아오거나 창을 고르거나 인터넷이 다시 이어지면 기다리지 않고 바로 다시 해 본다

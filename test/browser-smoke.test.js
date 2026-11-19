@@ -84,10 +84,14 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     };
     const js = async expr => {
       const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
-      if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.text);
+      const ex = r.result.exceptionDetails;
+      if (ex) throw new Error((ex.exception && ex.exception.description) || ex.text); // 'Uncaught'만이 아니라 무슨 오류인지
       return r.result.result.value;
     };
     await send('Runtime.enable');
+    // 화면이 연 실시간 연결(EventSource)을 붙잡아 둔다: 망가진 장면을 직접 흘려 넣어 보려고
+    await send('Page.enable');
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: 'window.__es = []; window.EventSource = class extends window.EventSource { constructor(...a) { super(...a); window.__es.push(this); } };' });
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
     await send('Page.navigate', { url });
 
@@ -167,6 +171,23 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '폰 크기에서 정보 카드 열기');
     assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '폰 크기에서 옆으로 넘치지 않는다');
+
+    // 세션 하나를 그리다 오류가 나도 다른 장면은 들어온다 (전에는 같이 온 묶음이 통째로 빠졌고, 첫 장면이면 빌딩이 비었다)
+    const seen = problems.length;
+    const pour = (type, data) => js(`window.__es[window.__es.length - 1].dispatchEvent(new MessageEvent('${type}', { data: ${JSON.stringify(JSON.stringify(data))} }))`);
+    const sid = 'abcdabcd-0000-0000-0000-00000000000a';
+    await pour('events', { updates: [{ sid, events: 5 }, { sid, events: [{ k: 'say', ts: Date.now(), text: '망가진 장면 뒤에도 들어와요', final: true }] }] });
+    await until(() => js(`document.getElementById('feed').textContent.includes('망가진 장면 뒤에도 들어와요')`), 3000, '망가진 장면과 같이 온 장면');
+    await pour('hello', { sessions: [
+      { sid: 'eeeeeeee-0000-0000-0000-00000000000b', session: { project: 'broken', title: '망가진 세션', cwd: '/tmp/broken' }, history: 5 },
+      { sid: 'ffffffff-0000-0000-0000-00000000000c', session: { project: 'blog', title: '글 다듬기', cwd: '/tmp/blog' }, history: [] },
+    ] });
+    const lobby = await until(() => js(`document.getElementById('lobby').textContent`), 3000, '망가진 세션과 같이 온 세션');
+    assert.match(lobby, /글 다듬기/);
+    assert.doesNotMatch(lobby, /망가진 세션/);
+    const broke = problems.splice(seen);
+    assert.equal(broke.length, 2, broke.join('\n'));
+    for (const p of broke) assert.match(p, /^\[세션\] /); // 어느 세션에서 났는지 남긴다
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

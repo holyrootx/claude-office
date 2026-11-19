@@ -204,6 +204,12 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     })()`), 3000, '12층으로 가기');
     assert.equal(seen12, 'yes', '지금 보는 층(12F) 칸이 층 막대 안에 보인다');
     assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '층이 많아도 페이지는 옆으로 넘치지 않는다');
+    // 1200px 창: 위쪽 줄이 빠듯해도 빌딩 제목('12개 층 · 직원 12명')은 다 보이고, 덧붙인 정보(프로젝트·모델)가 먼저 줄어든다
+    // (전에는 덧붙인 정보는 그대로고 제목만 '직원 1…'로 잘리거나 1280px 아래에서는 통째로 사라졌다)
+    await send('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+    await sleep(300);
+    const head = await js(`(() => { const t = document.getElementById('sessTitle'); return t.textContent + (t.scrollWidth > t.clientWidth ? ' (잘림 ' + t.clientWidth + '/' + t.scrollWidth + ')' : ''); })()`);
+    assert.equal(head, '12개 층 · 직원 12명');
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

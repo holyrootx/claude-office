@@ -1,4 +1,5 @@
-// 기록 폴더에 읽을 수 없는 세션 파일(권한이 바뀐 등)이 하나 섞여 있어도 사무실이 통째로 멈추지 않는다.
+// 망가진 기록이 섞여 있어도 사무실이 통째로 멈추지 않는다.
+// 기록 폴더에 읽을 수 없는 세션 파일(권한이 바뀐 등)이 하나 섞여 있을 때:
 // 전에는 그 파일 하나 때문에 세션 목록·업무 일지가 500이었고, 실시간 화면은 첫 장면(hello)이 안 와서 '연결 중…'에 멈췄다.
 // (Windows나 root로 돌리면 chmod로 못 읽게 할 수 없어서 건너뛴다)
 'use strict';
@@ -12,7 +13,7 @@ const path = require('path');
 const skip = process.platform === 'win32' || (process.getuid && process.getuid() === 0) ? '파일을 못 읽게 만들 수 없는 환경이에요' : false;
 const CFG = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-unreadable-'));
 process.env.CLAUDE_CONFIG_DIR = CFG;
-const { scanSessions, describe, journal, Follower } = require('../lib/sessions');
+const { scanSessions, describe, journal, Follower, replayOf } = require('../lib/sessions');
 
 const DIR = path.join(CFG, 'projects', '-tmp-shop');
 const GOOD = path.join(DIR, 'aaaaaaaa-0000-0000-0000-000000000001.jsonl');
@@ -52,4 +53,28 @@ test('읽을 수 없는 세션 파일이 섞여 있어도 세션 목록·업무 
   assert.ok(hello, '첫 장면이 안 왔어요');
   const data = JSON.parse(hello.split('\n').find(l => l.startsWith('data: ')).slice(6));
   assert.deepEqual(data.sessions.map(x => x.sid), ['aaaaaaaa-0000-0000-0000-000000000001']);
+});
+
+test("인턴의 meta.json이 'null'처럼 객체가 아니어도 다시 보기·업무 일지가 된다 (인턴은 종류 없이)", async () => {
+  const sid = 'cccccccc-0000-0000-0000-000000000003';
+  const file = path.join(DIR, sid + '.jsonl');
+  const sub = path.join(DIR, sid, 'subagents');
+  fs.mkdirSync(sub, { recursive: true });
+  const t = new Date(Date.now() - 30000).toISOString();
+  const L = o => JSON.stringify({ cwd: '/tmp/shop', timestamp: t, ...o });
+  fs.writeFileSync(file, [
+    L({ type: 'user', uuid: 'm1', message: { role: 'user', content: '조사해 줘' } }),
+    L({ type: 'assistant', uuid: 'm2', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: '조사' } }] } }),
+  ].join('\n') + '\n');
+  fs.writeFileSync(path.join(sub, 'agent-x1.jsonl'), L({ type: 'user', uuid: 's1', isSidechain: true, agentId: 'x1', message: { role: 'user', content: '찾아' } }) + '\n');
+  fs.writeFileSync(path.join(sub, 'agent-x1.meta.json'), 'null');
+  try {
+    const r = await replayOf(file);
+    assert.deepEqual(r.events.filter(e => e.k === 'agent').map(e => [e.agent, e.type]), [['x1', '']]);
+    const j = await journal(0);
+    assert.ok(j.projects.some(p => p.sessions.some(x => x.id === sid)), '업무 일지에서 그 세션이 빠지지 않는다');
+  } finally {
+    fs.rmSync(file, { force: true });
+    fs.rmSync(path.join(DIR, sid), { recursive: true, force: true });
+  }
 });

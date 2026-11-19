@@ -502,6 +502,7 @@ function renderNow(a, many) {
 }
 
 let floorbarHtml = '';
+let floorbarShown = null; // 층 막대를 마지막으로 맞춰 민 층
 function renderFloorbar() {
   const bar = $('floorbar');
   setHidden(bar, floors.size < 2);
@@ -517,6 +518,18 @@ function renderFloorbar() {
       + `<b>${i + 1}F</b>${esc(floorName(f.key))}<small>${on.length}명</small>${wait ? '<i role="img" aria-label="나를 기다리는 사람이 있어요">🔐</i>' : ''}</button>`;
   }).join('');
   if (html !== floorbarHtml) morph($('floorTabs'), floorbarHtml = html);
+  // 층이 많으면 층 막대가 옆으로 스크롤된다. 지금 보는 층이 바뀌었는데 그 칸이 밀려 안 보이면 막대만 밀어서 보여 준다
+  // (전에는 자동 모드·🔐·로비 줄로 12층에 가도 막대에는 1~7층만 보여서 지금 몇 층인지 알 수 없었다).
+  // 층이 바뀔 때만 미니까 막대를 손으로 밀어 둔 건 그대로 두고, 페이지는 움직이지 않는다
+  if (current !== floorbarShown) {
+    floorbarShown = current;
+    const tab = $('floorTabs').querySelector('.fl.active');
+    if (tab) {
+      const b = bar.getBoundingClientRect(), t = tab.getBoundingClientRect();
+      if (t.left < b.left) bar.scrollLeft -= b.left - t.left + 12;
+      else if (t.right > b.right) bar.scrollLeft += t.right - b.right + 12;
+    }
+  }
 }
 
 let lobbyHtml = '';

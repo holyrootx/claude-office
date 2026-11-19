@@ -188,6 +188,22 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     const broke = problems.splice(seen);
     assert.equal(broke.length, 2, broke.join('\n'));
     for (const p of broke) assert.match(p, /^\[세션\] /); // 어느 세션에서 났는지 남긴다
+
+    // 층이 많아 층 막대가 옆으로 스크롤될 때, 로비 줄로 끝 층에 가면 그 층 칸이 막대 안에 보인다 (폰 크기)
+    await pour('hello', { sessions: Array.from({ length: 12 }, (_, i) => ({
+      sid: `${String(i).padStart(8, '0')}-0000-0000-0000-00000000000d`, history: [],
+      session: { project: `long-project-name-${i + 1}`, title: `일 ${i + 1}`, cwd: `/tmp/p${i + 1}` },
+    })) });
+    await until(() => js(`document.querySelectorAll('#floorTabs .fl').length === 12`), 3000, '층 12개');
+    await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor="/tmp/p12"]').click()`);
+    const seen12 = await until(() => js(`(() => {
+      const bar = document.getElementById('floorbar').getBoundingClientRect(), tab = document.querySelector('#floorTabs .fl.active');
+      if (!tab || !tab.textContent.startsWith('12F')) return '';
+      const t = tab.getBoundingClientRect();
+      return t.left >= bar.left && t.right <= bar.right ? 'yes' : 'no:' + Math.round(t.left) + '~' + Math.round(t.right) + ' / ' + Math.round(bar.right);
+    })()`), 3000, '12층으로 가기');
+    assert.equal(seen12, 'yes', '지금 보는 층(12F) 칸이 층 막대 안에 보인다');
+    assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '층이 많아도 페이지는 옆으로 넘치지 않는다');
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

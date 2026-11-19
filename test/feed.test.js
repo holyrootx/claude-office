@@ -31,6 +31,8 @@ globalThis.document = {
     const li = {
       dataset: {}, classList: classes(), innerHTML: '',
       remove() { const c = li.parent.children; c.splice(c.indexOf(li), 1); },
+      // <time>의 글자만 바꿀 수 있게
+      querySelector: sel => (sel === 'time' ? { set textContent(v) { li.innerHTML = li.innerHTML.replace(/<time>[^<]*<\/time>/, `<time>${v}</time>`); } } : null),
     };
     Object.defineProperty(li, 'className', { set(v) { v.split(' ').forEach(x => x && li.classList.add(x)); } });
     return li;
@@ -169,4 +171,18 @@ test('오늘이 아닌 기록에는 날짜를 붙이고, 오늘 기록은 시각
   assert.match(list.children[0].innerHTML, new RegExp(`^<time>${yesterday.getMonth() + 1}/${yesterday.getDate()} 14:05</time>`));
   feed.add(A.s, A.a, say('지금 한 말'));
   assert.match(list.children[0].innerHTML, /^<time>\d{2}:\d{2}:\d{2}<\/time>/);
+});
+
+test('켜 둔 채 자정을 넘기면 어제가 된 줄에도 날짜를 붙인다 (전에는 시각만 남아 밤 23:15 줄이 오늘 것처럼 보였다)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('a');
+  const late = new Date(); late.setHours(23, 15, 0, 0); // 오늘 밤 23:15에 한 말을, 다음 날 아침에 본다
+  feed.add(A.s, A.a, { ...say('밤에 한 말'), ts: late.getTime() });
+  assert.match(list.children[0].innerHTML, /^<time>23:15:00<\/time>/);
+  feed.redate(Date.now()); // 아직 같은 날: 그대로
+  assert.match(list.children[0].innerHTML, /^<time>23:15:00<\/time>/);
+  const tomorrow = new Date(late); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(8, 0, 0, 0);
+  feed.redate(tomorrow.getTime());
+  assert.match(list.children[0].innerHTML, new RegExp(`^<time>${late.getMonth() + 1}/${late.getDate()} 23:15</time>`));
 });

@@ -83,8 +83,9 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
     // 오늘이 아닌 기록에는 날짜도 ('11/17 23:15'): 며칠째 이어지는 세션을 열면 어제 기록이 섞여 와서,
     // 시각만 보면 오늘 아침 09:00 줄 아래의 14:00 줄이 언제 것인지 알 수 없었다
     const at = ev.at || ev.ts || Date.now();
-    const old = new Date(at).toDateString() !== new Date().toDateString();
-    li.innerHTML = `<time>${stamp(at, ev.atDate || old)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
+    const dated = !!(ev.atDate || new Date(at).toDateString() !== new Date().toDateString());
+    li.innerHTML = `<time>${stamp(at, dated)}</time><span class="ic">${ic}</span><div class="tx">${who}${tx}</div>`;
+    if (!dated) li.dataset.at = String(at); // 자정을 넘기면 날짜를 붙이려고 (redate)
     if (ev.k === 'tool') items.set(ev.id, li);
     list.prepend(li);
     const before = fails;
@@ -96,6 +97,21 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
       last.remove();
     }
     if (fails !== before) onFails(fails);
+  }
+  // 화면을 켜 둔 채 자정을 넘기면 어제가 된 줄에도 날짜를 붙인다. 전에는 시각만 남아서, 아침에 보면
+  // 밤 23:15 줄이 오늘 것처럼 보였다 (그 아래 오늘 줄들과 구분되지 않았다). 1분마다 불린다
+  let today = new Date().toDateString();
+  function redate(now = Date.now()) {
+    const day = new Date(now).toDateString();
+    if (day === today) return;
+    today = day;
+    for (const li of list.children) {
+      const at = Number(li.dataset.at);
+      if (!at || new Date(at).toDateString() === day) continue;
+      const t = li.querySelector('time');
+      if (t) t.textContent = stamp(at, true);
+      delete li.dataset.at;
+    }
   }
   function clear() {
     items.clear();
@@ -111,5 +127,5 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
   function failsOnly(on) {
     list.classList.toggle('fails', !!on);
   }
-  return { add, clear, only, failsOnly, failCount: () => fails };
+  return { add, clear, only, failsOnly, redate, failCount: () => fails };
 }

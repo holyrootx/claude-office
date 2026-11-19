@@ -873,8 +873,8 @@ async function refreshToday() {
   if (!chip.hidden) chip.textContent = `📓 오늘 ${fmtWorked(t.workedMs)} · 도구 ${t.tools}`;
 }
 $('todayChip').addEventListener('click', () => journal.open(0));
-setInterval(refreshToday, 60000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshToday(); });
+setInterval(() => { refreshToday(); feed.redate(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshToday(); feed.redate(); } });
 
 // 켜 둔 사이에 사무실 프로그램이 바뀌었으면(git pull 등) 다시 켜거나 새로 고치라고 알려 준다. 닫으면 다음에 또 바뀔 때까지 숨긴다
 let firstUi = 0, codeShown = '', codeClosed = '';

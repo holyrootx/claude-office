@@ -123,6 +123,32 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     const first = await theme();
     for (let i = 0; i < 3; i++) await js(`document.getElementById('themeBtn').click()`);
     assert.equal(await theme(), first);
+    // 글자 대비: 밝은·어두운 화면 모두 둘레(막대·패널·카드)의 글자가 배경과 4.5:1(큰 글자 3:1) 넘는지 (WCAG AA).
+    // 색은 캔버스에 한 점 칠해 읽어서 color-mix()·color(srgb …)도 그대로 잰다. 사무실 그림 안은 빼고 본다
+    const lowContrast = () => js(`(() => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+      const cx = cv.getContext('2d', { willReadFrequently: true });
+      const rgba = c => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); return [...cx.getImageData(0, 0, 1, 1).data]; };
+      const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+      const bgOf = el => { for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c[3] > 230) return c; } return rgba(getComputedStyle(document.body).backgroundColor); };
+      const bad = [];
+      for (const el of document.querySelectorAll('body *')) {
+        if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' || !el.getClientRects().length || el.closest('#stage, .stage-wrap, svg, [hidden], .sr-only')) continue;
+        const fg = rgba(cs.color), bg = bgOf(el);
+        if (fg[3] < 200) continue; // 일부러 흐리게 한 글(비활성 등)은 빼고
+        const a = lum(fg), b = lum(bg), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        const big = parseFloat(cs.fontSize) >= 18.66 || (parseFloat(cs.fontSize) >= 14 && Number(cs.fontWeight) >= 700);
+        if (ratio < (big ? 3 : 4.5)) bad.push((el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + String(el.className).split(' ')[0]) + ' ' + ratio.toFixed(2) + ' "' + el.textContent.trim().slice(0, 16) + '"');
+      }
+      return bad;
+    })()`);
+    for (const scheme of ['light', 'dark']) {
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] });
+      await sleep(300);
+      assert.deepEqual(await lowContrast(), [], `${scheme === 'light' ? '밝은' : '어두운'} 화면에서 대비가 낮은 글자`);
+    }
     // 폰 크기에서도 로비 줄 → 정보 카드
     await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
     await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);

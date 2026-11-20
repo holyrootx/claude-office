@@ -49,6 +49,8 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         known.set(ev.id, ev);
         if (known.size > 1500) known.delete(known.keys().next().value);
         tx = `${ev.git ? '<b class="git-mark">git</b> ' : ''}<b>${esc(ev.tool)}</b> ${esc(ev.label || '')}<span class="st"></span><small>${esc(r.name)}${ev.detail && ev.detail !== ev.label ? ' · ' + esc(ev.detail) : ''}</small>`;
+        // 줄에 마우스를 올리면 실제 도구 이름 (MCP는 보여 주는 이름과 달라서, 방 바꾸기 설정에 쓸 이름을 알 수 없었다)
+        if (ev.name && ev.name !== ev.tool) full = `도구 이름: ${ev.name}`;
         break;
       }
       case 'result': {

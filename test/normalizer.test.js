@@ -98,6 +98,10 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   // 데스크톱 앱의 도구는 그룹(turn·session·session_mgmt) 대신 Desktop으로
   assert.equal(displayName('mcp__ccd_session__start_session'), 'Desktop.start_session');
   assert.equal(displayName('mcp__ccd_turn__update_plan'), 'Desktop.update_plan');
+  // 플러그인이 띄운 MCP 서버(plugin_<플러그인>_<서버>)는 서버 이름만 (전에는 'plugin_figma_figma.get_code')
+  assert.equal(displayName('mcp__plugin_figma_figma__get_code'), 'figma.get_code');
+  assert.equal(displayName('mcp__plugin_playwright_playwright__browser_click'), 'playwright.browser_click');
+  assert.equal(displayName('mcp__plugin_linear_linear-server__list_issues'), 'linear-server.list_issues');
   assert.equal(displayName('mcp__ccd_session_mgmt__send_message'), 'Desktop.send_message');
   assert.equal(displayName('mcp__claude-in-chrome__browser_batch'), 'Chrome.batch'); // 데스크톱 앱 브라우저와 같은 꼴로
   assert.equal(displayName('mcp__claude-in-chrome__tabs_context_mcp'), 'Chrome.tabs_context');

@@ -210,3 +210,13 @@ test('키보드: 활동 기록의 Tab 자리는 맨 위의 보이는 줄 하나�
   feed.clear();
   assert.deepEqual(stops(), []);
 });
+
+test('MCP 도구 줄에 마우스를 올리면 실제 도구 이름 (방 바꾸기 설정에 쓰는 이름)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('a');
+  feed.add(A.s, A.a, { k: 'tool', id: 'm1', name: 'mcp__plugin_github_github__create_issue', tool: 'github.create_issue', room: 'search', label: '버그', ts: Date.now() });
+  assert.equal(list.children[0].title, '도구 이름: mcp__plugin_github_github__create_issue');
+  feed.add(A.s, A.a, { k: 'tool', id: 'r1', name: 'Read', tool: 'Read', room: 'library', label: 'a.ts', ts: Date.now() });
+  assert.equal(list.children[0].title, undefined); // 보여 주는 이름과 같으면 붙이지 않는다
+});

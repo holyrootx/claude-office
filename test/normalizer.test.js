@@ -607,6 +607,17 @@ test("연결 오류는 'Connection error.' 대신 왜 끊겼는지 (connection.c
   assert.equal(apiErrorText({ error: { message: 'Connection error.', formatted: "Can't reach the API server — check your internet or DNS (ENOTFOUND)", connection: { code: 'ENOTFOUND' } }, retryAttempt: 1, maxRetries: 10 }), '인터넷 연결이 끊겼어요 · 다시 시도 1/10');
   assert.equal(apiErrorText({ error: { message: 'Connection error.', formatted: 'Connection lost while your computer was asleep', connection: { code: 'StreamSuspended' } }, retryAttempt: 2, maxRetries: 10 }), '컴퓨터가 잠들어서 연결이 끊겼어요 · 다시 시도 2/10');
   assert.equal(apiErrorText({ error: { message: 'Connection error.' } }), '인터넷 연결이 끊겼어요'); // 까닭이 안 적혀 있어도
+  // 자주 보는 400대 오류도 우리말로 (전에는 '400 {"type":"error","error":{…' JSON이 통째로 보였다)
+  const j = (code, type, message) => ({ content: `${code} ${JSON.stringify({ type: 'error', error: { type, message } })}` });
+  assert.equal(apiErrorText(j(400, 'invalid_request_error', 'prompt is too long: 210000 tokens > 200000 maximum')), '대화가 너무 길어요 (압축하거나 새로 시작해야 해요) (400)');
+  assert.equal(apiErrorText(j(400, 'invalid_request_error', 'Your credit balance is too low to access the Anthropic API.')), 'API 크레딧이 모자라요 (400)');
+  assert.equal(apiErrorText(j(400, 'invalid_request_error', 'messages.3.content.0.image.source.base64: image exceeds 5 MB maximum')), '이미지가 너무 커요 (400)');
+  assert.equal(apiErrorText({ content: '413 Request Entity Too Large' }), '보낸 내용이 너무 커요 (413)');
+  assert.equal(apiErrorText({ content: 'Request timed out.' }), '응답이 너무 오래 걸려서 끊겼어요');
+  assert.equal(apiErrorText(j(403, 'permission_error', 'Your organization has been disabled.')), '권한이 없어요: Your organization has been disabled. (403)');
+  assert.equal(apiErrorText(j(404, 'not_found_error', 'model: claude-foo')), '찾을 수 없어요: model: claude-foo (404)');
+  // 모르는 JSON 오류는 message만
+  assert.equal(apiErrorText(j(400, 'invalid_request_error', 'tools.0.name: String should match pattern')), 'tools.0.name: String should match pattern (400)');
 });
 
 test('Claude Code가 직접 내는 실패 안내(자동 모드·권한 취소·파일이 바뀜 등)는 무슨 일인지 우리말로', () => {

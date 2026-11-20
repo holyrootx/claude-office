@@ -52,10 +52,18 @@ export function hooksLine(h) {
   return `${icon} ${esc(h.text)}.${cmd}`;
 }
 
+// 도구가 가는 방 설정(claude-office.json) 한 줄: 파일이 없으면 '', 틀린 데가 있으면 무엇이 틀렸는지
+export function roomsLine(r) {
+  if (!r || !r.exists) return '';
+  if (r.problem) return `⚠ 방 설정 <code>${esc(r.file)}</code>: ${esc(r.problem)}`;
+  return `🗂 방 설정 ${r.count}개를 쓰고 있어요 (<code>${esc(r.file)}</code>)`;
+}
+
 export function helpHtml() {
   const rooms = ROOM_IDS.map(id => [`${ROOMS[id].icon} ${ROOMS[id].name}`, ROOMS[id].sub]);
   return `
     <p id="helpHooks" class="help-hooks" hidden></p>
+    <p id="helpRooms" class="help-hooks" hidden></p>
     <h3>방</h3><dl>${rows(rooms)}</dl>
     <p class="help-tip">도구에 따라 캐릭터가 이 방들을 오가요. 처음 보는 도구는 이름을 보고 방을 골라요.</p>
     <h3>캐릭터 모습</h3><dl>${rows(LOOKS)}</dl>

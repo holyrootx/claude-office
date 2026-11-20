@@ -2,7 +2,7 @@
 import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
-import { helpHtml, hooksLine } from './js/help.js';
+import { helpHtml, hooksLine, roomsLine } from './js/help.js';
 import { boardWindow, boardSize } from './js/board.js';
 import { W, H, ROOMS, ROOM_IDS, buildFloor } from './js/scene.js';
 import { Actor } from './js/actor.js';
@@ -959,6 +959,10 @@ function openHelp() {
     p.innerHTML = hooksLine(h);
     p.hidden = !p.innerHTML;
     p.classList.toggle('bad', h.state !== 'on');
+    const r = $('helpRooms');
+    r.innerHTML = roomsLine(h.rooms);
+    r.hidden = !r.innerHTML;
+    r.classList.toggle('bad', !!(h.rooms && h.rooms.problem));
   }).catch(() => {});
   // 지금 켜져 있는 사무실의 버전 (새 버전과 견줘 볼 때)
   fetch('/api/health').then(r => r.json()).then(h => { $('helpVersion').textContent = h.version ? `지금 쓰는 버전: Claude 사무실 ${h.version}` : ''; }).catch(() => {});

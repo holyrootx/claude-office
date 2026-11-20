@@ -185,7 +185,8 @@ function handle(req, res) {
 
   if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
   // hooks가 켜져 있는지 (도움말 창 맨 위에 보여 준다)
-  if (url.pathname === '/api/hooks') return json(res, hooksInfo(CLAUDE_DIR, __dirname, hookHeard, true));
+  // hooks 상태와 함께 도구가 가는 방 설정 상태도 (도움말 창 맨 위에 보여 준다)
+  if (url.pathname === '/api/hooks') return json(res, { ...hooksInfo(CLAUDE_DIR, __dirname, hookHeard, true), rooms: roomRules.status() });
 
   if (url.pathname === '/api/sessions') {
     const all = scanSessions();

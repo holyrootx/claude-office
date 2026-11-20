@@ -60,6 +60,9 @@ test('내 방 설정 파일이 있으면 그 규칙을 먼저 쓴다', () => {
   assert.equal(roomOf('mcp__linear__list_issues'), 'meeting');
   assert.equal(roomOf('Bash'), 'library');
   assert.equal(roomOf('mcp__x__y'), 'search');
+  // 무엇이 틀렸는지 도움말 창에도 보여 줄 수 있게 (뒤에서 켰거나 플러그인이면 터미널을 못 본다)
+  assert.match(roomRules.status().problem, /모르는 방이라 건너뛴 규칙이 있어요 → mcp__x__\*/);
+  assert.equal(roomRules.status().count, 3);
   assert.equal(roomOf('mcp__githubx__a'), 'search'); // 패턴은 이름 전체가 맞아야 한다
   // 화면에 보이는 이름으로 적어도 된다 (대소문자 무시): 플러그인 MCP·브라우저 도구
   fs.writeFileSync(ROOM_CONFIG, JSON.stringify({ rooms: { 'figma.*': '개발실', 'Chrome.navigate': 'desk' } }));
@@ -72,8 +75,10 @@ test('내 방 설정 파일이 있으면 그 규칙을 먼저 쓴다', () => {
   roomRules.mtime = -2;
   roomRules.get(true);
   assert.equal(roomOf('mcp__github__create_pull_request'), 'search'); // 읽지 못하면 기본 규칙
+  assert.match(roomRules.status().problem, /^파일을 읽지 못해서 기본 방으로 보내요 \(/);
   fs.unlinkSync(ROOM_CONFIG);
   roomRules.get(true);
+  assert.deepEqual({ ...roomRules.status(), file: '' }, { file: '', exists: false, count: 0, problem: '' });
   assert.equal(roomOf('Bash'), 'server');
 });
 

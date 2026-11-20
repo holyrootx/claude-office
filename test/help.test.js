@@ -48,3 +48,11 @@ test('도움말 맨 위 hooks 한 줄: 꺼져 있으면 무엇을 실행할지, 
   assert.equal(hooksLine({ state: 'unknown', text: '', cmd: '' }), '');
   assert.equal(hooksLine(null), '');
 });
+
+test('도구가 가는 방 설정 줄: 파일이 없으면 안 보이고, 쓰고 있으면 몇 개인지, 틀렸으면 무엇이 틀렸는지', async () => {
+  const { roomsLine } = await import('../public/js/help.js');
+  assert.equal(roomsLine({ exists: false }), '');
+  assert.equal(roomsLine(undefined), '');
+  assert.equal(roomsLine({ exists: true, file: '/u/.claude/claude-office.json', count: 2, problem: '' }), '🗂 방 설정 2개를 쓰고 있어요 (<code>/u/.claude/claude-office.json</code>)');
+  assert.match(roomsLine({ exists: true, file: '/u/x.json', count: 0, problem: "모르는 <방> 'x'" }), /^⚠ 방 설정 <code>\/u\/x\.json<\/code>: 모르는 &lt;방&gt; &#39;x&#39;$/);
+});

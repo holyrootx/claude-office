@@ -236,6 +236,8 @@ test('hooks 상태: 설정에 없으면 꺼져 있다며 넣는 명령을 알려
   const h = JSON.parse((await get('/api/hooks')).body);
   assert.equal(h.state, 'off');
   assert.equal(h.cmd, `node ${JSON.stringify(path.join(ROOT, 'server.js'))} --install-hooks`, '화면에서는 어느 폴더에서 쳐도 되게 전체 경로로');
+  // 도구가 가는 방 설정 상태도 같이 (도움말 창용): 설정 파일이 없으면 없다고
+  assert.deepEqual(h.rooms, { file: path.join(CFG, 'claude-office.json'), exists: false, count: 0, problem: '' });
 });
 
 test('빌딩: 최근 30분 안에 움직인 세션만, 일하는 인턴과 함께 보낸다', async () => {

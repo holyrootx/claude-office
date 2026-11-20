@@ -114,6 +114,11 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(displayName('mcp__plugin_figma_figma__get_code'), 'figma.get_code');
   assert.equal(displayName('mcp__plugin_playwright_playwright__browser_click'), 'playwright.browser_click');
   assert.equal(displayName('mcp__plugin_linear_linear-server__list_issues'), 'linear-server.list_issues');
+  // claude.ai 커넥터를 CLI에서 쓰면 claude_ai_<이름> (전에는 'claude_ai_Claude_Docs.update')
+  assert.equal(displayName('mcp__claude_ai_Claude_Docs__update'), 'Docs.update');
+  assert.equal(displayName('mcp__claude_ai_Google_Drive__search_files'), 'Drive.search_files');
+  assert.equal(displayName('mcp__claude_ai_Gmail__gmail_search'), 'Gmail.search');
+  assert.equal(displayName('mcp__claude_ai_Some_New_App__do_it'), 'Some New App.do_it');
   assert.equal(displayName('mcp__ccd_session_mgmt__send_message'), 'Desktop.send_message');
   assert.equal(displayName('mcp__claude-in-chrome__browser_batch'), 'Chrome.batch'); // 데스크톱 앱 브라우저와 같은 꼴로
   assert.equal(displayName('mcp__claude-in-chrome__tabs_context_mcp'), 'Chrome.tabs_context');

@@ -16,12 +16,34 @@ test('아는 옵션과 그 값은 통과한다', () => {
 });
 
 test('모르는 옵션·= 붙여 쓰기·숫자가 아닌 값은 무엇이 틀렸는지 알려 준다', () => {
-  assert.equal(argProblem(['--prot', '5000']), '모르는 옵션이에요: --prot');
+  assert.equal(argProblem(['--prot', '5000']), '모르는 옵션이에요: --prot (--port 말인가요?)');
   assert.equal(argProblem(['--port=5000']), '--port 5000처럼 띄어 써 주세요');
   assert.match(argProblem(['--port']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--port', 'abc']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--port', '70000']), /--port 뒤에 포트 번호를/);
   assert.match(argProblem(['--active', '--no-open']), /--active 뒤에 분을/);
+});
+
+test('오타는 가까운 옵션을 알려 주고, 아는 옵션에 =를 붙였으면 띄어 쓰라고 한다 (전에는 둘 다 \'모르는 옵션\'이라고만 했다)', () => {
+  const { nearOption } = require('../lib/config');
+  for (const [typo, want] of [['--PORT', '--port'], ['--jornal', '--journal'], ['--jounral', '--journal'], ['--backgruond', '--background'], ['--noopen', '--no-open'],
+    ['--install-hook', '--install-hooks'], ['--uninstall', '--uninstall-hooks'], ['--h', '--help'], ['--prot', '--port']]) {
+    assert.equal(nearOption(typo), want, typo);
+  }
+  // 가까운 게 없거나 여럿이면 짐작하지 않는다 (--p는 --port·--project·--print-hooks)
+  for (const a of ['--verbose', '--p', '--', '--hooks']) assert.equal(nearOption(a), null, a);
+  assert.equal(argProblem(['--jornal', '어제']), '모르는 옵션이에요: --jornal (--journal 말인가요?)');
+  assert.equal(argProblem(['--verbose']), '모르는 옵션이에요: --verbose');
+  assert.equal(argProblem(['--journal=어제']), '--journal 어제처럼 띄어 써 주세요');
+  assert.equal(argProblem(['--journal', '--project=blog']), '--project blog처럼 띄어 써 주세요');
+  assert.equal(argProblem(['--active=60']), '--active 60처럼 띄어 써 주세요');
+  assert.equal(argProblem(['--port=']), '--port 뒤에 =를 붙이지 말고 띄어 써 주세요');
+  assert.equal(argProblem(['--no-open=1']), '--no-open 뒤에는 값을 붙이지 않아요 (--no-open만 적어 주세요)');
+  assert.equal(argProblem(['--prot=5000']), '모르는 옵션이에요: --prot=5000 (--port 말인가요?)');
+  // 메모 앱·메신저에서 붙여 넣으면 --가 —(긴 대시) 하나로 바뀌곤 한다
+  assert.match(argProblem(['\u2014port', '4800']), /--port처럼 -를 두 개 적어 주세요/);
+  assert.match(argProblem(['\u2013journal']), /--journal처럼 -를 두 개/);
+  assert.equal(argProblem(['journal']), '모르는 말이에요: journal (--journal처럼 앞에 --를 붙여 주세요)');
 });
 
 test('옵션 없이 홀로 적은 말은 조용히 넘기지 않는다 (전에는 4800이 기본 포트로, journal이 사무실 켜기로 넘어갔다)', () => {

@@ -209,7 +209,7 @@ Claude가 파일을 읽으면 자료실로, 코드를 고치면 개발실로 캐
 | `--print-hooks` | 같은 hooks 설정을 출력만 해요. 직접 합치고 싶을 때 써요. |
 | `--uninstall-hooks` | 넣어 둔 사무실 hooks만 빼요. 다른 hooks와 설정은 그대로 두고, 전 내용은 `settings.json.before-claude-office`로 남겨요. |
 | `--version` | 버전을 보여 줘요. |
-| `--help` | 도움말을 보여 줘요. 모르는 옵션이나 숫자가 아닌 포트(`--prot 5000`, `--port=5000`)를 쓰면 켜지 않고 무엇이 틀렸는지 알려 줘요. |
+| `--help` | 도움말을 보여 줘요. 모르는 옵션이나 숫자가 아닌 포트(`--prot 5000`, `--port=5000`)를 쓰면 켜지 않고 무엇이 틀렸는지 알려 줘요. 오타면 가까운 옵션도요(`--prot` → `--port` 말인가요?). |
 
 ```bash
 node server.js --port 4800 --no-open

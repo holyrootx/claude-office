@@ -110,6 +110,10 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.querySelector('#card [data-act="replay"]').click()`);
     await until(() => js(`!document.getElementById('replayBar').hidden`), 10000, '다시 보기 시작');
     assert.match(await js(`document.getElementById('replayBar').getAttribute('aria-valuetext') || ''`), /^\d+% · /);
+    // 빠르기: 10× → 30× → 100×(훑어보기) → 5× → 10×
+    const speeds = [];
+    for (let i = 0; i < 4; i++) { await js(`document.getElementById('speedBtn').click()`); speeds.push(await js(`document.getElementById('speedBtn').textContent`)); }
+    assert.deepEqual(speeds, ['30×', '100×', '5×', '10×']);
     await js(`document.getElementById('replayBtn').click()`); // 다시 보기 끝내고 실시간으로
     await until(() => js(`document.getElementById('replayBar').hidden`), 5000, '다시 보기 끝내기');
 

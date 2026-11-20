@@ -2,7 +2,9 @@
 // 캐릭터 연출이 밀리면 기다려 준다. 진행 막대를 누르면 그 시점의 사무실로 건너뛴다.
 import { $, esc, clip, stamp, scheduleName } from './util.js';
 
-const SPEEDS = [5, 10, 30];
+// 100×는 훑어보기: 캐릭터 연출을 기다리지 않고 밀린 장면은 건너뛴다(캐릭터가 바로 그 자리로). 몇 달째 이어진 세션은
+// 30×로도 한 시간 넘게 걸렸다 (연출을 기다려서 실제로는 절반쯤 빠르기)
+const SPEEDS = [5, 10, 30, 100];
 
 // 다시 볼 이벤트 중 일을 시킨 자리: 🙋 내 말, ⏰ 예약 작업, 📨 다른 세션이 보낸 말 (인턴이 받은 말은 빼고)
 // → [{ i: 이벤트 순서, cls: ''|'schedule'|'peer', tip }]
@@ -30,7 +32,7 @@ export function nextMark(marks, here, dir) {
   return to == null ? null : to;
 }
 // 빠르기마다 캐릭터에게 미리 쌓아 둘 장면 수: 많이 쌓일수록 캐릭터가 빨리 감는다
-const QUEUE = { 5: 1, 10: 3, 30: 12 };
+const QUEUE = { 5: 1, 10: 3, 30: 12, 100: 60 }; // 캐릭터는 40개 넘게 밀리면 앞 장면을 건너뛴다(actor.fastForward)
 
 // office: 화면 쪽에서 빌려 쓰는 것들
 //   pickFile() 다시 볼 세션 파일, beforeStart() 데모·실시간 연결 끄기, hello(d) 사무실 다시 세우기,

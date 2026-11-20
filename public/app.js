@@ -315,6 +315,7 @@ function retireSession(sid, why, max) {
   const s = sessions.get(sid);
   if (!s) return;
   if (!(why === 'ended' && s.main.ended)) feed.add(s, s.main, { k: 'leave', ts: Date.now(), why, max }); // 닫았다는 🚪 줄을 이미 남겼으면 또 쓰지 않는다
+  alerts.waitDone(sid);
   if (s.floor !== current) {
     removeSession(sid);
     render();
@@ -382,6 +383,7 @@ function setEnded(s, ts, log = true) {
 const waitId = (sid, w) => `${sid}|${w.ts}`;
 // 권한 대기는 기다리는 캐릭터(인턴이면 그 인턴)에게 준다. 새 대기면 그 층으로 엘리베이터를 탄다.
 function setWait(s, w) {
+  if (s.wait && (!w || w.ts !== s.wait.ts)) alerts.waitDone(s.sid);
   s.wait = w || null;
   const target = w ? (w.on && s.interns.get(w.on)) || s.main : null;
   for (const a of [s.main, ...s.interns.values()]) {
@@ -768,6 +770,7 @@ function onJoin(snap) {
   for (const ev of (snap.history || []).slice(-20)) feed.add(s, s.main, ev);
   if (snap.ended) feed.add(s, s.main, { k: 'closed', ts: snap.ended });
   if (!current) current = s.floor;
+  if (!s.wait) alerts.waitDone(s.sid); // 다시 이어 붙는 사이 허락·답을 했다
   if (s.wait) {
     // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우
     if (Date.now() - s.wait.ts < 60000) tellWait(s, s.wait);

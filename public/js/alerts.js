@@ -10,6 +10,8 @@ export function createAlerts({ toast, show, quiet }) {
   let notifyOn = false;
   try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장소 없음 */ }
   const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
+  // 세션마다 아직 떠 있는 기다림 알림: 터미널에서 허락·답을 하고 나면 닫는다 (전에는 '🔐 기다려요'가 알림 센터에 그대로 남았다)
+  const waitNotes = new Map();
 
   // w: 권한·입력을 기다리는 알림이면 그 기다림 (인턴이 기다리면 그 인턴의 카드를 연다)
   function notify(s, title, body, w = null) {
@@ -18,7 +20,9 @@ export function createAlerts({ toast, show, quiet }) {
     // 같은 세션 알림은 tag로 하나만 남긴다
     let n;
     try {
-      n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, icon: faviconUrl(0) });
+      // renotify: 같은 tag로 바꿔 띄워도 다시 울리게 (없으면 Chrome은 앞 알림이 알림 센터에 남아 있을 때 소리·배너 없이
+      // 내용만 바꿔서, 응답 완료 알림을 안 지운 사이 그 세션이 허락을 기다려도 모르고 지나갔다)
+      n = new Notification(title, { body: `${s.main.name} · ${clip(body, 120)}`, tag: 'claude-office-' + s.sid, renotify: true, icon: faviconUrl(0) });
     } catch {
       // 안드로이드 Chrome처럼 허락은 받았어도 페이지가 바로 알림을 만들 수 없는 브라우저 (전에는 여기서 던진 오류에
       // 그 묶음의 장면이 통째로 빠져서 🔐 기다림·말풍선이 안 떴다). 알림을 끄고 버튼에 까닭을 남긴다
@@ -32,6 +36,16 @@ export function createAlerts({ toast, show, quiet }) {
       show(s, w);
       n.close();
     };
+    if (w) waitNotes.set(s.sid, n);
+    else waitNotes.delete(s.sid); // 같은 tag라 앞 알림은 이미 바뀌었다
+    n.onclose = () => { if (waitNotes.get(s.sid) === n) waitNotes.delete(s.sid); };
+  }
+  // 그 세션이 더는 기다리지 않을 때 (허락·답을 했거나 세션이 빌딩을 나갔을 때) 떠 있는 기다림 알림을 닫는다
+  function waitDone(sid) {
+    const n = waitNotes.get(sid);
+    if (!n) return;
+    waitNotes.delete(sid);
+    try { n.close(); } catch { /* 이미 닫힘 */ }
   }
   function notifyWait(s, w) {
     const what = w.tool ? `${w.tool} ${w.label || ''}` : w.text || '';
@@ -82,5 +96,5 @@ export function createAlerts({ toast, show, quiet }) {
 
   $('notifyBtn').addEventListener('click', toggleNotify);
   renderNotifyBtn();
-  return { notify, notifyWait, setFavicon };
+  return { notify, notifyWait, waitDone, setFavicon };
 }

@@ -15,9 +15,13 @@ function browser({ permission = 'granted', ask = 'granted', make } = {}) {
   class Notification {
     constructor(title, opts) {
       if (make) make();
-      made.push({ title, ...opts });
+      this.rec = { title, ...opts, closed: false };
+      made.push(this.rec);
     }
-    close() {}
+    close() {
+      this.rec.closed = true;
+      if (this.onclose) this.onclose();
+    }
   }
   Notification.permission = permission;
   Notification.requestPermission = () => { Notification.permission = ask; return Promise.resolve(ask); };
@@ -94,4 +98,26 @@ test('옛 Safari처럼 허락을 콜백으로만 답해도 켜진다', async () 
   createAlerts({ toast() {}, show() {}, quiet: () => false });
   await b.btn.click();
   assert.equal(b.btn.textContent, '🔔');
+});
+
+test('같은 세션 알림을 또 띄우면 다시 울리고, 허락·답을 하고 나면 떠 있던 기다림 알림을 닫는다', async () => {
+  const { btn, made } = browser();
+  const al = createAlerts({ toast() {}, show() {}, quiet: () => false });
+  await btn.click();
+  // 같은 tag로 바꿔 띄워도 renotify가 있어야 Chrome이 소리·배너를 다시 낸다 (전에는 응답 완료 알림이 남아 있으면 조용히 바뀌었다)
+  al.notify(s, '✅ 응답 완료', '다 했어요');
+  al.notifyWait(s, { kind: 'permission', tool: 'Bash', label: 'git push' });
+  assert.deepEqual(made.map(n => [n.title, n.tag, n.renotify]), [['✅ 응답 완료', 'claude-office-sid-1', true], ['🔐 실행 허락을 기다려요', 'claude-office-sid-1', true]]);
+  al.waitDone('sid-1');
+  assert.deepEqual(made.map(n => n.closed), [false, true]);
+  al.waitDone('sid-1'); // 두 번 불러도 괜찮다
+  // 기다림 뒤에 응답 완료가 오면 그 알림은 기다림이 아니라서 닫지 않는다
+  al.notifyWait(s, { kind: 'input', text: '어느 쪽으로 할까요?' });
+  al.notify(s, '✅ 응답 완료', '골랐어요');
+  al.waitDone('sid-1');
+  assert.deepEqual(made.slice(2).map(n => [n.title, n.closed]), [['🔐 입력을 기다려요', false], ['✅ 응답 완료', false]]);
+  // 다른 세션의 기다림은 건드리지 않는다
+  al.notifyWait({ sid: 'sid-2', main: { name: '배포' } }, { kind: 'permission', tool: 'Bash', label: 'npm publish' });
+  al.waitDone('sid-1');
+  assert.equal(made.at(-1).closed, false);
 });

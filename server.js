@@ -510,6 +510,13 @@ function printHooks() {
 // '10월 31일'처럼 띄어 쓴 날도 받으려고, 다음 --옵션 전까지를 이어 붙인다
 const journalDay = () => argWords('--journal') || '';
 
+// 기록 폴더가 아예 없으면 '일한 기록이 없어요'만으로는 다른 곳에 기록이 있다는 걸 모른다 (화면의 첫 안내와 같은 말).
+// 마크다운(--md)은 그대로 붙여 넣게 두고 이 말은 stderr로
+function noteMissingRoot() {
+  if (fs.existsSync(PROJECTS)) return;
+  console.error(`  ℹ 세션 기록 폴더가 아직 없어요: ${PROJECTS}\n    Claude Code를 한 번 실행하면 생겨요. 다른 곳에서 claude를 쓰고 있다면(WSL, 다른 계정, CLAUDE_CONFIG_DIR로 바꾼 폴더) 그곳에서 실행해 주세요.\n`);
+}
+
 async function printJournal() {
   const v = journalDay();
   const project = argWords('--project') || ''; // --project blog: 그 프로젝트만 (--project my app처럼 빈칸이 든 이름도)
@@ -518,6 +525,7 @@ async function printJournal() {
   if (week) {
     const days = await weekDays(week, project);
     console.log(args.includes('--md') ? weekMarkdown(days) : weekText(days));
+    noteMissingRoot();
     return;
   }
   // 이번 달·지난 달·10월: 그 달을 주마다·프로젝트마다
@@ -525,6 +533,7 @@ async function printJournal() {
   if (month) {
     const days = await weekDays(month, project);
     console.log(args.includes('--md') ? monthMarkdown(days, month.month) : monthText(days, month.month));
+    noteMissingRoot();
     return;
   }
   // 앞날·너무 먼 옛날은 빈 일지('이날은 일한 기록이 없어요') 대신 그렇다고 알려 준다
@@ -543,6 +552,7 @@ async function printJournal() {
   }
   const j = await journal(day, project);
   console.log(args.includes('--md') ? journalMarkdown(j) : journalText(j));
+  noteMissingRoot();
 }
 
 if (require.main === module) {

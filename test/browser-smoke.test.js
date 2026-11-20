@@ -177,6 +177,28 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '폰 크기에서 정보 카드 열기');
     assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '폰 크기에서 옆으로 넘치지 않는다');
+    // 폰 크기 도움말: 한글 낱말 가운데서 줄이 바뀌지 않는다 (전에는 '누 / 르기', '이름 / 을'처럼 끊겼다)
+    await js(`document.getElementById('card').hidden = true`);
+    await key('?');
+    await until(() => js(`!document.getElementById('help').hidden`), 3000, '폰 크기 도움말');
+    const midWord = await js(`(() => {
+      const out = [], H = /[\\uac00-\\ud7a3]/, r = document.createRange();
+      const w = document.createTreeWalker(document.getElementById('helpBox'), NodeFilter.SHOW_TEXT);
+      for (let n; (n = w.nextNode());) {
+        const t = n.textContent;
+        let top = null;
+        for (let i = 0; i < t.length; i++) {
+          r.setStart(n, i); r.setEnd(n, i + 1);
+          const rect = r.getClientRects()[0];
+          if (!rect) continue;
+          if (top !== null && rect.top > top + 2 && H.test(t[i]) && H.test(t[i - 1])) out.push(t.slice(Math.max(0, i - 6), i) + '|' + t.slice(i, i + 4));
+          top = rect.top;
+        }
+      }
+      return out;
+    })()`);
+    assert.deepEqual(midWord, [], '낱말 가운데서 바뀐 줄');
+    await key('Escape');
 
     // 세션 하나를 그리다 오류가 나도 다른 장면은 들어온다 (전에는 같이 온 묶음이 통째로 빠졌고, 첫 장면이면 빌딩이 비었다)
     const seen = problems.length;

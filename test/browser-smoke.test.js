@@ -279,6 +279,12 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
       return out;
     })()`);
     assert.deepEqual(spills, [], '긴 주소가 상자 밖으로 삐져나간 곳');
+    // 아무도 없는데 기록 폴더도 없으면: 빈 폴더와 다르게 '아직 없는 폴더'라고, 다른 곳(WSL 등)에서 켜 보라고
+    await pour('hello', { sessions: [], root: '/home/me/.claude/projects', rootMissing: true });
+    await until(() => js(`!document.getElementById('empty').hidden && !document.getElementById('emptyWhy').hidden`), 3000, '빈 빌딩 안내');
+    assert.match(await js(`document.getElementById('empty').textContent`), /찾는 위치: \/home\/me\/.claude\/projects[\s\S]*이 폴더가 아직 없어요[\s\S]*WSL/);
+    await pour('hello', { sessions: [], root: '/home/me/.claude/projects', rootMissing: false });
+    await until(() => js(`document.getElementById('emptyWhy').hidden`), 3000, '폴더는 있으면 그 말은 빼기');
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

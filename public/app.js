@@ -739,6 +739,8 @@ function onHello(d) {
   if (viewMode === 'demo' || viewMode === 'replay') $('todayChip').hidden = true;
   else refreshToday();
   $('emptyRoot').textContent = d.root ? `찾는 위치: ${d.root}` : '';
+  // 폴더가 아예 없으면 빈 폴더와 다르게 알려 준다 (Windows에서 켰는데 Claude Code는 WSL에서 쓰는 경우처럼)
+  $('emptyWhy').hidden = !d.rootMissing;
   const added = (d.sessions || []).filter(snap => addApart(snap));
   // 활동 기록: 모든 세션의 지난 기록을 시간 순으로 섞어서
   const items = [];

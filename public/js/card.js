@@ -32,7 +32,7 @@ function sinceText(started, now) {
 function internNums(a, now = Date.now()) {
   if (!a.firstTs) return '';
   const sec = Math.max(0, Math.round(((a.doneTs || now) - a.firstTs) / 1000));
-  const time = a.doneTs ? `${sec >= 60 ? Math.round(sec / 60) + '분' : sec + '초'} 일했어요` : secs(sec);
+  const time = a.doneTs ? `${sec >= 60 ? fmtWorked(sec * 1000) : sec + '초'} 일했어요` : secs(sec); // 한 시간이 넘으면 '1시간 35분'
   return `<div class="card-nums">도구 ${a.toolCount || 0}번 · ${time}</div>`;
 }
 

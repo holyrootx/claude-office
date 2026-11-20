@@ -158,3 +158,14 @@ test('이어 하기 명령의 꼴은 브라우저가 아니라 폴더 경로로:
   assert.equal(resumeCommand('/home/me/shop', 'abc-1'), "cd '/home/me/shop' && claude --resume abc-1");
   assert.equal(resumeCommand('C:\\code\\shop', 'abc-1'), "cd -LiteralPath 'C:\\code\\shop'; claude --resume abc-1");
 });
+
+test("지금 하는 일을 얼마나 했는지: 한 시간이 넘으면 '2시간 5분째', 하루가 넘으면 '1일 3시간째' (전에는 '347분 12초째')", async () => {
+  const { secs } = await import('../public/js/util.js');
+  assert.equal(secs(12), '12초째');
+  assert.equal(secs(200), '3분 20초째');
+  assert.equal(secs(3599), '59분 59초째');
+  assert.equal(secs(3600), '1시간째');
+  assert.equal(secs(347 * 60 + 12), '5시간 47분째');
+  assert.equal(secs(86400 + 3 * 3600 + 59), '1일 3시간째');
+  assert.equal(secs(-3), '0초째'); // 시계가 조금 어긋나도
+});

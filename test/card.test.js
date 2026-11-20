@@ -75,6 +75,8 @@ test('인턴 카드: 누구의 인턴인지와 얼마나 일했는지, 버튼·�
   assert.doesNotMatch(html, /card-acts|💵/);
   // 일을 마쳤으면 걸린 시간으로
   assert.match(cardHtml({ ...intern, doneTs: intern.firstTs + 300000 }, session(), { live: true }), /도구 12번 · 5분 일했어요/);
+  // 한 시간 넘게 일한 인턴은 '95분'이 아니라 '1시간 35분'
+  assert.match(cardHtml({ ...intern, doneTs: intern.firstTs + 95 * 60000 }, session(), { live: true }), /도구 12번 · 1시간 35분 일했어요/);
 });
 
 test("실패가 있으면 '실패 N'을 누르면 활동 기록의 실패만 보기로 간다 (0이면 그냥 글자)", () => {

@@ -101,6 +101,8 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
     if (v.hours.week) hrs.style.setProperty('--n', v.hours.n);
     else hrs.style.removeProperty('--n');
     hrs.setAttribute('aria-label', v.hours.label);
+    // 하루 막대는 그림 하나로(요약을 읽게), 주·달 막대는 누를 수 있는 칸들의 묶음으로
+    hrs.setAttribute('role', v.hours.week ? 'group' : 'img');
     hrs.hidden = v.hours.hidden;
     hrs.innerHTML = v.hours.html;
     $('journalList').innerHTML = v.list;

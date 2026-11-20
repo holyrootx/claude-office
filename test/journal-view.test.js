@@ -59,7 +59,8 @@ test('한 달: 주 막대는 이번 주를 0으로 그 주를 가리킨다', () 
   assert.deepEqual([...v.hours.html.matchAll(/<span[^>]*data-week="(-?\d+)"/g)].map(m => Number(m[1])), [-2, -1, 0]);
   assert.match(v.hours.html, /<b>11\/1<\/b>/); // 하루뿐인 주는 날짜 하나
   assert.match(v.hours.html, /<b>11\/2~<wbr>11\/8<\/b>/); // 좁은 칸에서는 ~ 다음에서 줄을 바꾼다
-  assert.match(v.hours.html, /aria-label="11\/2~11\/8 주간 일지 보기"/);
+  // 화면 읽기 프로그램: 막대 칸의 이름에 일한 시간도 (전에는 '11/2~11/8 주간 일지 보기'만)
+  assert.match(v.hours.html, /aria-label="11\/2~11\/8 1분 · 1일 · 도구 1번, 주간 일지 보기"/);
   assert.equal(v.hours.n, 3);
   assert.equal(v.list, '<p class="jp-empty">이번 달에는 아직 일한 기록이 없어요</p>');
 });
@@ -72,4 +73,15 @@ test("이름이 같은 다른 폴더의 프로젝트는 위 폴더 이름을 붙
   assert.match(v.list, /class="jp-only" data-project="app" data-cwd="\/Users\/me\/work\/app"/);
   const w = weekView({ title: '주간', today: true, days: [], worked: 1, totals: {}, projects: [{ ...work, days: 1 }, { ...side, days: 1 }] }, { now: NOW });
   assert.deepEqual([...w.list.matchAll(/<h3>([^<]+) <small>/g)].map(m => m[1]), ['app · work', 'app · side']);
+});
+
+test('화면 읽기 프로그램: 하루 막대는 일한 시간대를 요약해 읽고, 한 주 요일 칸은 일한 시간까지 읽는다', () => {
+  const hours = Array(24).fill(0); hours[9] = 3; hours[14] = 1;
+  const day = dayView({ since: at(11, 15), today: true, hours, totals: { workedMs: 60000 }, projects: [proj('blog')] }, { now: NOW });
+  assert.equal(day.hours.label, '시간대별 도구 사용: 9시 3번, 14시 1번');
+  assert.equal(dayView({ since: at(11, 15), today: true, hours: Array(24).fill(0), totals: {}, projects: [] }, { now: NOW }).hours.label, '시간대별 도구 사용: 없음');
+  const days = [{ since: at(11, 9), workedMs: 52 * 60000 + 3600000, tools: 393 }, { since: at(11, 10), workedMs: 0, tools: 0 }];
+  const week = weekView({ title: '주간', today: true, days, worked: 1, totals: {}, projects: [] }, { now: NOW });
+  assert.match(week.hours.html, /aria-label="11\/9 \(월\) 1시간 52분 · 도구 393번, 그날 일지 보기"/);
+  assert.match(week.hours.html, /aria-label="11\/10 \(화\) 쉼, 그날 일지 보기"/);
 });

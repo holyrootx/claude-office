@@ -47,7 +47,9 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
       ['내 메시지', t.prompts], ...(t.scheduled ? [['예약 작업', t.scheduled]] : []), ['도구', t.tools], ['실패', t.errors], ['인턴', t.interns], ['출력 토큰', fmtTokens(t.tokens || 0)],
     ]),
     hours: {
-      week: false, n: 24, label: '시간대별 도구 사용', hidden: !hours.some(Boolean),
+      // 화면 읽기 프로그램용 요약: 막대 24개는 마우스를 올려야 보이는 글(title)뿐이라 읽어 주지 않았다
+      week: false, n: 24, hidden: !hours.some(Boolean),
+      label: `시간대별 도구 사용: ${hours.map((n, h) => (n ? `${h}시 ${n}번` : '')).filter(Boolean).join(', ') || '없음'}`,
       html: hours.map((n, h) => `<i class="${h === nowH ? 'now' : ''}" style="--h:${Math.round((n / maxH) * 100)}%" title="${h}시 · 도구 ${n}번"></i>`).join('')
         + [0, 6, 12, 18].map(h => `<span style="--c:${h + 1}">${h}시</span>`).join(''),
     },
@@ -89,7 +91,8 @@ export function weekView(j, { week = 0, project = '', now = Date.now() } = {}) {
     hours: {
       week: true, n: 7, label: '날마다 일한 시간', hidden: false,
       html: j.days.map(d => `<i class="${d.since === today ? 'now' : ''}" data-day="${off(d)}" style="--h:${Math.round((d.workedMs / maxD) * 100)}%" title="${label(d)} · ${d.workedMs ? `${fmtWorked(d.workedMs)} · 도구 ${d.tools}번` : '쉼'} · 누르면 그날 일지"></i>`).join('')
-        + j.days.map((d, i) => `<span style="--c:${i + 1}" data-day="${off(d)}" role="button" tabindex="0" aria-label="${label(d)} 일지 보기"><b>${WEEKDAY[new Date(d.since).getDay()]}</b>${d.workedMs ? fmtWorked(d.workedMs) : '·'}</span>`).join(''),
+        // aria-label이 안의 글을 덮어쓰니 일한 시간도 같이 (전에는 '11/16 (월) 일지 보기'만 읽어서 얼마나 일했는지 몰랐다)
+        + j.days.map((d, i) => `<span style="--c:${i + 1}" data-day="${off(d)}" role="button" tabindex="0" aria-label="${label(d)} ${d.workedMs ? `${fmtWorked(d.workedMs)} · 도구 ${d.tools}번` : '쉼'}, 그날 일지 보기"><b>${WEEKDAY[new Date(d.since).getDay()]}</b>${d.workedMs ? fmtWorked(d.workedMs) : '·'}</span>`).join(''),
     },
     list: rangeProjects(j, j.today ? '이번 주에는 아직 일한 기록이 없어요' : '이 주에는 일한 기록이 없어요', project),
   };
@@ -110,7 +113,7 @@ export function monthView(j, { month = 0, project = '', now = Date.now() } = {})
       week: true, n: j.weeks.length, label: '주마다 일한 시간', hidden: false,
       html: j.weeks.map(w => `<i class="${weekOff(w) === 0 ? 'now' : ''}" data-week="${weekOff(w)}" style="--h:${Math.round((w.workedMs / maxW) * 100)}%" title="${span(w)} · ${w.workedMs ? `${fmtWorked(w.workedMs)} · ${w.worked}일 · 도구 ${w.tools}번` : '쉼'} · 누르면 그 주 일지"></i>`).join('')
         // 좁은 칸에서는 '10/5~' 다음에서 줄을 바꿀 수 있게 (<wbr>, 안 그러면 막대가 옆으로 넘친다)
-        + j.weeks.map((w, i) => `<span style="--c:${i + 1}" data-week="${weekOff(w)}" role="button" tabindex="0" aria-label="${span(w)} 주간 일지 보기"><b>${span(w).replace('~', '~<wbr>')}</b>${w.workedMs ? fmtWorked(w.workedMs) : '·'}</span>`).join(''),
+        + j.weeks.map((w, i) => `<span style="--c:${i + 1}" data-week="${weekOff(w)}" role="button" tabindex="0" aria-label="${span(w)} ${w.workedMs ? `${fmtWorked(w.workedMs)} · ${w.worked}일 · 도구 ${w.tools}번` : '쉼'}, 주간 일지 보기"><b>${span(w).replace('~', '~<wbr>')}</b>${w.workedMs ? fmtWorked(w.workedMs) : '·'}</span>`).join(''),
     },
     list: rangeProjects(j, j.today ? '이번 달에는 아직 일한 기록이 없어요' : '이 달에는 일한 기록이 없어요', project),
   };

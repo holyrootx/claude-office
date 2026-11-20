@@ -121,6 +121,8 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     const title = () => js(`document.getElementById('journal').hidden ? '' : document.getElementById('journalTitle').textContent`);
     await key('j');
     assert.match(await until(title, 8000, '업무 일지 열기'), /업무 일지/);
+    // 시간대 막대는 화면 읽기 프로그램이 그림 하나로 요약해 읽는다 (일한 시간대가 이름에)
+    assert.match(await js(`(e => e.getAttribute('role') + ' ' + e.getAttribute('aria-label'))(document.getElementById('journalHours'))`), /^img 시간대별 도구 사용: \d+시 \d+번/);
     await key('w');
     await until(async () => /주간 업무 일지/.test(await title()), 8000, '주간 일지');
     await key('m');

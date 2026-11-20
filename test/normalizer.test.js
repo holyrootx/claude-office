@@ -450,6 +450,17 @@ test('사용 한도가 풀리는 때(resetAt)를 기록 시각 뒤로 처음 돌
   assert.equal(at(morning, "You've hit your session limit · resets 1:40pm (Asia/Seoul)"), new Date(2026, 10, 2, 13, 40).getTime()); // 같은 날
   assert.equal(at(morning, 'Claude AI usage limit reached|1793563200'), 1793563200 * 1000);
   assert.equal(at(morning, "You've hit your weekly limit"), 0); // 언제 풀리는지 모르면 0
+  // 주간 한도처럼 며칠 뒤에 풀리면: 요일·날짜도 알아본다 (전에는 'Mon 9am'이 영어 그대로, 풀리는 때를 몰랐다)
+  // 2026-11-02는 월요일
+  const sat = new Date(2026, 10, 7, 2, 0).getTime(); // 토요일 새벽 2시
+  assert.equal(at(sat, "You've hit your weekly limit · resets Mon 9am (Asia/Seoul)"), new Date(2026, 10, 9, 9, 0).getTime());
+  assert.equal(at(sat, 'Weekly limit reached ∙ resets Sat 2am'), new Date(2026, 10, 14, 2, 0).getTime()); // 바로 그 시각이면 다음 주
+  assert.equal(at(sat, "You've reached your weekly usage limit · resets Nov 24, 9am"), new Date(2026, 10, 24, 9, 0).getTime());
+  assert.equal(at(new Date(2026, 11, 30, 12, 0).getTime(), "You've hit your limit · resets Jan 2 at 10:30am"), new Date(2027, 0, 2, 10, 30).getTime()); // 해를 넘겨
+  const label = text => new Normalizer().line(JSON.stringify({ type: 'assistant', timestamp: new Date(sat).toISOString(), message: { model: '<synthetic>', content: [{ type: 'text', text }] } }))[0].resets;
+  assert.equal(label("You've hit your weekly limit · resets Mon 9am (Asia/Seoul)"), '월요일 오전 9:00');
+  assert.equal(label("You've reached your weekly usage limit · resets Nov 24, 9am"), '11월 24일 오전 9:00');
+  assert.equal(label('5-hour limit reached ∙ resets 7pm'), '오후 7:00');
 });
 
 test('세션 중에 하위 폴더로 옮겨 다녀도 시작한 폴더를 찾는다 (기록 폴더 이름과 맞는 위 폴더)', () => {

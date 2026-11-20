@@ -61,6 +61,13 @@ test('내 방 설정 파일이 있으면 그 규칙을 먼저 쓴다', () => {
   assert.equal(roomOf('Bash'), 'library');
   assert.equal(roomOf('mcp__x__y'), 'search');
   assert.equal(roomOf('mcp__githubx__a'), 'search'); // 패턴은 이름 전체가 맞아야 한다
+  // 화면에 보이는 이름으로 적어도 된다 (대소문자 무시): 플러그인 MCP·브라우저 도구
+  fs.writeFileSync(ROOM_CONFIG, JSON.stringify({ rooms: { 'figma.*': '개발실', 'Chrome.navigate': 'desk' } }));
+  roomRules.mtime = -3;
+  roomRules.get(true);
+  assert.equal(roomOf('mcp__plugin_figma_figma__get_code'), 'dev');
+  assert.equal(roomOf('mcp__claude-in-chrome__navigate'), 'desk');
+  assert.equal(roomOf('mcp__claude-in-chrome__computer'), 'search'); // 맞지 않으면 기본 규칙
   fs.writeFileSync(ROOM_CONFIG, '{ 망가진 json');
   roomRules.mtime = -2;
   roomRules.get(true);

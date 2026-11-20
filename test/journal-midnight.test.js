@@ -105,8 +105,9 @@ test("'이 프로젝트만'으로 고르면 이름이 꼭 같은 프로젝트만
   const j = createJournal({ toast() {}, onPick() {}, copy: async () => true, now: () => clock });
   j.open(0);
   await settle();
-  const only = { dataset: { project: 'blog' } };
+  const only = { dataset: { project: 'blog', cwd: '/Users/me/work/blog' } };
   $('journal').fire('click', { target: { closest: s => (s === '.jp-only' ? only : null) }, currentTarget: $('journal') });
   await settle();
-  assert.equal(asked.at(-1), 'day=0&project=blog&exact=1');
+  // 그 폴더의 것만 (이름이 같은 다른 폴더의 blog는 빼고)
+  assert.equal(asked.at(-1), 'day=0&project=blog&exact=1&cwd=%2FUsers%2Fme%2Fwork%2Fblog');
 });

@@ -63,3 +63,13 @@ test('한 달: 주 막대는 이번 주를 0으로 그 주를 가리킨다', () 
   assert.equal(v.hours.n, 3);
   assert.equal(v.list, '<p class="jp-empty">이번 달에는 아직 일한 기록이 없어요</p>');
 });
+
+test("이름이 같은 다른 폴더의 프로젝트는 위 폴더 이름을 붙여 구별하고('app · work'), '이 프로젝트만'에 폴더도 싣는다", () => {
+  const work = proj('app', { cwd: '/Users/me/work/app' }), side = proj('app', { cwd: '/Users/me/side/app' });
+  const j = { since: at(11, 15), today: true, hours: Array(24).fill(0), totals: { workedMs: 0 }, projects: [work, side, proj('blog', { cwd: '/Users/me/blog' })] };
+  const v = dayView(j, { now: NOW });
+  assert.deepEqual([...v.list.matchAll(/<h3>([^<]+) <small>/g)].map(m => m[1]), ['app · work', 'app · side', 'blog']);
+  assert.match(v.list, /class="jp-only" data-project="app" data-cwd="\/Users\/me\/work\/app"/);
+  const w = weekView({ title: '주간', today: true, days: [], worked: 1, totals: {}, projects: [{ ...work, days: 1 }, { ...side, days: 1 }] }, { now: NOW });
+  assert.deepEqual([...w.list.matchAll(/<h3>([^<]+) <small>/g)].map(m => m[1]), ['app · work', 'app · side']);
+});

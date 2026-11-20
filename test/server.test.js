@@ -384,6 +384,9 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   assert.deepEqual(JSON.parse((await get('/api/journal?week=0&project=sho&exact=1')).body).projects, []);
   assert.deepEqual(JSON.parse((await get('/api/journal?day=0&project=Shop&exact=1')).body).projects.map(p => p.project), ['shop']);
   assert.match((await get('/api/journal?day=0&format=md&exact=1&project=sho')).body, /'sho' 프로젝트에서 오늘은 아직 일한 기록이 없어요/);
+  // 폴더(cwd)도 주면 그 폴더의 프로젝트만 (이름이 같은 다른 폴더의 프로젝트는 빼고)
+  assert.deepEqual(JSON.parse((await get('/api/journal?week=0&exact=1&project=shop&cwd=' + encodeURIComponent('/tmp/shop'))).body).projects.map(p => p.project), ['shop']);
+  assert.deepEqual(JSON.parse((await get('/api/journal?week=0&exact=1&project=shop&cwd=' + encodeURIComponent('/elsewhere/shop'))).body).projects, []);
   // 한 달: 주마다 묶은 막대와 날 수
   const m = JSON.parse((await get('/api/journal?month=0')).body);
   assert.match(m.title, /^\d{4}년 \d{1,2}월 업무 일지 \(/);

@@ -12,6 +12,7 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
   let lastWeek = 0; // 마지막으로 본 주 (요일 막대를 눌러 하루로 갔다가 '주간'을 누르면 그 주로 돌아간다)
   let lastMonth = 0; // 마지막으로 본 달 (같은 식으로 '월간'을 누르면 그 달로)
   let project = ''; // '이 프로젝트만'으로 고른 프로젝트 ('' = 전부)
+  let projectCwd = ''; // 그 프로젝트의 폴더 (이름이 같은 다른 폴더의 프로젝트와 섞지 않게)
   let viewSince = 0; // 보고 있는 날·주·달의 처음 (세션을 누르면 여기부터 다시 본다)
   // day·week·month·lastWeek·lastMonth는 '오늘에서 떨어진 수'라서, 그 '오늘'이 언제였는지 들고 있다가
   // 자정을 넘긴 뒤 ◀ ▶·주간·월간을 누르면 그만큼 옮긴다 (전에는 열어 둔 채 날이 바뀌면 ◀가 보던 날을 또 보여 주고 ▶는 하루를 건너뛰었다)
@@ -29,7 +30,7 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
   }
   // 화면에서 고른 프로젝트는 '이 프로젝트만' 버튼으로 고른 것이라 이름이 꼭 같은 것만 (exact)
   const query = () => (month != null ? `month=${month}` : week != null ? `week=${week}` : `day=${day}`)
-    + (project ? `&project=${encodeURIComponent(project)}&exact=1` : '');
+    + (project ? `&project=${encodeURIComponent(project)}&exact=1` : '') + (project && projectCwd ? `&cwd=${encodeURIComponent(projectCwd)}` : '');
   let asked = 0; // ◀를 빨리 여러 번 눌렀을 때 마지막 것만 그린다
   let loading = false; // 받아 오는 중 (창은 아직 안 떴지만 Esc·J로 그만둘 수 있게 열린 셈 친다)
   async function openJournal(want = 0, wantWeek = null, wantMonth = null) {
@@ -169,6 +170,7 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
     lastWeek = 0;
     lastMonth = 0;
     project = '';
+    projectCwd = '';
     return openJournal(d);
   };
   $('journalBtn').addEventListener('click', () => openFresh(0));
@@ -200,6 +202,7 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
     const clear = e.target.closest('.jp-clear');
     if (only || clear) {
       project = only ? only.dataset.project : '';
+      projectCwd = only ? only.dataset.cwd || '' : '';
       reanchor();
       return openJournal(day, week, month);
     }

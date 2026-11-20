@@ -15,7 +15,14 @@ const roomsHtml = rooms => {
 const numsHtml = p => `<div class="jp-nums">메시지 ${p.prompts}${p.scheduled ? ` · 예약 작업 ${p.scheduled}` : ''} · 도구 ${p.tools}${p.errors ? ` · 실패 ${p.errors}` : ''}${p.interns ? ` · 인턴 ${p.interns}명` : ''}${p.tokens ? ` · 출력 토큰 ${fmtTokens(p.tokens)}` : ''}</div>`;
 const sessionLi = (s, hidden = false) => `<li data-file="${esc(s.file)}" tabindex="0" role="button"${hidden ? ' hidden' : ''} title="누르면 지금 보는 날·주·달의 처음부터 다시 봐요"><span>⏪ ${esc(clip(s.title, 44))}</span><time>${fmtWorked(s.workedMs)}</time></li>`;
 // 프로젝트 이름 옆 '이 프로젝트만' (둘 이상이고 아직 안 골랐을 때), 골랐으면 제목 옆 '✕ blog만'으로 풀기
-const onlyBtn = (p, many, project) => (many && !project ? ` <button type="button" class="jp-only" data-project="${esc(p.project)}" title="이 프로젝트만 모아 봐요 (📋 복사도 이 프로젝트만)">이 프로젝트만</button>` : '');
+// 폴더(cwd)를 같이 실어서, 이름이 같은 다른 폴더의 프로젝트는 섞지 않는다
+const onlyBtn = (p, many, project) => (many && !project ? ` <button type="button" class="jp-only" data-project="${esc(p.project)}" data-cwd="${esc(p.cwd || '')}" title="이 프로젝트만 모아 봐요 (📋 복사도 이 프로젝트만)">이 프로젝트만</button>` : '');
+// 프로젝트 이름: 이름이 같은 다른 폴더의 프로젝트가 있으면 바로 위 폴더 이름을 붙여 구별한다 (빌딩의 층 이름과 같이 'app · work')
+const nameOf = (p, list) => {
+  if (!list.some(o => o !== p && o.project === p.project)) return p.project;
+  const parent = String(p.cwd || '').split(/[\\/]/).filter(Boolean).slice(-2, -1)[0];
+  return parent ? `${p.project} · ${parent}` : p.project;
+};
 const clearBtn = project => (project ? `<button type="button" class="jp-clear" title="모든 프로젝트 다시 보기">✕ ${esc(project)}만</button>` : '');
 const midnight = t => new Date(t).setHours(0, 0, 0, 0);
 // 프로젝트 줄의 시각: 처음과 마지막이 같은 분이면(잠깐 한 일) '09:05 ~ 09:05' 대신 '09:05'
@@ -45,7 +52,7 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
         + [0, 6, 12, 18].map(h => `<span style="--c:${h + 1}">${h}시</span>`).join(''),
     },
     list: j.projects.length ? j.projects.map(p =>
-      `<section class="jp"><h3>${esc(p.project)} <small>${hmSpan(p.first, p.last)} · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, many, project)}</h3>`
+      `<section class="jp"><h3>${esc(nameOf(p, j.projects))} <small>${hmSpan(p.first, p.last)} · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, many, project)}</h3>`
         + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.map(sessionLi).join('')}</ul></section>`).join('')
       : `<p class="jp-empty">${project ? `'${esc(project)}'에서 ` : ''}${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`,
   };
@@ -62,7 +69,7 @@ const rangeTotals = (j, days) => {
 const rangeProjects = (j, empty, project) => (j.projects.length ? j.projects.map(p => {
   const rest = p.sessions.slice(8);
   const more = rest.length ? `<li class="more"><button type="button" class="jp-more" aria-expanded="false">그 밖에 세션 ${rest.length}개 더 보기</button></li>` : '';
-  return `<section class="jp"><h3>${esc(p.project)} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, j.projects.length > 1, project)}</h3>`
+  return `<section class="jp"><h3>${esc(nameOf(p, j.projects))} <small>${p.days}일 · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, j.projects.length > 1, project)}</h3>`
     + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.slice(0, 8).map(s => sessionLi(s)).join('')}${rest.map(s => sessionLi(s, true)).join('')}${more}</ul></section>`;
 }).join('') : `<p class="jp-empty">${empty}</p>`);
 

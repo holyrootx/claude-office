@@ -188,3 +188,12 @@ test("일지 글: 도구를 썼는데 반올림해서 0분이면 '1분 미만'",
   assert.match(journalMarkdown(once), /### shop\n09:05 · /);
   assert.match(journalText(once), /shop {2}09:05 · /);
 });
+
+test('이름이 같은 다른 폴더의 프로젝트: 보고에서도 위 폴더 이름으로 구별하고, 한 주로 모을 때 섞지 않고 폴더를 남긴다', () => {
+  const R = require('../lib/report');
+  const P = (name, cwd) => ({ project: name, cwd, first: 0, last: 0, workedMs: 60000, prompts: 1, tools: 1, errors: 0, interns: 0, tokens: 0, rooms: { library: 0, dev: 0, server: 0, search: 0, meeting: 0, desk: 0 }, sessions: [] });
+  const j = { since: Date.now(), today: true, hours: Array(24).fill(0), totals: { workedMs: 120000, projects: 2, sessions: 2, prompts: 2, tools: 2, errors: 0, interns: 0, tokens: 0 }, projects: [P('app', '/Users/me/work/app'), P('app', '/Users/me/side/app'), P('blog', '/Users/me/blog')] };
+  assert.deepEqual(R.journalMarkdown(j).split('\n').filter(l => l.startsWith('### ')), ['### app · work', '### app · side', '### blog']);
+  const w = R.weekSummary([j, j]);
+  assert.deepEqual(w.projects.map(p => [p.project, p.cwd, p.days]), [['app', '/Users/me/work/app', 2], ['app', '/Users/me/side/app', 2], ['blog', '/Users/me/blog', 2]]);
+});

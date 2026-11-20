@@ -46,7 +46,7 @@ if (args.includes('--help') || args.includes('-h')) {
                          직접 정하면 그 포트만 써요. 환경 변수 CLAUDE_OFFICE_PORT로도 돼요)
     --no-open            브라우저를 자동으로 열지 않기
     --background         터미널 창 없이 뒤에서 켜기 (이미 켜져 있으면 화면만 열기,
-                         켜져 있는 게 예전 버전이면 끄고 새 버전으로)
+                         켜져 있는 게 예전 버전이거나 켠 뒤로 코드가 바뀌었으면 끄고 다시)
     --stop               뒤에서 켜 둔 사무실 끄기
     --active <분>        빌딩에 머무는 시간 (기본 30분: 그동안 조용하면 퇴근, 다시 움직이면 출근)
 
@@ -183,7 +183,8 @@ function handle(req, res) {
   try { url = new URL(req.url, 'http://localhost'); } catch { res.writeHead(400); return res.end(); }
   if (req.method === 'POST') return handlePost(req, res, url.pathname);
 
-  if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid });
+  // root·stamp: 어느 폴더의 사무실이 언제 코드를 읽어 켜졌는지 (--background가 git pull로 바뀐 코드를 알아보게)
+  if (url.pathname === '/api/health') return json(res, { app: 'claude-office', version: VERSION, pid: process.pid, root: __dirname, stamp: SERVER_STAMP });
   // hooks가 켜져 있는지 (도움말 창 맨 위에 보여 준다)
   // hooks 상태와 함께 도구가 가는 방 설정 상태도 (도움말 창 맨 위에 보여 준다)
   if (url.pathname === '/api/hooks') return json(res, { ...hooksInfo(CLAUDE_DIR, __dirname, hookHeard, true), rooms: roomRules.status() });
@@ -433,14 +434,20 @@ function logTail(n = 6) {
 async function startBackground() {
   const found = await findRunning();
   let samePort = 0;
-  if (found && runtime.older(found.version, VERSION)) {
+  // 같은 폴더의 사무실인데 켠 뒤로 코드가 바뀌었으면(git pull 등, 버전 숫자는 그대로일 수 있다) 그것도 예전 것으로 본다.
+  // 전에는 버전 숫자만 견줘서 '이미 켜져 있어요'로 예전 코드가 계속 돌았다 (뒤에서 켜면 Ctrl+C할 터미널도 없다)
+  const olderVersion = found && runtime.older(found.version, VERSION);
+  const olderCode = found && !olderVersion && found.root === __dirname && Number(found.stamp) > 0 && found.stamp < SERVER_STAMP;
+  if (olderVersion || olderCode) {
     samePort = await stopOlder(found);
-    if (samePort) console.log(`  🔄 켜져 있던 사무실이 예전 버전(${found.version})이라 끄고 새 버전(${VERSION})으로 다시 켤게요.`);
+    if (samePort && olderVersion) console.log(`  🔄 켜져 있던 사무실이 예전 버전(${found.version})이라 끄고 새 버전(${VERSION})으로 다시 켤게요.`);
+    else if (samePort) console.log('  🔄 켜져 있던 사무실이 켠 뒤로 바뀐 코드를 아직 몰라서(git pull 등) 끄고 다시 켤게요.');
   }
   if (found && !samePort) {
     const url = `http://localhost:${found.port}`;
     console.log(`  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
-    if (runtime.older(found.version, VERSION)) console.log(`     켜져 있는 건 예전 버전(${found.version})이에요. 새 버전(${VERSION})으로 바꾸려면 그 사무실을 끄고 다시 켜 주세요.`);
+    if (olderVersion) console.log(`     켜져 있는 건 예전 버전(${found.version})이에요. 새 버전(${VERSION})으로 바꾸려면 그 사무실을 끄고 다시 켜 주세요.`);
+    else if (olderCode) console.log('     켜져 있는 건 바뀌기 전 코드예요. 바뀐 코드로 켜려면 그 사무실을 끄고 다시 켜 주세요.');
     if (OPEN_BROWSER) openBrowser(url);
     return;
   }

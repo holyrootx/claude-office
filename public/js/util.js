@@ -205,7 +205,7 @@ export function resumeCommand(cwd, sid, win = isWinPath(cwd)) {
 // → { kind: 'restart'|'reload'|'', text }
 export function codeNotice(code, firstUi) {
   if (!code) return { kind: '', text: '' };
-  if (code.restart) return { kind: 'restart', text: '🔄 사무실 프로그램이 바뀌었어요. 사무실을 끄고 다시 켜야 다 적용돼요 (켠 터미널에서 Ctrl+C 뒤 다시 실행, 플러그인이면 /office:stop 뒤 /office:open)' };
+  if (code.restart) return { kind: 'restart', text: '🔄 사무실 프로그램이 바뀌었어요. 사무실을 끄고 다시 켜야 다 적용돼요 (켠 터미널에서 Ctrl+C 뒤 다시 실행, 뒤에서 켰다면 --background로 한 번 더 켜면 알아서 바꿔 켜요, 플러그인이면 /office:open)' };
   if (firstUi && code.ui && code.ui !== firstUi) return { kind: 'reload', text: '🔄 화면이 새로 바뀌었어요. 새로 고치면 적용돼요' };
   return { kind: '', text: '' };
 }

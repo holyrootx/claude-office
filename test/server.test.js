@@ -931,6 +931,46 @@ test('켜기·끄기: 같은 포트로 다시 켜면 이미 켜져 있다고 하
   assert.ok(Date.now() - t0 < 1500, '꺼져 있으면 hook은 바로 끝난다');
 });
 
+test('뒤에서 켤 때 같은 폴더의 사무실이 켠 뒤로 바뀐 코드를 모르면(git pull, 버전은 그대로) 끄고 다시 켠다', async () => {
+  const runtime = require('../lib/runtime');
+  const token = 'same-version-token';
+  const version = require('../package.json').version;
+  let health = {}, stopped = false;
+  const fake = http.createServer((req, res) => {
+    res.setHeader('Connection', 'close');
+    if (req.url === '/api/health') return res.end(JSON.stringify({ app: 'claude-office', version, pid: process.pid, ...health }));
+    if (req.method === 'POST' && req.url === '/api/shutdown' && req.headers['x-office-token'] === token) {
+      stopped = true;
+      res.end('bye');
+      return fake.close();
+    }
+    res.writeHead(404);
+    res.end();
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const port = fake.address().port;
+  fs.writeFileSync(ENV.CLAUDE_OFFICE_RUNTIME, JSON.stringify({ pid: process.pid, port, token, version }), { mode: 0o600 });
+  const run = (...a) => new Promise((resolve, reject) => execFile(process.execPath, [path.join(ROOT, 'server.js'), ...a], { env: ENV, timeout: LIMIT }, (e, out) => (e ? reject(e) : resolve(out))));
+  try {
+    health = { root: ROOT, stamp: Date.now() + 3600000 }; // 코드를 읽은 뒤로 바뀐 게 없으면 그대로
+    assert.match(await run('--background'), /이미 켜져/);
+    health = { root: '/some/other/claude-office', stamp: 1 }; // 다른 폴더의 사무실이면 견주지 않는다
+    assert.match(await run('--background'), /이미 켜져/);
+    assert.equal(stopped, false);
+    health = { root: ROOT, stamp: 1 }; // 이 폴더의 코드가 그 뒤로 바뀌었다
+    const out = await run('--background');
+    assert.match(out, /켠 뒤로 바뀐 코드를 아직 몰라서\(git pull 등\) 끄고 다시 켤게요/);
+    assert.match(out, new RegExp(`뒤에서 켰어요 → http://localhost:${port}`));
+    assert.ok(stopped);
+    const now = await runtime.health(port);
+    assert.equal(now.root, ROOT);
+    assert.ok(now.stamp > 1);
+  } finally {
+    if (fake.listening) fake.close();
+    await run('--stop').catch(() => {});
+  }
+});
+
 test('뒤에서 켤 때 예전 버전 사무실이 켜져 있으면 끄고 같은 포트로 새로 켠다 (새 버전이면 그대로 둔다)', async () => {
   const runtime = require('../lib/runtime');
   const token = 'old-office-token';

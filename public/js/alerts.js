@@ -10,10 +10,10 @@ export function createAlerts({ toast, show, quiet }) {
   let notifyOn = false;
   try { notifyOn = localStorage.getItem(NOTIFY_KEY) === '1'; } catch { /* 저장소 없음 */ }
   const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
-  // 세션마다 아직 떠 있는 기다림 알림: 터미널에서 허락·답을 하고 나면 닫는다 (전에는 '🔐 기다려요'가 알림 센터에 그대로 남았다)
+  // 세션마다 아직 떠 있는 기다림 알림(🔐 허락·입력, ❓ 질문): 터미널에서 허락·답을 하고 나면 닫는다 (전에는 알림 센터에 그대로 남았다)
   const waitNotes = new Map();
 
-  // w: 권한·입력을 기다리는 알림이면 그 기다림 (인턴이 기다리면 그 인턴의 카드를 연다)
+  // w: 권한·입력·질문을 기다리는 알림이면 그 기다림 (인턴이 기다리면 그 인턴의 카드를 연다)
   function notify(s, title, body, w = null) {
     if (!notifyOn || !canNotify() || quiet()) return;
     if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다

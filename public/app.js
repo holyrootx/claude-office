@@ -108,8 +108,9 @@ function announce(text) {
   el.textContent = '';
   setTimeout(() => { el.textContent = text; }, 60); // 같은 말이 또 와도 다시 읽게 비웠다가 넣는다
 }
-function tell(s, title, body) {
-  alerts.notify(s, title, body);
+// w: 기다림 알림이면 { on: 기다리는 인턴 id } (그 일이 끝나면 alerts.waitDone으로 닫고, 누르면 그 인턴의 카드를 연다)
+function tell(s, title, body, w = null) {
+  alerts.notify(s, title, body, w);
   announce(`${s.main.name}: ${title.replace(/^\S+\s/, '')}. ${clip(body || '', 100)}`);
 }
 function tellWait(s, w) {
@@ -259,6 +260,11 @@ function addSession(snap) {
   if (snap.compacting) s.main.setCompacting(snap.compacting);
   if (snap.ended) setEnded(s, snap.ended, false); // 활동 기록 줄은 지난 기록과 시간 순으로 섞어서 (onHello·onJoin)
   if (w) seenWaits.add(waitId(s.sid, w));
+  // 아직 답하지 않은 질문(❓)의 도구 id: 답이 오면 ❓ 알림을 닫는다.
+  // 기다림도 질문도 없으면 (다시 이어 붙는 사이 허락·답을 했으면) 떠 있던 기다림 알림을 닫는다
+  const asking = [s.main, ...s.interns.values()].map(a => a.lastPending()).find(p => p && p.ask);
+  s.askId = asking ? asking.id : null;
+  if (!w && !asking) alerts.waitDone(s.sid);
   return s;
 }
 
@@ -350,7 +356,15 @@ function applyUpdate(u) {
     }
     if (!u.stats) countLocal(s, ev);
     feed.add(s, a, ev);
-    if (ev.k === 'tool' && ev.ask) tell(s, '❓ 물어볼 게 있어요', ev.ask);
+    if (ev.k === 'tool' && ev.ask) {
+      tell(s, '❓ 물어볼 게 있어요', ev.ask, { on: ev.agent || '' });
+      s.askId = ev.id;
+    }
+    // 물어본 것에 답했으면(건너뛰었어도) 떠 있던 ❓ 알림을 닫는다. 전에는 답한 뒤에도 알림 센터에 그대로 남았다
+    if (ev.k === 'result' && ev.id && ev.id === s.askId) {
+      s.askId = null;
+      if (!s.wait) alerts.waitDone(s.sid);
+    }
     // 이번 차례를 누가 시켰는지: 예약해 둔 작업(크론·/loop)이 시킨 차례가 끝나면 브라우저 알림은 띄우지 않는다
     // (30분마다 도는 작업이면 하루에 수십 번 울린다. 화면 읽기 프로그램에는 그대로 알려 주고, 허락·질문·멈춤은 늘 알린다)
     if (ev.k === 'say' && ev.final && !ev.agent) {
@@ -770,7 +784,6 @@ function onJoin(snap) {
   for (const ev of (snap.history || []).slice(-20)) feed.add(s, s.main, ev);
   if (snap.ended) feed.add(s, s.main, { k: 'closed', ts: snap.ended });
   if (!current) current = s.floor;
-  if (!s.wait) alerts.waitDone(s.sid); // 다시 이어 붙는 사이 허락·답을 했다
   if (s.wait) {
     // 보고 있지 않던 세션이 권한을 기다려서 빌딩에 들어온 경우
     if (Date.now() - s.wait.ts < 60000) tellWait(s, s.wait);

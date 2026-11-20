@@ -116,6 +116,10 @@ test('같은 세션 알림을 또 띄우면 다시 울리고, 허락·답을 하
   al.notify(s, '✅ 응답 완료', '골랐어요');
   al.waitDone('sid-1');
   assert.deepEqual(made.slice(2).map(n => [n.title, n.closed]), [['🔐 입력을 기다려요', false], ['✅ 응답 완료', false]]);
+  // ❓ 질문 알림도 기다림처럼 넘기면(w) 답한 뒤 닫힌다
+  al.notify(s, '❓ 물어볼 게 있어요', '어느 쪽으로 할까요?', { on: '' });
+  al.waitDone('sid-1');
+  assert.deepEqual([made.at(-1).title, made.at(-1).closed], ['❓ 물어볼 게 있어요', true]);
   // 다른 세션의 기다림은 건드리지 않는다
   al.notifyWait({ sid: 'sid-2', main: { name: '배포' } }, { kind: 'permission', tool: 'Bash', label: 'npm publish' });
   al.waitDone('sid-1');

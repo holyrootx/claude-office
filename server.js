@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const runtime = require('./lib/runtime');
 const {
-  args, argValue, argWords, argProblem, envProblem, VERSION, PORT_GIVEN, PORT_FROM, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
+  args, argValue, argWords, argProblem, browserCommands, envProblem, VERSION, PORT_GIVEN, PORT_FROM, PORT, PORT_TRIES, OPEN_BROWSER, POLL_MS, CLAUDE_DIR, PROJECTS, PUBLIC, MAX_HOOK_BYTES, ACTIVE_MS, runCmd, NPX_COPY,
 } = require('./lib/config');
 // 안내에 보여 줄 설정 파일 (CLAUDE_CONFIG_DIR로 폴더를 바꿔 쓰면 그 경로, 홈 폴더 아래면 ~로 줄여서)
 const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.slice(os.homedir().length) : f))(path.join(CLAUDE_DIR, 'settings.json'));
@@ -311,12 +311,13 @@ function handle(req, res) {
   });
 }
 
-function openBrowser(url) {
-  const cmd = process.platform === 'win32' ? 'cmd' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-  const cmdArgs = process.platform === 'win32' ? ['/c', 'start', '""', url] : [url];
+// 후보 명령을 차례로: 없는 명령(ENOENT)이면 다음 것으로. 다 안 되면 그만둔다 (주소는 콘솔에 나와 있다)
+function openBrowser(url, list = browserCommands(url)) {
+  const [next, ...rest] = list;
+  if (!next) return;
   try {
-    spawn(cmd, cmdArgs, { stdio: 'ignore', detached: true, windowsVerbatimArguments: true }).on('error', () => {}).unref();
-  } catch { /* 브라우저를 못 열어도 주소는 콘솔에 나와 있다 */ }
+    spawn(next[0], next[1], { stdio: 'ignore', detached: true, windowsVerbatimArguments: true }).on('error', () => openBrowser(url, rest)).unref();
+  } catch { openBrowser(url, rest); }
 }
 
 // ───────────────────────── 실행 방법 ─────────────────────────

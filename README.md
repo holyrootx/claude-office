@@ -312,7 +312,7 @@ hooks가 켜져 있으면 Claude Code를 닫을 때 바로 알 수 있어서, 30
 맥의 AirPlay 수신 모드가 5000·7000번 포트를 쓰고 있어서, 브라우저가 `localhost`를 `[::1]`로 찾아가면 AirPlay가 받아 버려요. 1.4.0부터는 사무실이 같은 포트를 `[::1]`에도 열어서 괜찮아요. 그보다 예전 버전이면 다른 포트(`--port 4800`)로 켜거나, 시스템 설정 > 일반 > AirDrop 및 Handoff에서 AirPlay 수신 모드를 꺼 주세요.
 
 **Q. Mac이나 Linux에서도 되나요?**
-Windows와 macOS에서 테스트했어요. 운영체제와 상관없이 홈 폴더의 `.claude/projects`를 읽도록 만들어서 Linux에서도 같은 방법으로 실행할 수 있어요.
+Windows와 macOS에서 테스트했어요. 운영체제와 상관없이 홈 폴더의 `.claude/projects`를 읽도록 만들어서 Linux에서도 같은 방법으로 실행할 수 있어요. Windows에서 Claude Code를 WSL로 쓰고 있다면 WSL 안에서 켜면 돼요. 화면은 Windows 쪽 기본 브라우저로 열려요(WSL2는 Windows의 `localhost`를 WSL로 이어 줘요).
 
 **Q. Codex(OpenAI)도 같이 쓰는데, Codex 세션도 보이나요?**
 이 사무실은 Claude Code 기록만 읽어요. Claude Code와 Codex를 같이 돌린다면(Herdr 같은 도구로 여러 개를 한꺼번에 띄워도) 둘을 한 빌딩에서 보여 주는 [에이전트 사무실(agent-office)](https://github.com/holyrootx/agent-office)을 쓰세요. 이 사무실을 바탕으로 Codex 기록(`~/.codex/sessions`)도 읽게 넓힌 것이고, 포트(4787)·플러그인 이름이 달라서 둘을 같이 켜 둬도 괜찮아요.

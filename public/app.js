@@ -1037,7 +1037,17 @@ function showActor(li, focus = false) {
 }
 $('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 // 키보드로도: Tab으로 줄을 고르고 Enter나 Space (버튼처럼)
+// 로비 줄 사이는 ↑ ↓(Home·End로 처음·끝)로 옮겨 다닌다. 12명에 인턴까지 있으면 Tab으로 한 줄씩 지나가기가 길었다
+const LOBBY_MOVE = { ArrowDown: 1, ArrowUp: -1, Home: -Infinity, End: Infinity };
 $('lobby').addEventListener('keydown', e => {
+  if (e.key in LOBBY_MOVE) {
+    const rows = [...$('lobby').querySelectorAll('[data-actor]')];
+    const i = rows.indexOf(e.target.closest && e.target.closest('[data-actor]'));
+    if (i < 0) return;
+    e.preventDefault(); // 목록이 스크롤되지 않고 초점만 옮긴다 (초점이 간 줄은 브라우저가 보이게 해 준다)
+    rows[Math.max(0, Math.min(rows.length - 1, i + LOBBY_MOVE[e.key]))].focus();
+    return;
+  }
   if (e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault();
   showActor(e.target.closest('[data-floor]'), true); // 키보드로 열면 초점이 카드로

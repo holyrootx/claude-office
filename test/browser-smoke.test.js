@@ -210,6 +210,19 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await sleep(300);
     const head = await js(`(() => { const t = document.getElementById('sessTitle'); return t.textContent + (t.scrollWidth > t.clientWidth ? ' (잘림 ' + t.clientWidth + '/' + t.scrollWidth + ')' : ''); })()`);
     assert.equal(head, '12개 층 · 직원 12명');
+    // 로비 안내판: ↑ ↓로 위아래 줄, Home·End로 처음·끝 (12명을 Tab으로 하나씩 지나가지 않게)
+    const focusedRow = () => js(`[...document.querySelectorAll('#lobby [data-actor]')].indexOf(document.activeElement)`);
+    await js(`document.querySelector('#lobby [data-actor]').focus()`);
+    await key('ArrowDown');
+    assert.equal(await focusedRow(), 1);
+    await key('End');
+    assert.equal(await focusedRow(), 11);
+    await key('ArrowDown'); // 끝에서는 그대로
+    assert.equal(await focusedRow(), 11);
+    await key('ArrowUp');
+    assert.equal(await focusedRow(), 10);
+    await key('Home');
+    assert.equal(await focusedRow(), 0);
     // 띄어쓰기 없는 긴 주소·경로가 말풍선·내 말 풍선·정보 카드 제목·업무 일지 프로젝트 이름을 뚫고 나가지 않는다
     // (전에는 'PR 올렸어요: https://github.com/…' 말풍선 글자가 풍선 밖으로 방을 가로질렀다)
     const spills = await js(`(() => {

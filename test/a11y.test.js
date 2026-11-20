@@ -30,8 +30,9 @@ test('키보드: 버튼·로비 줄에 초점이 있으면 Space는 그걸 누�
   // 전에는 다시 보기 중 10× 버튼에서 Space를 누르면 단축키가 preventDefault를 해서 버튼은 안 눌리고 멈추기만 했다
   assert.match(app, /const onControl = e\.target\.closest && e\.target\.closest\('button, a\[href\], \[role="button"\]'\);/);
   assert.match(app, /if \(replay\.isOn\(\) && e\.key === ' ' && !onControl\)/);
-  // role="button"인 로비 줄은 Enter와 Space 둘 다
-  assert.match(app, /\$\('lobby'\)\.addEventListener\('keydown', e => \{\n\s+if \(e\.key !== 'Enter' && e\.key !== ' '\) return;/);
+  // role="button"인 로비 줄은 Enter와 Space 둘 다, 줄 사이는 ↑ ↓ Home End
+  assert.match(app, /\$\('lobby'\)\.addEventListener\('keydown', e => \{[\s\S]*?if \(e\.key !== 'Enter' && e\.key !== ' '\) return;/);
+  assert.match(app, /const LOBBY_MOVE = \{ ArrowDown: 1, ArrowUp: -1, Home: -Infinity, End: Infinity \};/);
 });
 
 test('다시 보기 진행 막대는 화면 읽기 프로그램이 슬라이더로 읽고, 키보드로 고를 수 있다', () => {

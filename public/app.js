@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine, roomsLine } from './js/help.js';
@@ -905,7 +905,13 @@ function showCodeNotice(code) {
   $('codeBar').hidden = !n.kind || key === codeClosed;
   $('codeText').textContent = n.text;
   $('codeReload').hidden = n.kind !== 'reload';
+  reloadIfAway();
 }
+// 보고 있지 않을 때 새로 고칠 화면이 있으면 바로 (안내가 뜬 뒤에 다른 탭으로 갔어도)
+function reloadIfAway() {
+  if (autoReload(codeShown.split('|')[0], { hidden: document.hidden, viewMode })) location.reload();
+}
+document.addEventListener('visibilitychange', reloadIfAway);
 $('codeReload').addEventListener('click', () => location.reload());
 $('codeClose').addEventListener('click', () => { codeClosed = codeShown; $('codeBar').hidden = true; });
 

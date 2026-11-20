@@ -210,6 +210,10 @@ export function codeNotice(code, firstUi) {
   return { kind: '', text: '' };
 }
 
+// 화면 쪽만 바뀌었을 때(새로 고치면 되는 경우) 알아서 새로 고쳐도 되는지: 이 탭을 안 보고 있고 다시 보기·데모 중이 아닐 때.
+// 뒤에 켜 둔 탭은 '새로 고치세요' 안내를 볼 일이 없어서, 사무실을 새 버전으로 바꿔도 예전 화면이 계속 돌았다
+export const autoReload = (kind, { hidden = false, viewMode = 'all' } = {}) => kind === 'reload' && hidden && viewMode !== 'replay' && viewMode !== 'demo';
+
 export function ctxOf(s) {
   const c = s && s.info && s.info.ctx;
   if (!c || !c.tokens) return null;

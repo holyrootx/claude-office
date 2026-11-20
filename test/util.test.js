@@ -186,3 +186,14 @@ test("꺼진 사무실을 다시 켤 때 복사할 글: 플러그인이면 Claud
   assert.deepEqual(startCopy('node server.js (받은 폴더에서)'), { text: 'node server.js', where: '터미널' }); // 괄호 설명은 빼고
   assert.deepEqual(startCopy('npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.17.0'), { text: 'npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.17.0', where: '터미널' });
 });
+
+test('화면 쪽만 바뀌었으면 이 탭을 안 보고 있을 때 알아서 새로 고친다 (다시 보기·데모 중이거나 서버를 다시 켜야 할 때는 아니다)', async () => {
+  const { autoReload } = await import('../public/js/util.js');
+  assert.equal(autoReload('reload', { hidden: true, viewMode: 'all' }), true);
+  assert.equal(autoReload('reload', { hidden: true, viewMode: 'file' }), true);
+  assert.equal(autoReload('reload', { hidden: false, viewMode: 'all' }), false); // 보고 있으면 안내만
+  assert.equal(autoReload('reload', { hidden: true, viewMode: 'replay' }), false);
+  assert.equal(autoReload('reload', { hidden: true, viewMode: 'demo' }), false);
+  assert.equal(autoReload('restart', { hidden: true }), false); // 서버를 다시 켜야 하면 새로 고쳐도 소용없다
+  assert.equal(autoReload('', { hidden: true }), false);
+});

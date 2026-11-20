@@ -797,9 +797,19 @@ test('기본 포트를 다른 프로그램이 쓰고 있으면 다음 포트로 
 
 test('localhost가 [::1]로 가도 사무실이 받고, 다른 프로그램이 [::1]의 그 포트를 쓰면 127.0.0.1 주소를 알려 준다', async t => {
   // 맥은 AirPlay 수신 모드가 모든 주소의 5000번을 잡고 있어서, 127.0.0.1에만 열면 localhost:5000이 403이 났다
-  const other = http.createServer((q, r) => r.end('다른 프로그램'));
-  const v6 = await new Promise(resolve => other.once('error', () => resolve(false)).listen(0, '::1', () => resolve(true)));
-  if (!v6) return t.skip('이 컴퓨터는 IPv6가 없어요');
+  // [::1]에서 빈 포트를 받되, 같은 번호가 127.0.0.1에서도 비어 있어야 한다 (다른 프로그램이 127.0.0.1의 그 번호를 쓰고 있으면
+  // 사무실이 '다른 프로그램이 쓰고 있어요'로 끝나서 이 테스트가 가끔 실패했다): 아니면 다른 번호로 다시
+  let other = null;
+  for (let i = 0; i < 20 && !other; i++) {
+    const o = http.createServer((q, r) => r.end('다른 프로그램'));
+    const v6 = await new Promise(resolve => o.once('error', () => resolve(false)).listen(0, '::1', () => resolve(true)));
+    if (!v6) return t.skip('이 컴퓨터는 IPv6가 없어요');
+    const probe = http.createServer();
+    const free = await new Promise(resolve => probe.once('error', () => resolve(false)).listen(o.address().port, '127.0.0.1', () => probe.close(() => resolve(true))));
+    if (free) other = o;
+    else o.close();
+  }
+  if (!other) return t.skip('127.0.0.1과 [::1]에서 같이 빈 포트를 찾지 못했어요');
   const health = host => new Promise(resolve => http.get({ host, port: PORT, path: '/api/health' }, res => {
     let d = '';
     res.on('data', c => { d += c; });

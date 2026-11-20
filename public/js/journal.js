@@ -27,8 +27,9 @@ export function createJournal({ toast, onPick, copy, now = () => Date.now() }) {
     lastWeek -= g.weeks;
     lastMonth -= g.months;
   }
+  // 화면에서 고른 프로젝트는 '이 프로젝트만' 버튼으로 고른 것이라 이름이 꼭 같은 것만 (exact)
   const query = () => (month != null ? `month=${month}` : week != null ? `week=${week}` : `day=${day}`)
-    + (project ? `&project=${encodeURIComponent(project)}` : '');
+    + (project ? `&project=${encodeURIComponent(project)}&exact=1` : '');
   let asked = 0; // ◀를 빨리 여러 번 눌렀을 때 마지막 것만 그린다
   let loading = false; // 받아 오는 중 (창은 아직 안 떴지만 Esc·J로 그만둘 수 있게 열린 셈 친다)
   async function openJournal(want = 0, wantWeek = null, wantMonth = null) {

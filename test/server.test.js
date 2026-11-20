@@ -378,6 +378,12 @@ test('업무 일지: 한 주 모아 보기 (?week=0은 월요일부터 오늘까
   assert.match(shopOnly.title, / · SHOP$/);
   const none = await get('/api/journal?day=0&format=md&project=' + encodeURIComponent('없는-프로젝트'));
   assert.match(none.body, /'없는-프로젝트'가 든 프로젝트에서 오늘은 아직 일한 기록이 없어요/);
+  // 화면의 '이 프로젝트만'(exact=1)은 이름이 꼭 같은 프로젝트만: 'sho'는 shop에 들어 있지만 shop이 아니다
+  // (전에는 'blog'를 누르면 'blog-admin'까지 섞였다. 터미널의 --project는 지금처럼 '이름이 든')
+  assert.deepEqual(JSON.parse((await get('/api/journal?week=0&project=sho')).body).projects.map(p => p.project), ['shop']);
+  assert.deepEqual(JSON.parse((await get('/api/journal?week=0&project=sho&exact=1')).body).projects, []);
+  assert.deepEqual(JSON.parse((await get('/api/journal?day=0&project=Shop&exact=1')).body).projects.map(p => p.project), ['shop']);
+  assert.match((await get('/api/journal?day=0&format=md&exact=1&project=sho')).body, /'sho' 프로젝트에서 오늘은 아직 일한 기록이 없어요/);
   // 한 달: 주마다 묶은 막대와 날 수
   const m = JSON.parse((await get('/api/journal?month=0')).body);
   assert.match(m.title, /^\d{4}년 \d{1,2}월 업무 일지 \(/);

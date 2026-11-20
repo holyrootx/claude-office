@@ -99,3 +99,14 @@ test('자정을 넘긴 뒤 1분 확인보다 먼저 눌러도 보던 날에서 �
   assert.equal(asked.at(-1), 'day=-6');
   assert.equal(title(), '📓 11월 16일 업무 일지 6일 전');
 });
+
+test("'이 프로젝트만'으로 고르면 이름이 꼭 같은 프로젝트만 받아 온다 (exact=1: 'blog'에 'blog-admin'이 섞이지 않게)", async () => {
+  clock = at(11, 20, 15);
+  const j = createJournal({ toast() {}, onPick() {}, copy: async () => true, now: () => clock });
+  j.open(0);
+  await settle();
+  const only = { dataset: { project: 'blog' } };
+  $('journal').fire('click', { target: { closest: s => (s === '.jp-only' ? only : null) }, currentTarget: $('journal') });
+  await settle();
+  assert.equal(asked.at(-1), 'day=0&project=blog&exact=1');
+});

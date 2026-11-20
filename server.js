@@ -29,7 +29,7 @@ const SETTINGS_SHOWN = (f => (f.startsWith(os.homedir() + path.sep) ? '~' + f.sl
 const { hooksInfo, hooksHint, ourHooks, installHooks, uninstallHooks } = require('./lib/hookcheck');
 const normalize = require('./lib/normalize');
 const { roomRules, ROOM_CONFIG } = normalize;
-const { scanSessions, describe, activeAt, insideProjects, waits, endedAt, sweepStale, onHook, Follower, replayOf, journal } = require('./lib/sessions');
+const { scanSessions, describe, insideProjects, onHook, Follower, replayOf, journal, listSessions } = require('./lib/sessions');
 const {
   journalText, journalMarkdown, parseDay, parseWeek, weekRange, weekTitle, weekSummary, weekText, weekMarkdown,
   parseMonth, monthRange, monthTitle, byWeek, monthText, monthMarkdown, pastOffset, apiDay, dayProblem,
@@ -196,24 +196,7 @@ function handle(req, res) {
   if (url.pathname === '/api/hooks') return json(res, { ...hooksInfo(CLAUDE_DIR, __dirname, hookHeard, true), rooms: roomRules.status() });
 
   if (url.pathname === '/api/sessions') {
-    const all = scanSessions();
-    // 파일이 바뀐 차례로 40개를 고른 뒤 마지막 기록 시각 차례로 다시 세워 30개 (장부 줄만 붙은 옛 세션이
-    // 어제 일한 세션들보다 위에 오지 않게. 마지막 기록은 파일이 바뀐 때보다 늦을 수 없어서 40개 안에서 고르면 된다)
-    const top = all.slice(0, 40).sort((a, b) => activeAt(b) - activeAt(a)).slice(0, 30);
-    // 화면에서 고정해 둔 세션은 오래돼서 30개 밖으로 밀려도 목록에 남긴다
-    const keep = url.searchParams.get('keep');
-    if (keep && insideProjects(keep)) {
-      const k = all.find(x => x.file === path.resolve(keep));
-      if (k && !top.includes(k)) top.push(k);
-    }
-    sweepStale(); // 꺼진 Claude Code가 남긴 🔐는 지운다
-    // waiting: 권한 확인 대기(🔐), ended: Claude Code를 닫은 시각(🚪, 닫았다는 hook을 받았고 그 뒤로 이어 하지 않았을 때)
-    const list = top.map(s => {
-      const sid = path.basename(s.file, '.jsonl');
-      // active: 마지막으로 시각이 적힌 기록 (장부 줄만 붙은 옛 세션이 '방금'으로 보이지 않게, 목록의 '… 전'에 쓴다)
-      const active = activeAt(s);
-      return { ...describe(s), active, waiting: waits.has(sid), ended: endedAt(sid, active) };
-    });
+    const list = listSessions(url.searchParams.get('keep'));
     // activeMinutes: 빌딩에 머무는 시간(--active). 화면의 '최근 N분' 글자에 쓴다
     // start: 사무실이 꺼졌을 때 화면이 '다시 켜려면 …'으로 보여 줄 명령 (꺼진 뒤에는 물어볼 수 없어서 미리 받아 둔다)
     return json(res, { root: PROJECTS, activeMinutes: ACTIVE_MS / 60000, sessions: list, code: codeInfo(), start: START_CMD });

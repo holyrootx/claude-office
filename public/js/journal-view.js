@@ -51,10 +51,11 @@ export function dayView(j, { day = 0, project = '', now = Date.now() } = {}) {
       html: hours.map((n, h) => `<i class="${h === nowH ? 'now' : ''}" style="--h:${Math.round((n / maxH) * 100)}%" title="${h}시 · 도구 ${n}번"></i>`).join('')
         + [0, 6, 12, 18].map(h => `<span style="--c:${h + 1}">${h}시</span>`).join(''),
     },
-    list: j.projects.length ? j.projects.map(p =>
+    list: (j.projects.length ? j.projects.map(p =>
       `<section class="jp"><h3>${esc(nameOf(p, j.projects))} <small>${hmSpan(p.first, p.last)} · ${fmtWorked(p.workedMs)}</small>${onlyBtn(p, many, project)}</h3>`
         + numsHtml(p) + `<div class="jp-rooms">${roomsHtml(p.rooms)}</div><ul>${p.sessions.map(sessionLi).join('')}</ul></section>`).join('')
-      : `<p class="jp-empty">${project ? `'${esc(project)}'에서 ` : ''}${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`,
+      : `<p class="jp-empty">${project ? `'${esc(project)}'에서 ` : ''}${j.today ? '오늘은 아직 일한 기록이 없어요' : '이날은 일한 기록이 없어요'}</p>`)
+      + (j.left ? `<p class="jp-empty">⚠ 세션이 너무 많아서 오래된 ${Number(j.left)}개는 빼고 셌어요</p>` : ''),
   };
 }
 

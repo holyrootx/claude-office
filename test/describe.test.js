@@ -82,3 +82,19 @@ test('제목 줄이 없는 기록(예전 Claude Code 등)은 내가 마지막으
   // 사람이 친 말이 하나도 없으면 그대로 (제목 없음)
   assert.equal(d('66666666-0000-0000-0000-000000000004.jsonl', [U([{ type: 'tool_result', tool_use_id: 'x', content: 'ok' }])]), '(제목 없음)');
 });
+
+test("제목의 한글 모양을 맞춘다: 풀어 쓴(NFD) 한글은 모아 쓰고, 홀로 남은 낱자('ᄒᄋ')는 흔히 쓰는 낱자('ㅎㅇ')로", () => {
+  const dir = path.join(CFG, 'projects', '-tmp-shop');
+  fs.mkdirSync(dir, { recursive: true });
+  const ts = new Date().toISOString();
+  const d = (name, title) => {
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, [JSON.stringify({ type: 'user', timestamp: ts, cwd: '/tmp/shop', message: { role: 'user', content: '안녕' } }), JSON.stringify({ type: 'custom-title', customTitle: title })].join('\n') + '\n');
+    const st = fs.statSync(file);
+    return describe({ file, mtime: st.mtimeMs, size: st.size, dir: '-tmp-shop' }).title;
+  };
+  // 데스크톱 앱이 'ㅎㅇ'를 이렇게 저장했다 (내 기록에서). 터미널·마크다운 일지에서 흩어져 보였다
+  assert.equal(d('77777777-0000-0000-0000-000000000001.jsonl', '\u1112\u110b'), '\u314e\u3147');
+  assert.equal(d('77777777-0000-0000-0000-000000000002.jsonl', '보고서 정리'.normalize('NFD')), '보고서 정리');
+  assert.equal(d('77777777-0000-0000-0000-000000000003.jsonl', 'Fix ㅋㅋ bug'), 'Fix ㅋㅋ bug'); // 원래 낱자는 그대로
+});

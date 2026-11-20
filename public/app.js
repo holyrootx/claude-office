@@ -486,6 +486,7 @@ function highlight(rooms) {
 }
 
 let nowKey = '', titleKey = '';
+let serverOff = false; // 재연결 중이 아니라 사무실 서버가 꺼진 게 확실할 때 (setConn, 탭 제목·아이콘에 그렇게)
 function renderNow(a, many) {
   // ⏳는 '사용 한도'에 쓰니까 빈 상태는 다른 그림으로
   const st = a ? a.now : { icon: sessions.size ? '🏢' : '🔍', title: sessions.size ? '이 층은 비어 있어요' : '따라갈 세션이 없어요', sub: '', room: 'desk', mode: '', time: '' };
@@ -510,11 +511,13 @@ function renderNow(a, many) {
     $('now').dataset.room = st.room || '';
     $('now').dataset.mode = st.mode || '';
   }
-  // 탭 제목: 다른 층에서라도 나를 기다리는 직원이 있으면 그걸 먼저 알린다
+  // 탭 제목: 다른 층에서라도 나를 기다리는 직원이 있으면 그걸 먼저 알린다.
+  // 사무실 서버가 꺼졌으면 그것부터: 전에는 꺼지기 직전 모습('🔨 작업 중', '🔐 1명이 기다려요')이 그대로 남아서
+  // 탭만 보고는 아직 일하는(기다리는) 줄 알았다. 화면은 그때 모습에서 멈춰 있으니 무엇을 하는지 알 수 없다
   const waiting = [...actors].filter(x => x.waitState || x.status === 'ask').length;
-  const title = waiting ? `🔐 ${waiting}명이 기다려요 · Claude 사무실` : `${st.icon} ${st.title} · Claude 사무실`;
+  const title = serverOff ? '🔌 사무실이 꺼져 있어요 · Claude 사무실' : waiting ? `🔐 ${waiting}명이 기다려요 · Claude 사무실` : `${st.icon} ${st.title} · Claude 사무실`;
   if (title !== titleKey) document.title = titleKey = title;
-  alerts.setFavicon(waiting);
+  alerts.setFavicon(serverOff ? 0 : waiting, serverOff);
 }
 
 let floorbarHtml = '';
@@ -803,6 +806,7 @@ function beat() {
 // 사무실을 다시 켜는 명령 (서버가 세션 목록과 함께 알려 준다. 그 전에는 받은 폴더에서 node server.js)
 let startCmd = 'node server.js (받은 폴더에서)';
 function setConn(state, text) {
+  serverOff = state === 'off' && /꺼져/.test(text);
   $('conn').dataset.state = state;
   $('conn').querySelector('span').textContent = text;
   $('conn').title = state === 'off' ? `다시 켜려면: ${startCmd}` : '';

@@ -81,17 +81,18 @@ export function createAlerts({ toast, show, quiet }) {
     if (why) toast(why);
   }
 
-  // 탭 아이콘: Claude 얼굴, 기다리는 사람이 있으면 빨간 숫자
-  let faviconKey = -1;
-  function faviconUrl(n) {
+  // 탭 아이콘: Claude 얼굴, 기다리는 사람이 있으면 빨간 숫자. 사무실 서버가 꺼졌으면(off) 회색 얼굴
+  let faviconKey = '';
+  function faviconUrl(n, off = false) {
     const badge = n ? `<circle cx="48" cy="16" r="15" fill="#ef4444"/><text x="48" y="22" font-size="19" font-weight="700" text-anchor="middle" fill="#fff" font-family="sans-serif">${n > 9 ? '9+' : n}</text>` : '';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="8" y="12" width="46" height="44" rx="19" fill="#D97757"/><ellipse cx="24" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><ellipse cx="38" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><path d="M27 41 q4 4 8 0" stroke="#2b1d16" stroke-width="2.6" fill="none" stroke-linecap="round"/>${badge}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="8" y="12" width="46" height="44" rx="19" fill="${off ? '#9ca3af' : '#D97757'}"/><ellipse cx="24" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><ellipse cx="38" cy="32" rx="3.4" ry="4.4" fill="#2b1d16"/><path d="M27 41 q4 4 8 0" stroke="#2b1d16" stroke-width="2.6" fill="none" stroke-linecap="round"/>${badge}</svg>`;
     return 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
-  function setFavicon(n) {
-    if (n === faviconKey) return;
-    faviconKey = n;
-    $('favicon').href = faviconUrl(n);
+  function setFavicon(n, off = false) {
+    const key = off ? 'off' : String(n);
+    if (key === faviconKey) return;
+    faviconKey = key;
+    $('favicon').href = faviconUrl(n, off);
   }
 
   $('notifyBtn').addEventListener('click', toggleNotify);

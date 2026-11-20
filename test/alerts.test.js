@@ -27,9 +27,10 @@ function browser({ permission = 'granted', ask = 'granted', make } = {}) {
   Notification.requestPermission = () => { Notification.permission = ask; return Promise.resolve(ask); };
   globalThis.window = { Notification, focus() {} };
   globalThis.Notification = Notification;
-  globalThis.document = { getElementById: id => (id === 'notifyBtn' ? btn : { href: '' }), visibilityState: 'hidden', hasFocus: () => false };
+  const fav = { href: '' };
+  globalThis.document = { getElementById: id => (id === 'notifyBtn' ? btn : fav), visibilityState: 'hidden', hasFocus: () => false };
   globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
-  return { btn, store, made };
+  return { btn, store, made, fav };
 }
 
 let createAlerts;
@@ -124,4 +125,18 @@ test('같은 세션 알림을 또 띄우면 다시 울리고, 허락·답을 하
   al.notifyWait({ sid: 'sid-2', main: { name: '배포' } }, { kind: 'permission', tool: 'Bash', label: 'npm publish' });
   al.waitDone('sid-1');
   assert.equal(made.at(-1).closed, false);
+});
+
+test('탭 아이콘: 기다리는 수를 빨간 숫자로, 사무실 서버가 꺼졌으면 회색 얼굴로 (숫자 없이)', () => {
+  const { fav } = browser();
+  const al = createAlerts({ toast() {}, show() {}, quiet: () => false });
+  const look = () => { const svg = decodeURIComponent(fav.href); return [svg.match(/rx="19" fill="(#\w+)"/)[1], (svg.match(/<text[^>]*>([^<]+)</) || [])[1] || '']; };
+  al.setFavicon(0);
+  assert.deepEqual(look(), ['#D97757', '']);
+  al.setFavicon(12);
+  assert.deepEqual(look(), ['#D97757', '9+']);
+  al.setFavicon(0, true);
+  assert.deepEqual(look(), ['#9ca3af', '']);
+  al.setFavicon(2);
+  assert.deepEqual(look(), ['#D97757', '2']);
 });

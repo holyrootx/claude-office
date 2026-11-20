@@ -15,7 +15,23 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-office-test-'));
 const CFG = path.join(TMP, 'claude');
 const PROJ = path.join(CFG, 'projects', '-tmp-shop');
 const PROJ2 = path.join(CFG, 'projects', '-tmp-blog');
-const PORT = 40000 + Math.floor(Math.random() * 20000);
+// 테스트 사무실의 포트: 운영체제에 빈 번호를 받아서 127.0.0.1과 [::1] 둘 다 비어 있는 것으로 (test.before에서 정한다).
+// 전에는 40000~60000 사이를 아무렇게나 골라서, 맥이 바깥 연결에 쓰는 번호(49152~)와 겹치면 사무실이
+// '다른 프로그램이 쓰고 있어요'로 켜지지 않아 테스트가 통째로 실패할 수 있었다
+let PORT = 0;
+async function freePort() {
+  const net = require('net');
+  for (let i = 0; i < 20; i++) {
+    const s = net.createServer();
+    const port = await new Promise((resolve, reject) => s.once('error', reject).listen(0, '127.0.0.1', () => resolve(s.address().port)));
+    await new Promise(r => s.close(r));
+    const v6 = net.createServer();
+    // IPv6가 없는 컴퓨터면 [::1]은 따지지 않는다
+    const ok = await new Promise(resolve => v6.once('error', e => resolve(e.code === 'EADDRNOTAVAIL' || e.code === 'EAFNOSUPPORT')).listen(port, '::1', () => v6.close(() => resolve(true))));
+    if (ok) return port;
+  }
+  throw new Error('빈 포트를 찾지 못했어요');
+}
 const ENV = { ...process.env, CLAUDE_CONFIG_DIR: CFG, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'runtime.json'), NO_OPEN: '1' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -122,6 +138,7 @@ test.before(async () => {
   toolUse(busy, 'k1', 'Grep', { pattern: 'verifyToken' }, { isSidechain: true, agentId: 'busy1' });
 
   fixtureHour = new Date().getHours();
+  PORT = await freePort();
   srv = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(PORT)], { env: ENV, stdio: 'ignore' });
   srvAt = Date.now();
   for (let i = 0; i < 50 && (await get('/api/health')).status !== 200; i++) await sleep(100);

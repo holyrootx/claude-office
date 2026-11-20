@@ -178,3 +178,11 @@ test("도구 표지판의 짧은 경과 시간: '12s', '3m 20s', 한 시간이 �
   assert.equal(signTime(4523), '1h 15m');
   assert.equal(signTime(-1), '');
 });
+
+test("꺼진 사무실을 다시 켤 때 복사할 글: 플러그인이면 Claude Code에 칠 '/office:open', 아니면 터미널 명령", async () => {
+  const { startCopy } = await import('../public/js/util.js');
+  assert.deepEqual(startCopy('Claude Code에서 /office:open'), { text: '/office:open', where: 'Claude Code' });
+  assert.deepEqual(startCopy('node "/Users/me/claude-office/server.js"'), { text: 'node "/Users/me/claude-office/server.js"', where: '터미널' });
+  assert.deepEqual(startCopy('node server.js (받은 폴더에서)'), { text: 'node server.js', where: '터미널' }); // 괄호 설명은 빼고
+  assert.deepEqual(startCopy('npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.17.0'), { text: 'npx https://github.com/holyrootx/claude-office/archive/refs/heads/main.tar.gz?v=1.17.0', where: '터미널' });
+});

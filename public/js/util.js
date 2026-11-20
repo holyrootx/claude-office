@@ -177,6 +177,15 @@ export function ago(ms, now = Date.now()) {
   return `${Math.round(s / 86400)}일 전`;
 }
 
+// 꺼진 사무실을 다시 켤 때 복사해 줄 글과 붙여 넣을 곳 (start: 서버가 알려 준 켜는 방법).
+// 플러그인이면 'Claude Code에서 /office:open'이라 그 문장째 터미널에 붙여 넣으라고 했었다: Claude Code에 칠 /office:open만.
+// 터미널 명령은 뒤의 괄호 설명('(받은 폴더에서)')을 빼고
+export function startCopy(start) {
+  const s = String(start || '');
+  if (/\/office:open\b/.test(s)) return { text: '/office:open', where: 'Claude Code' };
+  return { text: s.replace(/\s*\([^)]*\)\s*$/, ''), where: '터미널' };
+}
+
 // Windows 폴더 경로인지 (C:\x, C:/x, \\서버\x). Claude Code가 Windows에서 돌았는지는 브라우저가 아니라 이걸로 안다
 export const isWinPath = p => /^[A-Za-z]:[\\/]|^\\\\/.test(String(p || ''));
 

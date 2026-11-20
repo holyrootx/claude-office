@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine, roomsLine } from './js/help.js';
@@ -794,7 +794,8 @@ function setConn(state, text) {
   setHidden($('connCopy'), !(state === 'off' && /꺼져/.test(text)));
 }
 $('connCopy').addEventListener('click', () => {
-  copyText(startCmd).then(ok => toast(ok ? `📋 복사했어요 · 터미널에 붙여 넣어 실행하세요: ${startCmd}` : `다시 켜려면: ${startCmd}`));
+  const { text, where } = startCopy(startCmd);
+  copyText(text).then(ok => toast(ok ? `📋 복사했어요 · ${where}에 붙여 넣어 실행하세요: ${text}` : `다시 켜려면: ${startCmd}`));
 });
 
 // 서버가 꺼졌으면(--stop, 컴퓨터를 껐다 켬 등) 브라우저가 1.5초마다 다시 붙으려는 걸 멈추고

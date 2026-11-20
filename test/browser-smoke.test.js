@@ -289,6 +289,14 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     assert.match(await js(`document.getElementById('empty').textContent`), /찾는 위치: \/home\/me\/.claude\/projects[\s\S]*이 폴더가 아직 없어요[\s\S]*WSL/);
     await pour('hello', { sessions: [], root: '/home/me/.claude/projects', rootMissing: false });
     await until(() => js(`document.getElementById('emptyWhy').hidden`), 3000, '폴더는 있으면 그 말은 빼기');
+    // 사무실이 꺼지면: '📋 켜는 명령 복사'가 터미널에 붙여 넣을 명령(node "…/server.js")을 복사한다
+    await send('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'] });
+    srv.kill();
+    await until(() => js(`document.getElementById('conn').dataset.state === 'off' && !document.getElementById('connCopy').hidden`), 20000, '꺼졌다는 표시와 복사 버튼');
+    await js(`document.getElementById('connCopy').click()`);
+    const told = await until(() => js(`(t => /복사했어요|다시 켜려면/.test(t) && t)(document.getElementById('floorToast').textContent)`), 3000, '켜는 명령 복사 안내');
+    assert.match(told, /^📋 복사했어요 · 터미널에 붙여 넣어 실행하세요: node .*server\.js/);
+    assert.match(await js(`navigator.clipboard.readText()`), /^node .*server\.js"?$/);
     ws.close();
     assert.deepEqual(problems, [], '화면에서 난 오류');
   } finally {

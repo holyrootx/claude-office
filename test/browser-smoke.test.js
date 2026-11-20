@@ -223,6 +223,16 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     assert.equal(await focusedRow(), 10);
     await key('Home');
     assert.equal(await focusedRow(), 0);
+    // 활동 기록: Tab 자리 한 줄에서 ↓로 다음 줄, Enter로 그 사람의 정보 카드 (전에는 마우스로만)
+    await pour('events', { updates: [1, 2, 3].map(n => ({ sid: '00000002-0000-0000-0000-00000000000d', events: [{ k: 'say', ts: Date.now() + n, text: `활동 기록 줄 ${n}` }] })) });
+    await until(() => js(`document.getElementById('feed').textContent.includes('활동 기록 줄 3')`), 3000, '활동 기록 줄');
+    assert.equal(await js(`document.querySelectorAll('#feed > li[tabindex="0"]').length`), 1, 'Tab 자리는 한 줄');
+    await js(`document.querySelector('#feed > li[tabindex="0"]').focus(); document.getElementById('card').hidden = true`);
+    await key('ArrowDown');
+    assert.match(await js(`document.activeElement.textContent`), /활동 기록 줄 2/);
+    await key('Enter');
+    await until(() => js(`!document.getElementById('card').hidden`), 3000, '활동 기록 줄에서 Enter로 정보 카드');
+    assert.match(await js(`document.getElementById('card').textContent`), /일 3/);
     // 띄어쓰기 없는 긴 주소·경로가 말풍선·내 말 풍선·정보 카드 제목·업무 일지 프로젝트 이름을 뚫고 나가지 않는다
     // (전에는 'PR 올렸어요: https://github.com/…' 말풍선 글자가 풍선 밖으로 방을 가로질렀다)
     const spills = await js(`(() => {

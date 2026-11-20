@@ -348,7 +348,7 @@ button, select { font: inherit; color: inherit; }
 .lb:hover { filter: brightness(1.15); }
 .lb:focus-visible { outline: 2px solid var(--claude); outline-offset: 1px; }
 /* 키보드로 옮겨 다닐 때 지금 어디 있는지 또렷하게 (마우스로 누를 때는 안 보인다) */
-button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
+button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:focus-visible, .feed > li:focus-visible { outline: 2px solid var(--claude); outline-offset: 2px; }
 .lb b { grid-area: f; font: 700 11px var(--mono); color: var(--muted); align-self: center; }
 .lb .nm { grid-area: nm; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb .ctx { grid-area: ctx; height: 3px; margin-top: 4px; background: var(--panel); }

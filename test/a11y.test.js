@@ -32,7 +32,10 @@ test('키보드: 버튼·로비 줄에 초점이 있으면 Space는 그걸 누�
   assert.match(app, /if \(replay\.isOn\(\) && e\.key === ' ' && !onControl\)/);
   // role="button"인 로비 줄은 Enter와 Space 둘 다, 줄 사이는 ↑ ↓ Home End
   assert.match(app, /\$\('lobby'\)\.addEventListener\('keydown', e => \{[\s\S]*?if \(e\.key !== 'Enter' && e\.key !== ' '\) return;/);
-  assert.match(app, /const LOBBY_MOVE = \{ ArrowDown: 1, ArrowUp: -1, Home: -Infinity, End: Infinity \};/);
+  assert.match(app, /\$\('lobby'\)\.addEventListener\('keydown'[\s\S]*?rowStep\(/);
+  // 활동 기록 줄도 키보드로 (↑ ↓ Home End, Enter·Space), 그 줄이 처리한 Space는 다시 보기 멈춤으로 넘어가지 않는다
+  assert.match(app, /el\.feed\.addEventListener\('keydown'[\s\S]*?rowStep\(/);
+  assert.match(app, /document\.addEventListener\('keydown', e => \{\n\s+if \(e\.defaultPrevented\) return;/);
 });
 
 test('다시 보기 진행 막대는 화면 읽기 프로그램이 슬라이더로 읽고, 키보드로 고를 수 있다', () => {

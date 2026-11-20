@@ -14,6 +14,25 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
   const known = new Map();
   let onlyFloor = null;
   let fails = 0;
+  // 키보드: 활동 기록의 Tab 자리는 한 줄뿐이다(줄마다 Tab이면 200번 눌러야 지나간다). 그 안에서는 ↑ ↓로 옮긴다(app.js).
+  // 활동 기록 안에 초점이 없으면 Tab 자리는 늘 맨 위의 보이는 줄 ('이 층만'·'실패만'으로 가린 줄은 Tab으로 갈 수 없어서)
+  let stop = null;
+  const shown = li => !li.classList.contains('away') && !(list.classList.contains('fails') && !li.classList.contains('err'));
+  const focusInside = () => typeof list.contains === 'function' && typeof document !== 'undefined' && list.contains(document.activeElement);
+  function setStop(li) {
+    if (stop === li) return;
+    if (stop) stop.tabIndex = -1;
+    stop = li || null;
+    if (stop) stop.tabIndex = 0;
+  }
+  function restop() {
+    if (focusInside() && stop && stop.parentNode === list) return; // 고르고 있는 줄은 그대로
+    setStop([...list.children].find(shown) || null);
+  }
+  function focusRow(li) {
+    setStop(li);
+    li.focus();
+  }
   function add(s, a, ev) {
     let ic = '', cls = '', tx = '', room = '', full = '';
     switch (ev.k) {
@@ -80,6 +99,7 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
     li.dataset.floor = s.floor;
     if (onlyFloor && s.floor !== onlyFloor) li.classList.add('away');
     if (a) li.dataset.actor = a.key;
+    li.tabIndex = -1;
     // 오늘이 아닌 기록에는 날짜도 ('11/17 23:15'): 며칠째 이어지는 세션을 열면 어제 기록이 섞여 와서,
     // 시각만 보면 오늘 아침 09:00 줄 아래의 14:00 줄이 언제 것인지 알 수 없었다
     const at = ev.at || ev.ts || Date.now();
@@ -94,8 +114,10 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
       const last = list.lastElementChild;
       for (const [k, v] of items) if (v === last) items.delete(k);
       if (last.classList.contains('err')) fails--;
+      if (last === stop) stop = null;
       last.remove();
     }
+    restop();
     if (fails !== before) onFails(fails);
   }
   // 화면을 켜 둔 채 자정을 넘기면 어제가 된 줄에도 날짜를 붙인다. 전에는 시각만 남아서, 아침에 보면
@@ -117,15 +139,20 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
     items.clear();
     known.clear();
     list.innerHTML = '';
+    stop = null;
     if (fails) onFails((fails = 0));
   }
   function only(floor) {
     onlyFloor = floor || null;
     list.classList.toggle('only', !!onlyFloor);
     for (const li of list.children) li.classList.toggle('away', !!onlyFloor && li.dataset.floor !== onlyFloor);
+    setStop(null);
+    restop();
   }
   function failsOnly(on) {
     list.classList.toggle('fails', !!on);
+    setStop(null);
+    restop();
   }
-  return { add, clear, only, failsOnly, redate, failCount: () => fails };
+  return { add, clear, only, failsOnly, redate, focusRow, failCount: () => fails };
 }

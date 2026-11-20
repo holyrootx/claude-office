@@ -37,6 +37,14 @@ export function weekOffset(ts, now = Date.now()) {
   return Math.round((monday(ts) - monday(now)) / (7 * 86400000));
 }
 
+// 목록 안에서 ↑ ↓ Home End를 눌렀을 때 갈 줄 번호 (n줄 중 i번째에서, 그 키가 아니면 -1). 끝에서는 그대로.
+// 로비 안내판과 활동 기록이 같이 쓴다
+const ROW_KEYS = { ArrowDown: 1, ArrowUp: -1, Home: -Infinity, End: Infinity };
+export function rowStep(n, i, key) {
+  if (!Object.prototype.hasOwnProperty.call(ROW_KEYS, key) || i < 0 || !n) return -1;
+  return Math.max(0, Math.min(n - 1, i + ROW_KEYS[key]));
+}
+
 // then에서 now까지 넘어간 날·주(월요일부터)·달 수. 업무 일지는 '오늘이 0, 어제가 -1'처럼 오늘에서 떨어진 수로 날을 가리켜서,
 // 열어 둔 채 자정을 넘기면 같은 수가 다른 날을 가리킨다. 그만큼 옮겨서 보던 날을 그대로 가리키게 한다
 export function calendarGap(then, now = Date.now()) {

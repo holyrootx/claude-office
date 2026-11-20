@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine } from './js/help.js';
@@ -1038,21 +1038,33 @@ function showActor(li, focus = false) {
 $('lobby').addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
 // 키보드로도: Tab으로 줄을 고르고 Enter나 Space (버튼처럼)
 // 로비 줄 사이는 ↑ ↓(Home·End로 처음·끝)로 옮겨 다닌다. 12명에 인턴까지 있으면 Tab으로 한 줄씩 지나가기가 길었다
-const LOBBY_MOVE = { ArrowDown: 1, ArrowUp: -1, Home: -Infinity, End: Infinity };
 $('lobby').addEventListener('keydown', e => {
-  if (e.key in LOBBY_MOVE) {
-    const rows = [...$('lobby').querySelectorAll('[data-actor]')];
-    const i = rows.indexOf(e.target.closest && e.target.closest('[data-actor]'));
-    if (i < 0) return;
+  const rows = [...$('lobby').querySelectorAll('[data-actor]')];
+  const j = rowStep(rows.length, rows.indexOf(e.target.closest && e.target.closest('[data-actor]')), e.key);
+  if (j >= 0) {
     e.preventDefault(); // 목록이 스크롤되지 않고 초점만 옮긴다 (초점이 간 줄은 브라우저가 보이게 해 준다)
-    rows[Math.max(0, Math.min(rows.length - 1, i + LOBBY_MOVE[e.key]))].focus();
-    return;
+    return rows[j].focus();
   }
   if (e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault();
   showActor(e.target.closest('[data-floor]'), true); // 키보드로 열면 초점이 카드로
 });
 el.feed.addEventListener('click', e => showActor(e.target.closest('[data-floor]')));
+// 활동 기록도 키보드로: Tab으로 들어오면(Tab 자리는 한 줄뿐, feed.js) ↑ ↓ Home End로 줄을 옮기고 Enter·Space로 그 사람에게.
+// 전에는 마우스로만 누를 수 있었다
+el.feed.addEventListener('keydown', e => {
+  const li = e.target.closest && e.target.closest('#feed > li');
+  if (!li) return;
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    return showActor(li.closest('[data-floor]'), true);
+  }
+  const rows = [...el.feed.children].filter(r => r.getClientRects().length); // '이 층만'·'실패만'으로 가린 줄은 건너뛴다
+  const j = rowStep(rows.length, rows.indexOf(li), e.key);
+  if (j < 0) return;
+  e.preventDefault();
+  feed.focusRow(rows[j]);
+});
 
 const sel = $('sessionSelect');
 const VIEW_KEY = 'claude-office-view';
@@ -1143,6 +1155,7 @@ $('help').addEventListener('click', e => { if (e.target === e.currentTarget) clo
 // (J는 한글 자판(ㅓ)에서도 되게 자리(code)로도 본다)
 const isJ = e => e.key === 'j' || e.key === 'J' || e.code === 'KeyJ';
 document.addEventListener('keydown', e => {
+  if (e.defaultPrevented) return; // 로비·활동 기록·일지 줄이 이미 처리한 키 (활동 기록 줄의 Space가 다시 보기를 멈추지 않게)
   if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('input, select, textarea'))) return;
   if (cardActor && e.key === 'Escape') return closeCard();
   if (!$('help').hidden) {

@@ -186,3 +186,27 @@ test('켜 둔 채 자정을 넘기면 어제가 된 줄에도 날짜를 붙인�
   feed.redate(tomorrow.getTime());
   assert.match(list.children[0].innerHTML, new RegExp(`^<time>${late.getMonth() + 1}/${late.getDate()} 23:15</time>`));
 });
+
+test('키보드: 활동 기록의 Tab 자리는 맨 위의 보이는 줄 하나뿐 (가린 줄은 건너뛴다)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => true });
+  const A = person('a'), B = person('b');
+  feed.add(A.s, A.a, say('a 첫 줄'));
+  feed.add(B.s, B.a, { k: 'tool', id: 'f1', tool: 'Bash', room: 'server', label: 'npm test', ts: Date.now() });
+  feed.add(B.s, B.a, { k: 'result', id: 'f1', ok: false, error: 'exit 1', ts: Date.now() });
+  feed.add(A.s, A.a, say('a 새 줄'));
+  const stops = () => list.children.filter(li => li.tabIndex === 0).map(li => li.innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+  assert.equal(stops().length, 1);
+  assert.match(stops()[0], /a 새 줄/);
+  assert.ok(list.children.slice(1).every(li => li.tabIndex === -1));
+  feed.only('b'); // a 줄들은 가려진다: b의 가장 새 줄(실패 줄)로
+  assert.equal(stops().length, 1);
+  assert.match(stops()[0], /Bash 실패 exit 1/);
+  feed.only(null);
+  feed.failsOnly(true); // 실패 줄만
+  assert.match(stops()[0], /Bash 실패 exit 1/);
+  feed.failsOnly(false);
+  assert.match(stops()[0], /a 새 줄/);
+  feed.clear();
+  assert.deepEqual(stops(), []);
+});

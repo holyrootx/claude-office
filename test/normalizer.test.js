@@ -119,6 +119,10 @@ test('표지판에 쓸 짧은 이름을 만든다', () => {
   assert.equal(displayName('mcp__claude_ai_Google_Drive__search_files'), 'Drive.search_files');
   assert.equal(displayName('mcp__claude_ai_Gmail__gmail_search'), 'Gmail.search');
   assert.equal(displayName('mcp__claude_ai_Some_New_App__do_it'), 'Some New App.do_it');
+  // 자주 쓰는 다른 커넥터도: 도구 이름 앞머리(stripe_…)나 안내 글(Normalizer가 배운 이름)로
+  assert.equal(displayName('mcp__aaaaaaaa-1111-2222-3333-444444444444__stripe_create_invoice'), 'Stripe.create_invoice');
+  assert.equal(displayName('mcp__aaaaaaaa-1111-2222-3333-444444444444__sentry-search_issues'), 'Sentry.search_issues');
+  assert.equal(displayName('mcp__claude_ai_Hugging_Face__search_models'), 'HuggingFace.search_models');
   assert.equal(displayName('mcp__ccd_session_mgmt__send_message'), 'Desktop.send_message');
   assert.equal(displayName('mcp__claude-in-chrome__browser_batch'), 'Chrome.batch'); // 데스크톱 앱 브라우저와 같은 꼴로
   assert.equal(displayName('mcp__claude-in-chrome__tabs_context_mcp'), 'Chrome.tabs_context');
@@ -643,6 +647,16 @@ test("커넥터 도구는 세션 처음의 안내 글로 어느 서비스인지 
   // 안내 글을 못 본 세션(끝부분만 읽음)은 전처럼
   const [other] = feed(new Normalizer(), toolUse('d2', `mcp__${DOCS}__batch`, {}));
   assert.equal(other.tool, 'MCP.batch');
+  // 더 많은 커넥터도 (전에는 목록에 없어서 'MCP.list_customers'였다). 'monday.com'처럼 점이 든 이름도
+  const n2 = new Normalizer();
+  const STRIPE = '5e5e5e5e-0000-4000-8000-000000000001', MONDAY = '5e5e5e5e-0000-4000-8000-000000000002';
+  feed(n2, line({ type: 'attachment', attachment: { type: 'mcp_instructions_delta', addedBlocks: [
+    `## ${STRIPE}\nUse these tools to work with the user's Stripe account (customers, invoices).`,
+    `## ${MONDAY}\nTools for boards and items on monday.com.`,
+  ] } }));
+  const [st] = feed(n2, toolUse('s1', `mcp__${STRIPE}__list_customers`, {}));
+  const [mo] = feed(n2, toolUse('o1', `mcp__${MONDAY}__get_board`, {}));
+  assert.deepEqual([st.tool, mo.tool], ['Stripe.list_customers', 'monday.get_board']);
 });
 
 test('커넥터 이름을 한 번 알아보면 같은 커넥터의 다른 도구에도 쓴다 (createIssueLink → Atlassian.createIssueLink)', () => {

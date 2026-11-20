@@ -1,5 +1,9 @@
 # 바뀐 것들
 
+## 다음 버전 (아직 버전을 올리지 않았어요)
+
+- claude.ai에서 연결한 커넥터 중 알아보는 서비스를 늘렸어요(Stripe·Sentry·Vercel·Cloudflare·Supabase·Netlify·Airtable·Zapier·Intercom·PayPal·Plaid·Webflow·Shopify·Salesforce·Dropbox·Trello·ClickUp·Todoist·Miro·Calendly·monday.com·Hugging Face·Outlook·OneDrive·SharePoint). 전에는 이런 커넥터의 도구가 'MCP.list_customers'처럼 나왔는데, 이제 'Stripe.list_customers'처럼 보여 줘요.
+
 ## 1.19.0
 
 ### 고친 것 (꼭 받으세요)

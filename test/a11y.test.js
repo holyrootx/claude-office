@@ -46,3 +46,11 @@ test('다시 보기 진행 막대는 화면 읽기 프로그램이 슬라이더�
   // 슬라이더 키: 막대에 초점이 있을 때 Home·End·PageUp·PageDown
   assert.match(replay, /\$\('replayBar'\)\.addEventListener\('keydown'[\s\S]*Home:[\s\S]*End:[\s\S]*PageUp:[\s\S]*PageDown:/);
 });
+
+test('화면 읽기 프로그램이 영역 사이를 이름으로 건너뛸 수 있다 (층 막대·지금 하는 일·로비·방별 사용·활동 기록)', () => {
+  // 이름 없는 <nav>는 '탐색'으로만, 이름 없는 <section>은 영역으로 치지 않아서 건너뛸 수 없었다.
+  // 제목(h2)으로 이름을 지으면 안의 버튼 글('이 층만' 등)까지 섞여서 따로 짧게 붙인다
+  for (const [tag, label] of [['nav', '층'], ['section', '지금 하는 일'], ['aside', '안내판과 기록'], ['section', '로비 안내판'], ['section', '방별 도구 사용'], ['section', '활동 기록']]) {
+    assert.match(html, new RegExp(`<${tag}[^>]*aria-label="${label}"`), `${tag} ${label}`);
+  }
+});

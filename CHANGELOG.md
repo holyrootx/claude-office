@@ -2,6 +2,7 @@
 
 ## 다음 버전 (아직 버전을 올리지 않았어요)
 
+- 화면 읽기 프로그램: 활동 기록 도구 줄의 ✓·✗를 '체크 표시'·'곱하기'가 아니라 '성공'·'실패'로 읽어요.
 - 화면 읽기 프로그램: 로비 안내판 줄의 컨텍스트 막대도 읽어요(줄 이름 끝에 '· 컨텍스트 84%'). 전에는 마우스를 올려야 보이는 글뿐이라 빠졌어요.
 - 화면 읽기 프로그램: 업무 일지의 시간대 막대 24개는 마우스를 올려야 보이는 글뿐이라 읽어 주지 않았어요. 이제 '시간대별 도구 사용: 9시 3번, 14시 1번'처럼 요약해 읽어요. 주간·월간 막대 칸도 '11/16 (월) 일지 보기'만 읽던 것을 일한 시간·도구 수까지 읽어요.
 - claude.ai에서 연결한 커넥터 중 알아보는 서비스를 늘렸어요(Stripe·Sentry·Vercel·Cloudflare·Supabase·Netlify·Airtable·Zapier·Intercom·PayPal·Plaid·Webflow·Shopify·Salesforce·Dropbox·Trello·ClickUp·Todoist·Miro·Calendly·monday.com·Hugging Face·Outlook·OneDrive·SharePoint). 전에는 이런 커넥터의 도구가 'MCP.list_customers'처럼 나왔는데, 이제 'Stripe.list_customers'처럼 보여 줘요.

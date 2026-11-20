@@ -427,8 +427,9 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
 .feed li .tx b.git-mark { color: var(--text-orange); } /* 테마마다 대비가 맞는 주황 */
 .feed li .tx small { display: block; color: var(--faint); font: 11px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .feed li .st { margin-left: 4px; font-weight: 700; }
-.feed li.ok .st::after { content: '✓'; color: var(--ok); }
-.feed li.fail .st::after { content: '✗'; color: var(--bad); }
+/* 화면 읽기 프로그램에는 '체크 표시'·'곱하기' 대신 '성공'·'실패'로 (/ 뒤가 읽을 글. 모르는 브라우저는 앞 줄을 쓴다) */
+.feed li.ok .st::after { content: '✓'; content: '✓' / '성공'; color: var(--ok); }
+.feed li.fail .st::after { content: '✗'; content: '✗' / '실패'; color: var(--bad); }
 .feed li.fail, .feed li.err { --c: var(--bad); }
 .feed li.err .tx { color: var(--text-bad); }
 .feed li.think { --c: #64748b; }

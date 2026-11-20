@@ -97,6 +97,8 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
 
     await until(() => js('window.__officeReady === true'), 15000, '화면 코드를 끝까지 불러오기');
     const row = await until(() => js(`(document.querySelector('#lobby [data-floor]') || {}).textContent || ''`), 15000, '로비에 직원이 나오기');
+    // 활동 기록의 도구 줄: 화면에는 ✓, 화면 읽기 프로그램에는 '성공' (CSS content의 / 뒤 글)
+    assert.equal(await until(() => js(`(e => e ? getComputedStyle(e, '::after').content : '')(document.querySelector('#feed li.ok .st'))`), 5000, '성공한 도구 줄'), '"✓" / "성공"');
     assert.match(row, /로그인 고쳐 줘/);
     await js(`document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 열기');

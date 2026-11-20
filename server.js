@@ -8,6 +8,12 @@
 //   node server.js --background  → 터미널 없이 뒤에서 켜기 (끌 때는 --stop)
 'use strict';
 
+// 사무실은 하루 종일 뒤에서 켜 두는 프로그램이라 메모리를 아껴 쓴다. 업무 일지(특히 주간·월간)를 열면 큰 세션 기록을
+// 훑느라 잠깐 쓴 메모리를 V8이 계속 들고 있어서, 남은 데이터는 50MB인데 맥의 메모리 사용량은 440MB까지 올라가
+// 그대로였다(서버가 0.25초마다 기록을 보느라 한가해지지 않아 줄이지도 않는다). 크기를 아끼는 쪽으로 돌리면
+// 같은 일지에서 340MB → 200MB쯤이고 빠르기는 거의 같다(1.84초 → 1.92초)
+require('v8').setFlagsFromString('--optimize-for-size');
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');

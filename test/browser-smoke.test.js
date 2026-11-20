@@ -239,6 +239,10 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await key('Enter');
     await until(() => js(`!document.getElementById('card').hidden`), 3000, '활동 기록 줄에서 Enter로 정보 카드');
     assert.match(await js(`document.getElementById('card').textContent`), /일 3/);
+    // 오래 도는 도구: 표지판 끝 경과 시간이 '1200s'가 아니라 '20m 0s'처럼, 위쪽 줄은 '20분 …초째'
+    await pour('events', { updates: [{ sid: '00000002-0000-0000-0000-00000000000d', events: [{ k: 'tool', id: 'long1', name: 'Bash', tool: 'Bash', room: 'server', label: 'npm run build', ts: Date.now() - 1200000 }] }] });
+    const signed = await until(() => js(`(document.querySelector('.tool-sign.show em') || {}).textContent || ''`), 10000, '오래 도는 도구 표지판');
+    assert.match(signed, /^20m \d+s$/);
     // 띄어쓰기 없는 긴 주소·경로가 말풍선·내 말 풍선·정보 카드 제목·업무 일지 프로젝트 이름을 뚫고 나가지 않는다
     // (전에는 'PR 올렸어요: https://github.com/…' 말풍선 글자가 풍선 밖으로 방을 가로질렀다)
     const spills = await js(`(() => {

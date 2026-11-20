@@ -156,6 +156,15 @@ export const secs = s => {
   if (h < 24) return `${h}시간${m ? ` ${m}분` : ''}째`;
   return `${Math.floor(h / 24)}일${h % 24 ? ` ${h % 24}시간` : ''}째`;
 };
+// 도구 표지판 끝의 짧은 경과 시간: '12s', '3m 20s', 한 시간이 넘으면 '1h 15m' (3초 안쪽은 비운다).
+// 전에는 초로만 세서 75분째 도는 명령이 '4523s'였다
+export const signTime = s => {
+  s = Math.max(0, Math.floor(s) || 0);
+  if (s < 3) return '';
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+};
 // 얼마나 지났는지: '방금', '12분 전', '3시간 전', '2일 전'
 // 반올림한 뒤에 단위를 고른다 (59분 40초가 '60분 전', 23시간 50분이 '24시간 전'으로 나오지 않게)
 export function ago(ms, now = Date.now()) {

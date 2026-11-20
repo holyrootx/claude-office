@@ -169,3 +169,12 @@ test("지금 하는 일을 얼마나 했는지: 한 시간이 넘으면 '2시간
   assert.equal(secs(86400 + 3 * 3600 + 59), '1일 3시간째');
   assert.equal(secs(-3), '0초째'); // 시계가 조금 어긋나도
 });
+
+test("도구 표지판의 짧은 경과 시간: '12s', '3m 20s', 한 시간이 넘으면 '1h 15m' (전에는 '4523s')", async () => {
+  const { signTime } = await import('../public/js/util.js');
+  assert.equal(signTime(2), ''); // 금방 끝나는 도구는 비운다
+  assert.equal(signTime(12), '12s');
+  assert.equal(signTime(200), '3m 20s');
+  assert.equal(signTime(4523), '1h 15m');
+  assert.equal(signTime(-1), '');
+});

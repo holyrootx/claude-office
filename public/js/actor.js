@@ -1,5 +1,5 @@
 // 캐릭터 한 명: 세션의 메인 Claude(직원) 또는 서브에이전트(인턴). 받은 이벤트를 차례로 연출한다.
-import { esc, clamp, clip, sleep, secs, fmtTokens, compactHow, scheduleName } from './util.js';
+import { esc, clamp, clip, sleep, secs, signTime, fmtTokens, compactHow, scheduleName } from './util.js';
 import { ROOMS, W, LANE_Y, SPEED, slotPoint, doorInside } from './scene.js';
 
 class Abort extends Error {}
@@ -704,7 +704,7 @@ export class Actor {
       } else this.setNow(r.icon, `${r.name} · ${p.tool} 실행 중`, p.label || p.detail || r.sub, p.room);
       this.now.time = secs(s);
       const em = this.sign.querySelector('em');
-      if (em) em.textContent = s >= 3 ? `${s}s` : '';
+      if (em) em.textContent = signTime(s);
       return;
     }
     if (this.turnOpen) {

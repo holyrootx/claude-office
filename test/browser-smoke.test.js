@@ -181,6 +181,16 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '폰 크기에서 정보 카드 열기');
     assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '폰 크기에서 옆으로 넘치지 않는다');
+    // 폰 크기 보기 메뉴: 고른 칸(빌딩 전체)의 글이 칸 안에 다 들어간다 (전에는 '…세션 모'에서 잘려 '세션 5'처럼 읽혔다)
+    const pickFits = await js(`(() => {
+      const s = document.getElementById('sessionSelect'), cs = getComputedStyle(s);
+      const cx = document.createElement('canvas').getContext('2d');
+      cx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      const w = cx.measureText(s.options[s.selectedIndex].text).width;
+      const room = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 20; // 오른쪽 ⌄ 자리
+      return w <= room || Math.round(w) + '>' + Math.round(room) + ' ' + s.options[s.selectedIndex].text;
+    })()`);
+    assert.equal(pickFits, true);
     // 폰 크기 도움말: 한글 낱말 가운데서 줄이 바뀌지 않는다 (전에는 '누 / 르기', '이름 / 을'처럼 끊겼다)
     await js(`document.getElementById('card').hidden = true`);
     await key('?');

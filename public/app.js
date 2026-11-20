@@ -847,7 +847,8 @@ async function loadSessions(keepFile) {
   showCodeNotice(d.code);
   if (typeof d.start === 'string' && d.start) startCmd = d.start;
   const want = [
-    ['all', `🏢 빌딩 · 최근 ${minutesText(d.activeMinutes || 30)} 세션 모두`],
+    // 중요한 말을 앞에: 폰처럼 좁은 칸에서 뒤가 잘려도 뜻이 남게 (전에는 '…최근 30분 세션 모'까지 보여서 '세션 5'처럼 읽혔다)
+    ['all', `🏢 빌딩 전체 · 최근 ${minutesText(d.activeMinutes || 30)}`],
     ['auto', '자동 · 가장 최근 세션 하나'],
     ...(d.sessions || []).map(s => [s.file, `${s.file === keep ? '📌 ' : sessions.has(s.id) ? '● ' : ''}${s.waiting ? '🔐 ' : ''}${s.limitUntil > Date.now() ? '⏳ ' : ''}${s.ended ? '🚪 ' : ''}${s.project} — ${clip(s.title, 34)} · ${ago(s.active || s.mtime)}`]),
   ];

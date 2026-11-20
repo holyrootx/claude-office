@@ -53,3 +53,11 @@ test('이름·상태에 든 HTML은 글자로 나온다', () => {
   assert.doesNotMatch(html, /<img|<b>굵게/);
   assert.match(html, /&lt;img src=x&gt;/);
 });
+
+test('화면 읽기 프로그램: 컨텍스트 막대에도 읽을 글을 숨겨 두어 로비 줄 이름에 컨텍스트가 든다', () => {
+  const a = person('a', 'A', 'work');
+  const html = lobbyHtml([{ key: 'A', sids: new Set(['s']) }], new Map([['s', session(a, [], { ctx: { tokens: 880000, window: 1000000 } })]]), 'A');
+  assert.match(html, /<i class="ctx high" style="--p:88%" title="컨텍스트 88% · [^"]*"><span class="sr-only"> · 컨텍스트 88%<\/span><\/i>/);
+  // 인턴 줄과 컨텍스트를 모르는 세션은 막대가 없다
+  assert.doesNotMatch(lobbyHtml([{ key: 'A', sids: new Set(['s']) }], new Map([['s', session(a)]]), 'A'), /class="ctx/);
+});

@@ -5,7 +5,9 @@ import { esc, clip, ago, ctxOf } from './util.js';
 // 나를 기다리는 순서 (작을수록 위). 나머지는 모두 같은 순위라 층 순서대로 선다.
 const STATUS_ORDER = { wait: 0, ask: 1 };
 
-const ctxBar = c => (c ? `<i class="ctx ${c.level}" style="--p:${c.p}%" title="컨텍스트 ${c.p}% · ${esc(c.text)}"></i>` : '');
+// 화면 읽기 프로그램용 글도 막대 안에 숨겨 둔다: 로비 줄(버튼)의 이름은 안의 글로 정해지는데, 막대에는 마우스를 올려야
+// 보이는 글(title)뿐이라 컨텍스트가 얼마나 찼는지는 읽지 않았다
+const ctxBar = c => (c ? `<i class="ctx ${c.level}" style="--p:${c.p}%" title="컨텍스트 ${c.p}% · ${esc(c.text)}"><span class="sr-only"> · 컨텍스트 ${c.p}%</span></i>` : '');
 
 // 시간 칸: 지금 하는 일이 몇 초째인지, 사용 한도면 풀리는 때, 쉬거나 멈췄으면 마지막으로 일한 때
 export function lobbyTime(a, st = a.status) {

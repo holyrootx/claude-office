@@ -269,6 +269,17 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     assert.equal(await focusedRow(), 10);
     await key('Home');
     assert.equal(await focusedRow(), 0);
+    // 층 막대: 🛗 자동에서 →로 1F, End로 12F, Home으로 다시 자동 (층이 많아도 Tab으로 하나씩 지나가지 않게)
+    const focusedFloor = () => js(`document.activeElement.id === 'floorAuto' ? 'auto' : (document.activeElement.querySelector('b') || {}).textContent || ''`);
+    await js(`document.getElementById('floorAuto').focus()`);
+    await key('ArrowRight');
+    assert.equal(await focusedFloor(), '1F');
+    await key('End');
+    assert.equal(await focusedFloor(), '12F');
+    await key('ArrowLeft');
+    assert.equal(await focusedFloor(), '11F');
+    await key('Home');
+    assert.equal(await focusedFloor(), 'auto');
     // 활동 기록: Tab 자리 한 줄에서 ↓로 다음 줄, Enter로 그 사람의 정보 카드 (전에는 마우스로만)
     await pour('events', { updates: [1, 2, 3].map(n => ({ sid: '00000002-0000-0000-0000-00000000000d', events: [{ k: 'say', ts: Date.now() + n, text: `활동 기록 줄 ${n}` }] })) });
     await until(() => js(`document.getElementById('feed').textContent.includes('활동 기록 줄 3')`), 3000, '활동 기록 줄');

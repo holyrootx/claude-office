@@ -1033,6 +1033,17 @@ $('floorTabs').addEventListener('click', e => {
   if (b) goFloor(b.dataset.floor, true);
 });
 $('floorAuto').addEventListener('click', () => { floorAuto = true; autoFloor(); render(); });
+// 층 막대 안에서는 ← →(Home·End로 처음·끝)로 🛗 자동과 층 버튼 사이를 옮겨 다닌다. 층이 많으면 Tab으로 하나씩 지나가기가 길었다.
+// (여기서 처리한 ← →는 다시 보기의 5% 건너뛰기로 넘어가지 않는다: 화면 전체 단축키는 defaultPrevented면 보지 않는다)
+const FLOOR_KEYS = { ArrowRight: 'ArrowDown', ArrowLeft: 'ArrowUp', Home: 'Home', End: 'End' };
+$('floorbar').addEventListener('keydown', e => {
+  if (!(e.key in FLOOR_KEYS)) return;
+  const btns = [$('floorAuto'), ...$('floorTabs').querySelectorAll('[data-floor]')];
+  const j = rowStep(btns.length, btns.indexOf(e.target.closest && e.target.closest('button')), FLOOR_KEYS[e.key]);
+  if (j < 0) return;
+  e.preventDefault();
+  btns[j].focus(); // 막대가 옆으로 스크롤되면 브라우저가 그 버튼이 보이게 밀어 준다
+});
 // 로비 안내판 줄이나 활동 기록 줄을 누르면 그 층으로 가서, 그 사람의 정보 카드를 연다
 function showActor(li, focus = false) {
   if (!li) return;

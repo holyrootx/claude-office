@@ -4,9 +4,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-let resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked;
+let resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked, isWinPath;
 test.before(async () => {
-  ({ resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked } = await import('../public/js/util.js'));
+  ({ resumeCommand, fmtTokens, compactHow, codeNotice, ago, fmtWorked, isWinPath } = await import('../public/js/util.js'));
 });
 
 test('이어 하기 명령: 그 폴더로 가서 claude --resume', () => {
@@ -150,4 +150,11 @@ test("모델 이름: 'claude-opus-5-5' → 'Opus 5.5', 날짜·예전 꼴·[1m]�
   assert.equal(modelName('gpt-x'), 'gpt-x'); // 모르는 꼴은 그대로
   assert.equal(modelName(''), '');
   assert.equal(modelName(undefined), '');
+});
+
+test('이어 하기 명령의 꼴은 브라우저가 아니라 폴더 경로로: Windows 폴더면 PowerShell, 아니면 sh (WSL의 /home/…도 sh)', () => {
+  for (const p of ['C:\\code\\shop', 'd:/work', '\\\\server\\share\\x']) assert.equal(isWinPath(p), true, p);
+  for (const p of ['/home/me/shop', '/mnt/c/code', '', 'C:', 'shop\\x', null]) assert.equal(isWinPath(p), false, String(p));
+  assert.equal(resumeCommand('/home/me/shop', 'abc-1'), "cd '/home/me/shop' && claude --resume abc-1");
+  assert.equal(resumeCommand('C:\\code\\shop', 'abc-1'), "cd -LiteralPath 'C:\\code\\shop'; claude --resume abc-1");
 });

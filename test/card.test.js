@@ -61,8 +61,9 @@ test('워크트리에서 일하면 🌿 그 이름을 붙인다 (워크트리에
 test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에서는 버튼이 다 없다', () => {
   assert.doesNotMatch(cardHtml(main, session(), { live: true, pinned: true }), /data-act="pin"/);
   assert.doesNotMatch(cardHtml(main, session(), { live: false }), /card-acts/);
-  // Windows면 PowerShell 꼴
-  assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true, win: true }), /cd -LiteralPath &#39;C:\\code\\shop&#39;; claude --resume sid-1/);
+  // Windows 폴더면 PowerShell 꼴, WSL처럼 Windows 브라우저로 봐도 Linux 폴더면 sh 꼴 (폴더 경로로 정한다)
+  assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true }), /cd -LiteralPath &#39;C:\\code\\shop&#39;; claude --resume sid-1/);
+  assert.match(cardHtml(main, session({ cwd: '/home/me/shop' }), { live: true }), /title="cd &#39;\/home\/me\/shop&#39; &amp;&amp; claude --resume sid-1"/);
 });
 
 test('인턴 카드: 누구의 인턴인지와 얼마나 일했는지, 버튼·비용은 없다', () => {

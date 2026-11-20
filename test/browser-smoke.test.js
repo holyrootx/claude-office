@@ -101,6 +101,12 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 열기');
     assert.match(await js(`document.getElementById('card').textContent`), /로그인 고쳐 줘/);
+    // 📋 이어 하기 명령 복사: 폴더가 /tmp/shop이니 sh 꼴 (헤드리스는 클립보드가 막혀 있을 수 있어서 안내 글만 본다)
+    assert.equal(await js(`document.querySelector('#card [data-act="resume"]').title`), "cd '/tmp/shop' && claude --resume abcdabcd-0000-0000-0000-00000000000a");
+    await js(`document.querySelector('#card [data-act="resume"]').click()`);
+    await until(() => js(`/복사/.test(document.getElementById('floorToast').textContent)`), 3000, '이어 하기 명령 복사 안내');
+    await js(`document.querySelector('#lobby [data-floor]').click()`); // 카드의 버튼은 누르면 카드를 닫으니 다시 연다
+    await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 다시 열기');
     await js(`document.querySelector('#card [data-act="replay"]').click()`);
     await until(() => js(`!document.getElementById('replayBar').hidden`), 10000, '다시 보기 시작');
     assert.match(await js(`document.getElementById('replayBar').getAttribute('aria-valuetext') || ''`), /^\d+% · /);

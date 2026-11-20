@@ -159,9 +159,13 @@ export function ago(ms, now = Date.now()) {
   return `${Math.round(s / 86400)}일 전`;
 }
 
+// Windows 폴더 경로인지 (C:\x, C:/x, \\서버\x). Claude Code가 Windows에서 돌았는지는 브라우저가 아니라 이걸로 안다
+export const isWinPath = p => /^[A-Za-z]:[\\/]|^\\\\/.test(String(p || ''));
+
 // 터미널에서 이 세션을 이어서 하는 명령: 그 폴더로 가서 claude --resume <세션 id>
-// win이면 PowerShell 꼴 (cd -LiteralPath 'C:\x'; …), 아니면 sh 꼴 (cd '/x' && …)
-export function resumeCommand(cwd, sid, win) {
+// Windows 폴더면 PowerShell 꼴 (cd -LiteralPath 'C:\x'; …), 아니면 sh 꼴 (cd '/x' && …).
+// 전에는 브라우저가 Windows인지로 정해서, WSL에서 돌린 Claude Code(/home/…)도 PowerShell 꼴이 돼 WSL 터미널에서 안 됐다
+export function resumeCommand(cwd, sid, win = isWinPath(cwd)) {
   const resume = `claude --resume ${sid}`;
   if (!cwd) return resume;
   // PowerShell: 큰따옴표 안에서는 $·` 가 풀리고, cd는 [ ]를 와일드카드로 봐서 'shop [old]' 같은 폴더로 못 갔다.

@@ -647,8 +647,6 @@ $('feedFails').addEventListener('click', () => {
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다. 내용은 js/card.js가 만들고, 여기서는 띄울 자리만 정한다.
 let cardActor = null, cardHtml = '';
-// 이어 하기 명령을 Windows(PowerShell) 꼴로 만들지
-const IS_WIN = /Win/i.test(navigator.platform || navigator.userAgent || '');
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
 // focus: 키보드로 열었으면(로비 줄에서 Enter) 초점을 카드로 옮겨 안의 버튼을 바로 Tab으로 고르게 하고,
 // 닫으면(Esc·✕) 원래 줄로 돌려준다. 마우스로 열 때는 초점을 건드리지 않는다
@@ -690,7 +688,6 @@ function renderCard() {
     ctx: a.intern ? null : ctxOf(s),
     live: viewMode !== 'demo' && viewMode !== 'replay' && !!s.info.file,
     pinned: viewMode === 'file',
-    win: IS_WIN,
     today: viewMode !== 'demo' && viewMode !== 'replay' ? todayBySession.get(a.sid) || 0 : 0,
   });
   const card = $('card');
@@ -1099,7 +1096,7 @@ $('card').addEventListener('click', e => {
     sel.dispatchEvent(new Event('change'));
   }
   if (act.dataset.act === 'resume') {
-    const cmd = resumeCommand(s.info.cwd, s.sid, IS_WIN);
+    const cmd = resumeCommand(s.info.cwd, s.sid); // 폴더 경로로 PowerShell·sh 꼴을 정한다
     copyText(cmd).then(ok => toast(ok ? '📋 복사했어요 · 터미널에 붙여 넣으면 이 세션을 이어서 해요' : `복사하지 못했어요: ${cmd}`));
   }
 });

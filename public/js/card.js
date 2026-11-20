@@ -17,7 +17,7 @@ const MODE_HELP = {
 // a: 캐릭터 { intern, name, desc, now: { icon, title, time, sub } }
 // s: 세션 { sid, info, color, stats, interns, main }
 // ctx: ctxOf(s) 결과 (인턴은 null)
-// live: 실제 세션을 보는 중(데모·다시 보기가 아님), pinned: 이 세션만 보는 중, win: 이어 하기 명령을 PowerShell 꼴로
+// live: 실제 세션을 보는 중(데모·다시 보기가 아님), pinned: 이 세션만 보는 중, win: 이어 하기 명령을 PowerShell 꼴로 (안 주면 폴더 경로로 정한다)
 // today: 이 세션이 오늘 일한 시간(ms, 업무 일지와 같은 셈, 모르면 0), clock: 지금 시각 (테스트용)
 // 세션을 언제 시작했는지 (info.started): 오늘이면 '09:12부터', 전이면 '10/24부터 · 23일째'
 function sinceText(started, now) {
@@ -36,7 +36,7 @@ function internNums(a, now = Date.now()) {
   return `<div class="card-nums">도구 ${a.toolCount || 0}번 · ${time}</div>`;
 }
 
-export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win = false, today = 0, clock = Date.now() } = {}) {
+export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win, today = 0, clock = Date.now() } = {}) {
   const info = s.info;
   // 지금 하위 폴더에 있으면 그 폴더도 (📂 frontend), 워크트리면 그 이름 (🌿 fix-login)
   let sub = info.here && info.cwd && info.here.startsWith(info.cwd) ? info.here.slice(info.cwd.length).replace(/^[\\/]+/, '') : '';

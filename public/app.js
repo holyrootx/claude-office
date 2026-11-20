@@ -841,9 +841,13 @@ const minutesText = m => (m >= 60 && m % 60 === 0 ? `${m / 60}시간` : `${m}분
 // keepFile: 처음 켤 때 저장해 둔 고정 세션 (그 뒤로는 지금 고른 값)
 async function loadSessions(keepFile) {
   const sel = $('sessionSelect');
-  const keep = keepFile || sel.value;
+  const before = sel.value;
+  const asked = keepFile || before;
   let d;
-  try { d = await (await fetch('/api/sessions' + (isFile(keep) ? '?keep=' + encodeURIComponent(keep) : ''))).json(); } catch { return; }
+  try { d = await (await fetch('/api/sessions' + (isFile(asked) ? '?keep=' + encodeURIComponent(asked) : ''))).json(); } catch { return; }
+  // 받아 오는 사이에 보기를 바꿨으면(📌 고정 → 바로 🏢 빌딩으로) 지금 고른 것을 따른다. 전에는 물어볼 때의 값으로
+  // 되돌려서, 빌딩을 보고 있는데 보기 메뉴는 고정한 세션으로 남았다 (그 뒤로 15초마다 그 값을 다시 물었다)
+  const keep = sel.value !== before ? sel.value : asked;
   showCodeNotice(d.code);
   if (typeof d.start === 'string' && d.start) startCmd = d.start;
   const want = [
@@ -1110,8 +1114,8 @@ $('card').addEventListener('click', e => {
     if (!feedFails) $('feedFails').click();
     el.feed.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
-  if (act.dataset.act === 'pin') {
-    sel.value = s.info.file;
+  if (act.dataset.act === 'pin' || act.dataset.act === 'unpin') {
+    sel.value = act.dataset.act === 'pin' ? s.info.file : 'all';
     sel.dispatchEvent(new Event('change'));
   }
   if (act.dataset.act === 'resume') {

@@ -68,7 +68,8 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win, 
     ? `<div class="card-acts"><button type="button" data-act="replay" title="이 세션을 처음부터 빠르게 다시 봐요">⏪ 다시 보기</button>`
       // 며칠째 이어지는 세션이면 오늘 한 일만 보기 (처음부터면 지난 며칠을 한참 넘겨야 해서)
       + (multiDay ? '<button type="button" data-act="replay-today" title="오늘 0시부터 빠르게 다시 봐요">⏪ 오늘부터</button>' : '')
-      + `${pinned ? '' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>'}`
+      // 고정해 둔 세션이면 빌딩으로 돌아가는 버튼을 (전에는 버튼이 없어져서 위쪽 보기 메뉴를 찾아 '빌딩 전체'를 골라야 했다)
+      + (pinned ? '<button type="button" data-act="unpin" title="빌딩 전체 보기로 돌아가요">🏢 빌딩으로 돌아가기</button>' : '<button type="button" data-act="pin">📌 이 세션만 보기</button>')
       + `<button type="button" data-act="resume" title="${esc(resumeCommand(info.cwd, s.sid, win))}">📋 이어 하기 명령 복사</button></div>`
     : '';
   const now = a.now || {};

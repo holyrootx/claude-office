@@ -107,6 +107,18 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     assert.equal(await js(`document.querySelector('#card [data-act="resume"]').title`), "cd '/tmp/shop' && claude --resume abcdabcd-0000-0000-0000-00000000000a");
     await js(`document.querySelector('#card [data-act="resume"]').click()`);
     await until(() => js(`/복사/.test(document.getElementById('floorToast').textContent)`), 3000, '이어 하기 명령 복사 안내');
+    // 📌 이 세션만 보기 → 카드에 '🏢 빌딩으로 돌아가기' → 누르면 보기 메뉴가 빌딩 전체로
+    await js(`document.querySelector('#lobby [data-floor]').click()`);
+    await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 다시 열기');
+    await js(`document.querySelector('#card [data-act="pin"]').click()`);
+    await until(() => js(`document.getElementById('sessionSelect').value.endsWith('.jsonl') && !!document.querySelector('#lobby [data-floor]')`), 8000, '이 세션만 보기');
+    await js(`document.querySelector('#lobby [data-floor]').click()`);
+    await until(() => js(`!!document.querySelector('#card [data-act="unpin"]')`), 5000, '빌딩으로 돌아가기 버튼');
+    await js(`document.querySelector('#card [data-act="unpin"]').click()`);
+    await until(() => js(`document.getElementById('sessionSelect').value === 'all' && !!document.querySelector('#lobby [data-floor]')`), 8000, '빌딩으로 돌아가기');
+    // 고정하며 물어 둔 세션 목록이 늦게 와도 보기 메뉴를 고정한 세션으로 되돌리지 않는다
+    await sleep(1500);
+    assert.equal(await js(`document.getElementById('sessionSelect').value`), 'all');
     await js(`document.querySelector('#lobby [data-floor]').click()`); // 카드의 버튼은 누르면 카드를 닫으니 다시 연다
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 다시 열기');
     await js(`document.querySelector('#card [data-act="replay"]').click()`);

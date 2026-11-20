@@ -58,8 +58,10 @@ test('워크트리에서 일하면 🌿 그 이름을 붙인다 (워크트리에
   assert.match(cardHtml(main, session({ cwd: '/u/shop/.claude/worktrees/fix-login', home: '/u/shop', worktree: 'fix-login' }), { live: true }), /cd &#39;\/u\/shop\/.claude\/worktrees\/fix-login&#39;/);
 });
 
-test('이 세션만 볼 때는 고정 버튼이 없고, 데모·다시 보기에서는 버튼이 다 없다', () => {
+test('이 세션만 볼 때는 고정 버튼 대신 빌딩으로 돌아가는 버튼, 데모·다시 보기에서는 버튼이 다 없다', () => {
   assert.doesNotMatch(cardHtml(main, session(), { live: true, pinned: true }), /data-act="pin"/);
+  assert.match(cardHtml(main, session(), { live: true, pinned: true }), /<button type="button" data-act="unpin"[^>]*>🏢 빌딩으로 돌아가기<\/button>/);
+  assert.doesNotMatch(cardHtml(main, session(), { live: true }), /data-act="unpin"/);
   assert.doesNotMatch(cardHtml(main, session(), { live: false }), /card-acts/);
   // Windows 폴더면 PowerShell 꼴, WSL처럼 Windows 브라우저로 봐도 Linux 폴더면 sh 꼴 (폴더 경로로 정한다)
   assert.match(cardHtml(main, session({ cwd: 'C:\\code\\shop' }), { live: true }), /cd -LiteralPath &#39;C:\\code\\shop&#39;; claude --resume sid-1/);

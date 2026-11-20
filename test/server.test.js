@@ -971,6 +971,27 @@ test('뒤에서 켤 때 같은 폴더의 사무실이 켠 뒤로 바뀐 코드�
   }
 });
 
+test('그냥 켰는데 같은 폴더의 사무실이 바뀌기 전 코드로 켜져 있으면 그렇다고 알려 준다 (끄지는 않는다)', async () => {
+  let health = { root: ROOT, stamp: 1 };
+  const fake = http.createServer((req, res) => {
+    res.setHeader('Connection', 'close');
+    if (req.url === '/api/health') return res.end(JSON.stringify({ app: 'claude-office', version: require('../package.json').version, pid: process.pid, ...health }));
+    res.writeHead(404);
+    res.end();
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const port = String(fake.address().port);
+  // 가짜 사무실이 이 테스트 안에서 답해야 하니 기다리지 않고 실행한다
+  const run = (...a) => new Promise((resolve, reject) => execFile(process.execPath, [path.join(ROOT, 'server.js'), ...a], { env: ENV, timeout: LIMIT }, (e, out) => (e ? reject(e) : resolve(out))));
+  try {
+    assert.match(await run('--port', port), /이미 켜져 있어요[\s\S]*바뀌기 전 코드예요[\s\S]*--background\S*로 켜면 알아서 바꿔 켜요/);
+    health = { root: ROOT, stamp: Date.now() + 3600000 };
+    assert.doesNotMatch(await run('--port', port), /바뀌기 전 코드/);
+  } finally {
+    fake.close();
+  }
+});
+
 test('뒤에서 켤 때 예전 버전 사무실이 켜져 있으면 끄고 같은 포트로 새로 켠다 (새 버전이면 그대로 둔다)', async () => {
   const runtime = require('../lib/runtime');
   const token = 'old-office-token';

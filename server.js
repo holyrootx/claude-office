@@ -348,6 +348,9 @@ function serve() {
         console.log(`\n  🏢 Claude 사무실이 이미 켜져 있어요 → ${url}`);
         if (runtime.older(running.version, VERSION)) {
           console.log(`     켜져 있는 건 예전 버전(${running.version})이에요. 새 버전(${VERSION})으로 바꾸려면 그 사무실을 끄고(--stop이나 그 터미널에서 Ctrl+C) 다시 실행해 주세요.`);
+        } else if (running.root === __dirname && Number(running.stamp) > 0 && running.stamp < SERVER_STAMP) {
+          // 같은 폴더의 사무실이 켠 뒤로 바뀐 코드(git pull 등)를 모른다: 버전 숫자가 같아도 알려 준다 (켜 둔 터미널을 보고 있을 수 있어서 직접 끄지는 않는다)
+          console.log(`     켜져 있는 건 바뀌기 전 코드예요(켠 뒤로 이 폴더의 코드가 바뀌었어요). 바꿔 켜려면 그 사무실을 끄고(--stop이나 그 터미널에서 Ctrl+C) 다시 실행하거나, ${runCmd('--background')}로 켜면 알아서 바꿔 켜요.`);
         }
         console.log('');
         if (OPEN_BROWSER) openBrowser(url);

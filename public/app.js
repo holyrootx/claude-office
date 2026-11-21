@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload, tookText, tabTitle } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload, tookText, tabTitle, schedText } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine, roomsLine } from './js/help.js';
@@ -496,7 +496,11 @@ let serverOff = false; // 재연결 중이 아니라 사무실 서버가 꺼진 
 function renderNow(a, many) {
   // ⏳는 '사용 한도'에 쓰니까 빈 상태는 다른 그림으로
   const st = a ? a.now : { icon: sessions.size ? '🏢' : '🔍', title: sessions.size ? '이 층은 비어 있어요' : '따라갈 세션이 없어요', sub: '', room: 'desk', mode: '', time: '' };
-  const sub = a && many ? `${a.intern ? '인턴 ' : ''}${a.name}${st.sub ? ' · ' + st.sub : ''}` : st.sub;
+  // 쉬는 동안에는 다음 예약 작업이 언제 도는지 먼저 (크론·/loop로 돌리는 세션: '⏰ 다음 예약 19:28쯤 · 지시가 오면 바로 일어나요')
+  const ss = a && !a.intern && !a.ended && (a.status === 'idle' || a.status === 'sleep') && sessions.get(a.sid);
+  const next = ss && viewMode !== 'replay' && viewMode !== 'demo' ? schedText(ss.info.sched) : '';
+  const own = next ? `${next}${st.sub ? ' · ' + st.sub : ''}` : st.sub;
+  const sub = a && many ? `${a.intern ? '인턴 ' : ''}${a.name}${own ? ' · ' + own : ''}` : own;
   // 지금 보는 직원의 컨텍스트 (인턴은 따로 세지 않는다)
   const ctx = a && !a.intern ? ctxOf(sessions.get(a.sid)) : null;
   const key = [st.icon, st.title, sub, st.room, st.mode, st.time, ctx ? ctx.p : ''].join('|');

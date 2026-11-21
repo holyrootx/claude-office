@@ -769,6 +769,53 @@ test.describe('따로 띄운 사무실', { concurrency: true }, () => {
     }
   });
 
+  test('빌딩: 예약 작업이 곧 다시 돌 직원은 조용해도 퇴근하지 않는다 (1시간 크론이 매시간 퇴근·출근하지 않게)', async () => {
+    const cfg = path.join(TMP, 'claude-sched');
+    const P = path.join(cfg, 'projects', '-tmp-sched');
+    fs.mkdirSync(P, { recursive: true });
+    const fsch = path.join(P, 'sched-a.jsonl'), fq = path.join(P, 'quiet-c.jsonl');
+    const port = PORT + 9;
+    const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-sched.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+    const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+    const log = [];
+    let req;
+    try {
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 10000));
+      // 1분마다 돈 예약 작업 네 번 (마지막은 지금): 다음은 1분 뒤라 그때(+10분)까지 남는다
+      const t = Date.now();
+      for (const m of [3, 2, 1, 0]) {
+        fs.appendFileSync(fsch, JSON.stringify({ type: 'user', uuid: 'sch' + m, isMeta: true, turnOrigin: 'scheduled', cwd: '/tmp/sched', timestamp: new Date(t - m * 60000).toISOString(), message: { role: 'user', content: '자동 점검 1회' } }) + '\n');
+      }
+      await sleep(50);
+      userMsg(fq, '그냥 조용한 세션');
+      req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+        let buf = '';
+        res.setEncoding('utf8');
+        res.on('data', c => {
+          buf += c;
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const blk = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const ev = (blk.match(/^event: (.*)$/m) || [])[1];
+            const dd = (blk.match(/^data: (.*)$/m) || [])[1];
+            if (ev) log.push({ ev, ...JSON.parse(dd) });
+          }
+        });
+      });
+      const hello = await until(() => log.find(x => x.ev === 'hello'));
+      assert.equal(hello.sessions.length, 2);
+      assert.equal(hello.sessions.find(x => x.sid === 'sched-a').session.sched.every, 60000); // 화면도 간격을 받는다 (⏰ 다음 예약)
+      const left = await until(() => log.find(x => x.ev === 'leave'), 8000);
+      assert.equal(left && left.sid, 'quiet-c'); // 더 오래 조용한 sched-a가 아니라 그냥 조용한 쪽이 퇴근
+      await sleep(2000);
+      assert.ok(!log.some(x => x.ev === 'leave' && x.sid === 'sched-a'));
+    } finally {
+      if (req) req.destroy();
+      child.kill();
+    }
+  });
+
   test('뒤에서 켜지 못하면 사무실이 남긴 말을 보여 준다', async () => {
     const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
     await new Promise(r => busy.once('listening', r));
@@ -1055,4 +1102,14 @@ test('뒤에서 켤 때 예전 버전 사무실이 켜져 있으면 끄고 같�
     if (fake.listening) fake.close();
     await run('--stop').catch(() => {});
   }
+});
+
+test('예약 작업이 곧 다시 돌 세션인지: 다음 때(+10분)까지, 2시간 넘는 간격은 빼고', () => {
+  const { scheduledSoon } = require('../lib/sessions');
+  const m = 60000, now = Date.parse('2026-11-21T18:40:00+09:00');
+  const hourly = { every: 60 * m, anchor: now - 45 * m, last: now - 45 * m };
+  assert.equal(scheduledSoon(hourly, now), true);
+  assert.equal(scheduledSoon({ ...hourly, last: now - 71 * m }, now), false); // 다음 때가 지나고 10분이 넘었다
+  assert.equal(scheduledSoon({ every: 1440 * m, anchor: now - 60 * m, last: now - 60 * m }, now), false); // 하루 한 번은 남기지 않는다
+  assert.equal(scheduledSoon(null, now), false);
 });

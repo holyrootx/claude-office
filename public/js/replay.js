@@ -200,6 +200,9 @@ export function createReplay(office) {
     $('replayBtn').setAttribute('aria-label', r ? '다시 보기 끝내기' : '다시 보기');
     $('replayBtn').classList.toggle('on', !!r);
     $('speedBtn').hidden = $('pauseBtn').hidden = !r;
+    // 좁은 화면에서는 다시 보는 동안 쓸 일 없는 보기 메뉴·데모 버튼을 숨긴다 (style.css .top.replaying)
+    const top = document.querySelector('.top');
+    if (top) top.classList.toggle('replaying', !!r);
     if (r) {
       $('speedBtn').textContent = r.speed + '×';
       $('speedBtn').setAttribute('aria-label', `빠르기 ${r.speed}배, 누르면 바꿔요`);

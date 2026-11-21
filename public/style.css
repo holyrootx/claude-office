@@ -145,6 +145,8 @@ button, select { font: inherit; color: inherit; }
 .btn:hover { filter: brightness(1.08); }
 .btn-icon[aria-busy="true"] { opacity: .55; cursor: progress; } /* 다시 보기 기록을 받아 오는 중 */
 .btn.stop { background: #475069; }
+/* 다시 보는 동안에는 데모 버튼을 숨긴다: 누르면 다시 보기를 끊고 데모를 틀 뿐이고, 늘어난 ⏸·빠르기 버튼에 자리를 내준다 (replay.js) */
+.top.replaying #demoBtn { display: none; }
 .btn-icon {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
   width: 34px; height: 32px; font-size: 15px; cursor: pointer; opacity: .75;
@@ -775,6 +777,17 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
   .picker { flex: 0 1 300px; min-width: 150px; }
   .picker select { width: 100%; min-width: 0; }
 }
+/* '데모 보기'는 고르기 칸·아이콘 버튼 줄에 못 들어가서 혼자 한 줄을 차지했다(폰 폭·641~760px에서 위쪽이 네 줄).
+   첫 줄 이름·연결 표시 옆의 남는 자리로 옮긴다 (자리가 없으면 둘째 줄 맨 앞으로) */
+@media (max-width: 800px) {
+  #demoBtn { order: 1; margin-left: auto; }
+  .picker, .top > .btn-icon { order: 2; }
+}
+/* 다시 보는 동안에는 ⏸·빠르기 버튼이 늘어 위쪽이 다시 네 줄이 됐다: 좁은 창에서는 그동안 쓸 일 없는 보기 메뉴를 숨긴다
+   (⏹으로 끝내면 돌아온다) */
+@media (max-width: 720px) {
+  .top.replaying .picker { display: none; }
+}
 /* 터미널 옆에 좁게 띄워 둘 때 */
 @media (max-width: 640px) {
   .top { gap: 8px 10px; padding: 8px 12px; }
@@ -784,10 +797,7 @@ button:focus-visible, select:focus-visible, .jp li:focus-visible, .feed-scope:fo
   .picker span { display: none; }
   .picker select { max-width: none; width: 100%; }
   .btn { padding: 7px 10px; }
-  /* '데모 보기'는 고르기 칸·아이콘 버튼 줄에 못 들어가서 혼자 한 줄을 차지했다(폰 폭에서 위쪽이 네 줄).
-     첫 줄 이름·연결 표시 옆의 남는 자리로 옮긴다 (자리가 없으면 둘째 줄 맨 앞으로) */
-  #demoBtn { order: 1; margin-left: auto; padding: 5px 10px; font-size: 13px; }
-  .picker, .top > .btn-icon { order: 2; }
+  #demoBtn { padding: 5px 10px; font-size: 13px; }
   .sess { flex-wrap: wrap; row-gap: 0; }
   .sess span { flex: 1 1 auto; }
   .now { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }

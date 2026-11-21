@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload, tookText } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine, roomsLine } from './js/help.js';
@@ -369,7 +369,7 @@ function applyUpdate(u) {
     // (30분마다 도는 작업이면 하루에 수십 번 울린다. 화면 읽기 프로그램에는 그대로 알려 주고, 허락·질문·멈춤은 늘 알린다)
     if (ev.k === 'say' && ev.final && !ev.agent) {
       if (s.scheduledTurn) announce(`${s.main.name}: 예약된 작업 응답 완료. ${clip(ev.text || '', 100)}`);
-      else tell(s, '✅ 응답 완료', ev.text);
+      else tell(s, `✅ 응답 완료${tookText(ev.took) ? ` · ${tookText(ev.took)}` : ''}`, ev.text);
     }
     s.scheduledTurn = scheduledAfter(s.scheduledTurn, ev);
     // 사용 한도나 오류로 끝내 멈췄을 때도 알린다 (응답 완료가 오지 않으니까)

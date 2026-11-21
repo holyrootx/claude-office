@@ -220,3 +220,15 @@ test('MCP 도구 줄에 마우스를 올리면 실제 도구 이름 (방 바꾸�
   feed.add(A.s, A.a, { k: 'tool', id: 'r1', name: 'Read', tool: 'Read', room: 'library', label: 'a.ts', ts: Date.now() });
   assert.equal(list.children[0].title, undefined); // 보여 주는 이름과 같으면 붙이지 않는다
 });
+
+test('응답 완료 줄에 이번 차례가 걸린 시간을 붙인다 (모르면 안 붙인다)', () => {
+  const list = fakeList();
+  const feed = createFeed(list, { manyPeople: () => false });
+  const A = person('A');
+  feed.add(A.s, A.a, { k: 'say', ts: Date.now(), text: '고쳤어요', final: true, took: 252000 });
+  assert.match(list.children[0].innerHTML, /고쳤어요<small>⏱ 4분 12초 걸렸어요<\/small>/);
+  feed.add(A.s, A.a, { k: 'say', ts: Date.now(), text: '앞 차례 끝', final: true });
+  assert.doesNotMatch(list.children[0].innerHTML, /걸렸어요/);
+  feed.add(A.s, A.a, { k: 'say', ts: Date.now(), text: '중간 말', took: 5000 });
+  assert.doesNotMatch(list.children[0].innerHTML, /걸렸어요/);
+});

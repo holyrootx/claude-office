@@ -692,3 +692,25 @@ test('커넥터 이름을 한 번 알아보면 같은 커넥터의 다른 도구
   const [user] = feed(new Normalizer(), toolUse('u1', `mcp__${A}__atlassianUserInfo`, {}));
   assert.equal(user.tool, 'Atlassian.atlassianUserInfo'); // 소문자 atlassian도
 });
+
+test('응답 완료에 이번 차례가 걸린 시간(took)을 붙인다: 시킨 줄부터, 끼어든 말·이어 쓰기는 새 차례가 아니다', () => {
+  const at = (sec, o) => JSON.stringify({ uuid: 'took' + ++n, timestamp: new Date(Date.parse(ts) + sec * 1000).toISOString(), ...o });
+  const say = (sec, text, end = true) => at(sec, { type: 'assistant', message: { model: 'claude-opus-5-5', stop_reason: end ? 'end_turn' : null, content: [{ type: 'text', text }] } });
+  const norm = new Normalizer();
+  const finals = evs => evs.filter(e => e.k === 'say' && e.final).map(e => e.took);
+  // 처음 읽은 곳이 차례 중간이면 언제 시작했는지 몰라서 붙이지 않는다
+  assert.deepEqual(finals(feed(norm, say(5, '앞 차례 끝'))), [undefined]);
+  // 내 말 → 도구 → (일하는 중에 끼어든 말) → 응답 완료: 내 말부터 200초
+  const evs = feed(norm,
+    at(100, { type: 'user', message: { role: 'user', content: '로그인 고쳐 줘' } }),
+    at(110, { type: 'assistant', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', id: 'tk1', name: 'Bash', input: { command: 'npm test' } }] } }),
+    at(150, { type: 'attachment', attachment: { type: 'queued_command', prompt: '테스트도', commandMode: 'prompt' } }),
+    at(160, { type: 'user', isMeta: true, message: { role: 'user', content: 'Your response above was cut off. Resume directly' } }),
+    at(200, { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tk1', content: 'ok' }] } }),
+    say(300, '고쳤어요'));
+  assert.deepEqual(finals(evs), [200000]);
+  // 예약 작업이 시킨 차례도
+  assert.deepEqual(finals(feed(norm, at(1000, { type: 'user', isMeta: true, turnOrigin: 'scheduled', message: { role: 'user', content: '자동 개선 1회' } }), say(1252, '끝'))), [252000]);
+  // 중단하면 그 차례는 셈하지 않는다 (다음 응답 완료가 중단 전 시각부터 세지 않게)
+  assert.deepEqual(finals(feed(norm, at(2000, { type: 'user', message: { role: 'user', content: '또 해 줘' } }), at(2010, { type: 'user', message: { role: 'user', content: '[Request interrupted by user]' } }), say(2100, '멈췄어요'))), [undefined]);
+});

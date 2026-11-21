@@ -156,6 +156,8 @@ export const secs = s => {
   if (h < 24) return `${h}시간${m ? ` ${m}분` : ''}째`;
   return `${Math.floor(h / 24)}일${h % 24 ? ` ${h % 24}시간` : ''}째`;
 };
+// 한 차례에 걸린 시간: '12초', '3분 20초', '1시간 5분' (1초 안쪽이면 '')
+export const tookText = ms => (ms >= 1000 ? secs(ms / 1000).replace(/째$/, '') : '');
 // 도구 표지판 끝의 짧은 경과 시간: '12s', '3m 20s', 한 시간이 넘으면 '1h 15m' (3초 안쪽은 비운다).
 // 전에는 초로만 세서 75분째 도는 명령이 '4523s'였다
 export const signTime = s => {

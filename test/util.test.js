@@ -197,3 +197,12 @@ test('화면 쪽만 바뀌었으면 이 탭을 안 보고 있을 때 알아서 �
   assert.equal(autoReload('restart', { hidden: true }), false); // 서버를 다시 켜야 하면 새로 고쳐도 소용없다
   assert.equal(autoReload('', { hidden: true }), false);
 });
+
+test('한 차례에 걸린 시간: 12초, 4분 12초, 1시간 5분 (1초 안쪽은 비운다)', async () => {
+  const { tookText } = await import('../public/js/util.js');
+  assert.equal(tookText(12000), '12초');
+  assert.equal(tookText(252000), '4분 12초');
+  assert.equal(tookText(3900000), '1시간 5분');
+  assert.equal(tookText(400), '');
+  assert.equal(tookText(undefined), '');
+});

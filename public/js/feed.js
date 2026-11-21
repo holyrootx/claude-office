@@ -1,5 +1,5 @@
 // 오른쪽 활동 기록: 이벤트 하나를 한 줄로 쌓는다. 도구 줄에는 나중에 성공(✓)·실패(✗)를 붙인다.
-import { esc, clip, stamp, fmtTokens, compactHow, scheduleName } from './util.js';
+import { esc, clip, stamp, fmtTokens, compactHow, scheduleName, tookText } from './util.js';
 
 export { scheduleName }; // 테스트가 여기서 가져다 쓴다
 import { ROOMS } from './scene.js';
@@ -42,7 +42,12 @@ export function createFeed(list, { manyPeople, onFails = () => {} }) {
         ic = '🙋'; cls = 'user'; tx = `<b>나</b> ${esc(ev.text)}`;
         break;
       case 'think': if (!ev.text) return; ic = '💭'; cls = 'think'; tx = esc(ev.text); break;
-      case 'say': ic = ev.final ? '✅' : '💬'; cls = 'say'; tx = esc(clip(ev.text, 160)); if (ev.final) room = 'desk'; break;
+      case 'say':
+        ic = ev.final ? '✅' : '💬'; cls = 'say'; tx = esc(clip(ev.text, 160));
+        if (ev.final) room = 'desk';
+        // 이번 차례가 얼마나 걸렸는지 (시킨 때부터 응답 완료까지, 허락을 기다린 시간도 들어 있다)
+        if (ev.final && tookText(ev.took)) tx += `<small>⏱ ${tookText(ev.took)} 걸렸어요</small>`;
+        break;
       case 'tool': {
         const r = ROOMS[ev.room] || ROOMS.dev;
         ic = r.icon; room = ev.room;

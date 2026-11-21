@@ -1,5 +1,5 @@
 // Claude 사무실 — 서버가 보내는 세션 이벤트를 받아 층마다 직원(세션)과 인턴(서브에이전트)을 움직인다.
-import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload, tookText } from './js/util.js';
+import { $, esc, clip, ago, resumeCommand, ctxOf, codeNotice, fmtWorked, toastMs, setText, setHidden, setAttr, setStyle, scheduledAfter, trapTab, morph, THEMES, nextTheme, modelName, rowStep, startCopy, autoReload, tookText, tabTitle } from './js/util.js';
 import { cardHtml as buildCard } from './js/card.js';
 import { lobbyHtml as buildLobby } from './js/lobby.js';
 import { helpHtml, hooksLine, roomsLine } from './js/help.js';
@@ -514,8 +514,10 @@ function renderNow(a, many) {
   // 탭 제목: 다른 층에서라도 나를 기다리는 직원이 있으면 그걸 먼저 알린다.
   // 사무실 서버가 꺼졌으면 그것부터: 전에는 꺼지기 직전 모습('🔨 작업 중', '🔐 1명이 기다려요')이 그대로 남아서
   // 탭만 보고는 아직 일하는(기다리는) 줄 알았다. 화면은 그때 모습에서 멈춰 있으니 무엇을 하는지 알 수 없다
-  const waiting = [...actors].filter(x => x.waitState || x.status === 'ask').length;
-  const title = serverOff ? '🔌 사무실이 꺼져 있어요 · Claude 사무실' : waiting ? `🔐 ${waiting}명이 기다려요 · Claude 사무실` : `${st.icon} ${st.title} · Claude 사무실`;
+  // 다시 보기·데모 중이면 기다림 숫자는 달지 않는다 (지난 기록·연출의 기다림이라서. util.tabTitle 참고)
+  const staged = viewMode === 'replay' || viewMode === 'demo';
+  const waiting = staged ? 0 : [...actors].filter(x => x.waitState || x.status === 'ask').length;
+  const title = tabTitle(st, { off: serverOff, mode: viewMode, waiting });
   if (title !== titleKey) document.title = titleKey = title;
   alerts.setFavicon(serverOff ? 0 : waiting, serverOff);
 }

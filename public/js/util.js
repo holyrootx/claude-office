@@ -156,6 +156,15 @@ export const secs = s => {
   if (h < 24) return `${h}시간${m ? ` ${m}분` : ''}째`;
   return `${Math.floor(h / 24)}일${h % 24 ? ` ${h % 24}시간` : ''}째`;
 };
+// 탭 제목. st: 지금 보는 직원의 { icon, title }, off: 사무실 서버가 꺼짐, mode: 보기(replay·demo·…), waiting: 나를 기다리는 수.
+// 꺼졌으면 그것부터 (꺼지기 직전 모습이 남아 있으면 탭만 보고 아직 일하는 줄 안다). 다시 보기·데모 중이면 앞에 그렇다고 붙인다
+// (전에는 지난 기록·연출의 장면이 그대로 떠서, 다른 탭에서 보면 지금 일하는(데모의 🔐면 지금 나를 기다리는) 줄 알았다)
+export function tabTitle(st, { off = false, mode = 'all', waiting = 0 } = {}) {
+  const stage = mode === 'replay' ? '⏪ 다시 보기 · ' : mode === 'demo' ? '🎬 데모 · ' : '';
+  if (off) return '🔌 사무실이 꺼져 있어요 · Claude 사무실';
+  if (!stage && waiting) return `🔐 ${waiting}명이 기다려요 · Claude 사무실`;
+  return `${stage}${st.icon} ${st.title} · Claude 사무실`;
+}
 // 한 차례에 걸린 시간: '12초', '3분 20초', '1시간 5분' (1초 안쪽이면 '')
 export const tookText = ms => (ms >= 1000 ? secs(ms / 1000).replace(/째$/, '') : '');
 // 도구 표지판 끝의 짧은 경과 시간: '12s', '3m 20s', 한 시간이 넘으면 '1h 15m' (3초 안쪽은 비운다).

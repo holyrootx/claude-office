@@ -206,3 +206,13 @@ test('한 차례에 걸린 시간: 12초, 4분 12초, 1시간 5분 (1초 안쪽�
   assert.equal(tookText(400), '');
   assert.equal(tookText(undefined), '');
 });
+
+test('탭 제목: 꺼졌으면 그것부터, 기다리면 몇 명인지, 다시 보기·데모 중이면 앞에 붙이고 기다림 수는 안 센다', async () => {
+  const { tabTitle } = await import('../public/js/util.js');
+  const st = { icon: '🔐', title: '실행 허락을 기다리고 있어요' };
+  assert.equal(tabTitle({ icon: '🖥️', title: '서버실 · Bash 실행 중' }), '🖥️ 서버실 · Bash 실행 중 · Claude 사무실');
+  assert.equal(tabTitle(st, { waiting: 2 }), '🔐 2명이 기다려요 · Claude 사무실');
+  assert.equal(tabTitle(st, { waiting: 2, off: true }), '🔌 사무실이 꺼져 있어요 · Claude 사무실');
+  assert.equal(tabTitle(st, { mode: 'demo', waiting: 1 }), '🎬 데모 · 🔐 실행 허락을 기다리고 있어요 · Claude 사무실');
+  assert.equal(tabTitle({ icon: '🚶', title: '서버실로 가는 중' }, { mode: 'replay' }), '⏪ 다시 보기 · 🚶 서버실로 가는 중 · Claude 사무실');
+});

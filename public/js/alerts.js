@@ -13,10 +13,41 @@ export function createAlerts({ toast, show, quiet }) {
   // 세션마다 아직 떠 있는 기다림 알림(🔐 허락·입력, ❓ 질문): 터미널에서 허락·답을 하고 나면 닫는다 (전에는 알림 센터에 그대로 남았다)
   const waitNotes = new Map();
 
+  // 사무실 탭을 여러 개 열어 두었을 때(/office:open을 여러 번, 창 두 개): 탭마다 같은 장면을 받아서 따로 알렸다.
+  // - 어느 탭이든 보고 있으면 알리지 않는다. 보고 있는 탭이 1초마다 '보는 중'을 적어 둔다
+  //   (전에는 한 탭을 보고 있어도 뒤에 있는 다른 탭이 알렸다)
+  // - 같은 알림은 한 탭만 띄운다. 먼저 잡은 탭만 (Web Locks). renotify를 붙인 뒤로는 탭 수만큼 울렸다
+  const LOOK_KEY = 'claude-office-looking'; // '시각|탭'
+  const me = Math.random().toString(36).slice(2);
+  const looking = () => document.visibilityState === 'visible' && document.hasFocus();
+  const lastLook = () => { try { return String(localStorage.getItem(LOOK_KEY) || '').split('|'); } catch { return []; } };
+  const markLooking = () => { if (looking()) try { localStorage.setItem(LOOK_KEY, `${Date.now()}|${me}`); } catch { /* 저장소 없음 */ } };
+  // 이 탭을 떠나면 이 탭이 적은 것만 바로 지운다 (안 지우면 떠난 뒤 2.5초 동안 온 알림이 빠진다)
+  const leave = () => { try { if (!looking() && lastLook()[1] === me) localStorage.removeItem(LOOK_KEY); } catch { /* 저장소 없음 */ } };
+  const anyLooking = () => looking() || Date.now() - (Number(lastLook()[0]) || 0) < 2500;
+  const beat = setInterval(markLooking, 1000);
+  if (beat && beat.unref) beat.unref(); // 테스트(Node)가 끝나지 않고 기다리지 않게
+  if (window.addEventListener) {
+    window.addEventListener('focus', markLooking);
+    window.addEventListener('blur', leave);
+    document.addEventListener('visibilitychange', () => (looking() ? markLooking() : leave()));
+  }
+
   // w: 권한·입력·질문을 기다리는 알림이면 그 기다림 (인턴이 기다리면 그 인턴의 카드를 연다)
   function notify(s, title, body, w = null) {
     if (!notifyOn || !canNotify() || quiet()) return;
-    if (document.visibilityState === 'visible' && document.hasFocus()) return; // 이미 보고 있다
+    if (anyLooking()) return; // 이 탭이든 다른 사무실 탭이든 이미 보고 있다
+    const locks = window.navigator && window.navigator.locks;
+    if (!locks || typeof locks.request !== 'function') return pop(s, title, body, w);
+    // 같은 알림을 10초 동안 붙잡아서 다른 탭은 건너뛰게 한다 (탭들은 같은 장면을 몇 ms 차이로 받는다)
+    try {
+      locks.request(`claude-office-note:${s.sid}|${title}|${clip(body, 120)}`, { ifAvailable: true }, lock => lock && (pop(s, title, body, w), hold(10000)))
+        .catch(() => {});
+    } catch { pop(s, title, body, w); }
+  }
+  const hold = ms => new Promise(r => { const t = setTimeout(r, ms); if (t && t.unref) t.unref(); });
+  function pop(s, title, body, w) {
+    if (!notifyOn) return; // 기다리는 사이 이 브라우저에서는 알림을 못 띄운다는 걸 알았다
     // 같은 세션 알림은 tag로 하나만 남긴다
     let n;
     try {

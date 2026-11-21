@@ -29,7 +29,7 @@ function browser({ permission = 'granted', ask = 'granted', make } = {}) {
   globalThis.Notification = Notification;
   const fav = { href: '' };
   globalThis.document = { getElementById: id => (id === 'notifyBtn' ? btn : fav), visibilityState: 'hidden', hasFocus: () => false };
-  globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
+  globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
   return { btn, store, made, fav };
 }
 
@@ -139,4 +139,32 @@ test('탭 아이콘: 기다리는 수를 빨간 숫자로, 사무실 서버가 �
   assert.deepEqual(look(), ['#9ca3af', '']);
   al.setFavicon(2);
   assert.deepEqual(look(), ['#D97757', '2']);
+});
+
+test('사무실 탭이 여럿이면: 어느 탭이든 보고 있으면 알리지 않고, 같은 알림은 한 탭만 띄운다', async () => {
+  const { btn, store, made } = browser();
+  const tabA = createAlerts({ toast() {}, show() {}, quiet: () => false });
+  await btn.click(); // 켜 둔 값은 탭들이 같이 쓰는 저장소에 남는다
+  const tabB = createAlerts({ toast() {}, show() {}, quiet: () => false });
+  // 다른 탭을 보고 있다 (1초마다 적어 둔다): 이 탭은 뒤에 있어도 알리지 않는다
+  store.set('claude-office-looking', `${Date.now()}|다른탭`);
+  tabA.notify(s, '✅ 응답 완료', '다 했어요');
+  assert.equal(made.length, 0);
+  // 그 탭을 떠난 지 오래면(적은 게 낡았으면) 알린다
+  store.set('claude-office-looking', `${Date.now() - 5000}|다른탭`);
+  tabA.notify(s, '✅ 응답 완료', '다 했어요');
+  assert.equal(made.length, 1);
+  // 두 탭이 같은 장면을 받으면 먼저 잡은 탭만 띄운다 (전에는 renotify 때문에 탭 수만큼 울렸다)
+  made.length = 0;
+  const held = new Set();
+  window.navigator = { locks: { request(name, opts, cb) { const got = !held.has(name); held.add(name); return Promise.resolve().then(() => cb(got ? { name } : null)); } } };
+  tabA.notifyWait(s, { kind: 'permission', tool: 'Bash', label: 'git push' });
+  tabB.notifyWait(s, { kind: 'permission', tool: 'Bash', label: 'git push' });
+  await new Promise(r => setTimeout(r, 0));
+  assert.deepEqual(made.map(n => n.title), ['🔐 실행 허락을 기다려요']);
+  // 다른 알림은 다시 뜬다
+  tabB.notify(s, '✅ 응답 완료', '푸시했어요');
+  await new Promise(r => setTimeout(r, 0));
+  assert.deepEqual(made.map(n => n.title), ['🔐 실행 허락을 기다려요', '✅ 응답 완료']);
+  delete window.navigator;
 });

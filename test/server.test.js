@@ -816,6 +816,41 @@ test.describe('따로 띄운 사무실', { concurrency: true }, () => {
     }
   });
 
+  test('빌딩: 처음 켤 때 30분 넘게 조용해도 예약 작업이 곧 다시 돌 세션은 데려온다', async () => {
+    const cfg = path.join(TMP, 'claude-sched-start');
+    const P = path.join(cfg, 'projects', '-tmp-sched-start');
+    fs.mkdirSync(P, { recursive: true });
+    // 빌딩에 머무는 시간은 3초. 예약 세션은 1분마다 돌다 마지막이 1분 전이고(다음 예약은 곧), 그냥 세션은 30초 전에 조용해졌다
+    const t = Date.now();
+    const line = (o, ago) => JSON.stringify({ cwd: '/tmp/sched', timestamp: new Date(t - ago).toISOString(), ...o }) + '\n';
+    fs.writeFileSync(path.join(P, 'sched-x.jsonl'), [4, 3, 2, 1].map(m => line({ type: 'user', uuid: 'sx' + m, isMeta: true, turnOrigin: 'scheduled', message: { role: 'user', content: '자동 점검 1회' } }, m * 60000)).join(''));
+    fs.writeFileSync(path.join(P, 'plain-y.jsonl'), line({ type: 'user', uuid: 'py', message: { role: 'user', content: '그냥 일' } }, 30000));
+    const port = PORT + 10;
+    const env = { ...ENV, CLAUDE_CONFIG_DIR: cfg, CLAUDE_OFFICE_RUNTIME: path.join(TMP, 'rt-sched-start.json'), CLAUDE_OFFICE_ACTIVE_MINUTES: '0.05' }; // 3초
+    const child = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], { env, stdio: 'ignore' });
+    let req;
+    try {
+      assert.ok(await until(() => fs.existsSync(env.CLAUDE_OFFICE_RUNTIME), 10000));
+      const hello = await new Promise((resolve, reject) => {
+        req = http.get({ host: '127.0.0.1', port, path: '/api/stream?file=all' }, res => {
+          let buf = '';
+          res.setEncoding('utf8');
+          res.on('data', c => {
+            buf += c;
+            const m = buf.match(/^event: hello\ndata: (.*)$/m);
+            if (m) resolve(JSON.parse(m[1]));
+          });
+        }).on('error', reject);
+      });
+      // 전에는 머무를 세션이 없어서 가장 최근 하나(plain-y)만 데려왔다
+      assert.deepEqual(hello.sessions.map(x => x.sid), ['sched-x']);
+      assert.equal(hello.sessions[0].session.sched.every, 60000);
+    } finally {
+      if (req) req.destroy();
+      child.kill();
+    }
+  });
+
   test('뒤에서 켜지 못하면 사무실이 남긴 말을 보여 준다', async () => {
     const busy = http.createServer((q, r) => r.end('다른 프로그램')).listen(0, '127.0.0.1');
     await new Promise(r => busy.once('listening', r));

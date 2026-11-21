@@ -456,6 +456,11 @@ let toastTimer = 0;
 function toast(text) {
   const t = $('floorToast');
   t.textContent = text;
+  // 무대 가운데에 띄우되 화면 밖이면 화면 안쪽 끝으로 (폰에서 로비·활동 기록까지 스크롤한 채 누르면 무대는 화면 위로 지나가 있다)
+  const r = el.box.getBoundingClientRect();
+  const half = Math.min(t.offsetWidth, innerWidth - 32) / 2;
+  setStyle(t, 'left', Math.round(Math.min(Math.max(r.left + r.width / 2, half + 16), innerWidth - half - 16)) + 'px');
+  setStyle(t, 'top', Math.round(Math.min(Math.max(r.top + r.height / 2, 60), innerHeight - 60)) + 'px');
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), toastMs(text));

@@ -79,7 +79,6 @@
         <div class="me-tag" aria-hidden="true">나</div>
         <div class="user-bubble" id="userBubble" aria-hidden="true"></div>
         <div id="actors" aria-hidden="true"></div>
-        <div class="floor-toast" id="floorToast" role="status" aria-live="polite"></div>
         <div class="card" id="card" tabindex="-1" role="group" aria-label="정보 카드" hidden></div>
         <div class="empty" id="empty" hidden>
           <b>따라갈 세션 기록이 아직 없어요</b>
@@ -187,5 +186,7 @@
 </template>
 <div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <script type="module" src="app.js"></script>
+<!-- 짧은 안내: 화면에 붙박아서(무대 밖) 스크롤했거나 업무 일지 창이 떠 있어도 보이게. 자리는 app.js toast()가 무대 가운데로 -->
+<div class="floor-toast" id="floorToast" role="status" aria-live="polite"></div>
 </body>
 </html>

@@ -107,6 +107,11 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     assert.equal(await js(`document.querySelector('#card [data-act="resume"]').title`), "cd '/tmp/shop' && claude --resume abcdabcd-0000-0000-0000-00000000000a");
     await js(`document.querySelector('#card [data-act="resume"]').click()`);
     await until(() => js(`/복사/.test(document.getElementById('floorToast').textContent)`), 3000, '이어 하기 명령 복사 안내');
+    // 안내는 화면에 붙박혀 화면 안에, 다른 것에 가리지 않게 (전에는 무대 안이라 폰에서 6px쯤, 업무 일지 창 아래에 가려졌다)
+    const toastSeen = () => js(`(() => { const t = document.getElementById('floorToast'), r = t.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2; t.style.pointerEvents = 'auto'; const top = document.elementFromPoint(x, y); t.style.pointerEvents = '';
+      return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight && !!top && t.contains(top) && parseFloat(getComputedStyle(t).fontSize) >= 14; })()`);
+    assert.equal(await toastSeen(), true, '이어 하기 복사 안내가 화면 안에 보인다');
     // 📌 이 세션만 보기 → 카드에 '🏢 빌딩으로 돌아가기' → 누르면 보기 메뉴가 빌딩 전체로
     await js(`document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '정보 카드 다시 열기');

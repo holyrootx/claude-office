@@ -341,12 +341,16 @@ button, select { font: inherit; color: inherit; }
 @keyframes ring { 50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, .35); } }
 .stage.arrive .floor, .stage.arrive #actors, .stage.arrive #signs { animation: arrive .5s ease-out; }
 @keyframes arrive { from { opacity: .25; } }
+/* 짧은 안내: 무대 가운데(app.js toast가 자리를 정한다)에 띄우되 화면에 붙박는다. 전에는 무대 안에 있어서 무대와 같이 줄어
+   폰에서는 글씨가 6px쯤이었고, 무대를 지나 스크롤했으면 화면 밖에, 업무 일지 창이 떠 있으면 그 아래에 가려졌다 */
 .floor-toast {
-  position: absolute; left: 50%; top: 392px; transform: translate(-50%, -50%) scale(.9); z-index: 240;
-  background: rgba(14, 19, 29, .9); color: #fff; font: 700 22px var(--ui); padding: 10px 22px; border-radius: 14px;
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); z-index: 600;
+  background: rgba(14, 19, 29, .92); color: #fff; font: 700 18px/1.4 var(--ui); padding: 9px 18px; border-radius: 12px;
+  width: max-content; max-width: min(640px, calc(100vw - 32px)); text-align: center; overflow-wrap: anywhere;
   opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none;
 }
 .floor-toast.show { opacity: 1; transform: translate(-50%, -50%); }
+@media (max-width: 640px) { .floor-toast { font-size: 15px; padding: 8px 14px; } }
 
 .lobby-panel { max-height: 34vh; display: flex; flex-direction: column; }
 .lobby { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 4px; }

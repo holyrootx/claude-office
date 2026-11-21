@@ -197,6 +197,17 @@ test('헤드리스 Chrome: 화면이 오류 없이 다 불러와지고, 로비 �
     await js(`document.getElementById('card').hidden = true; document.querySelector('#lobby [data-floor]').click()`);
     await until(() => js(`!document.getElementById('card').hidden`), 5000, '폰 크기에서 정보 카드 열기');
     assert.equal(await js(`document.documentElement.scrollWidth <= innerWidth`), true, '폰 크기에서 옆으로 넘치지 않는다');
+    // 폰에서는 무대가 작아서, 카드가 길면 무대 안에 줄여 띄운 글씨가 8px쯤이었다: 그럴 땐 화면 아래 시트로 띄운다.
+    // 어느 쪽이든 글씨는 10px 넘게, 카드는 화면 안에 (이 카드는 짧아서 무대 안에 들어가고, 줄을 늘리면 시트로 간다)
+    const readable = () => js(`(() => {
+      const c = document.getElementById('card'), r = c.getBoundingClientRect();
+      const px = parseFloat(getComputedStyle(c.querySelector('.card-nums')).fontSize) * (r.width / c.offsetWidth);
+      return (c.classList.contains('sheet') ? '시트' : '무대') + (px >= 10 && r.left >= 0 && r.right <= innerWidth + 1 ? ' ok' : ' ' + px.toFixed(1) + 'px ' + Math.round(r.left) + '~' + Math.round(r.right));
+    })()`);
+    assert.equal(await readable(), '무대 ok');
+    const longer = { updates: [{ sid: 'abcdabcd-0000-0000-0000-00000000000a', events: [], meta: { queue: ['하나 더', '둘 더', '셋 더'], title: '로그인 고쳐 줘 그리고 회원 가입 화면의 비밀번호 확인 칸도 같이 손봐 주고 테스트까지 돌려 줘' } }] };
+    await js(`window.__es[window.__es.length - 1].dispatchEvent(new MessageEvent('events', { data: ${JSON.stringify(JSON.stringify(longer))} }))`);
+    await until(async () => (await readable()) === '시트 ok', 3000, '긴 카드는 폰에서 화면 아래 시트로');
     // 폰 크기 보기 메뉴: 고른 칸(빌딩 전체)의 글이 칸 안에 다 들어간다 (전에는 '…세션 모'에서 잘려 '세션 5'처럼 읽혔다)
     const pickFits = await js(`(() => {
       const s = document.getElementById('sessionSelect'), cs = getComputedStyle(s);

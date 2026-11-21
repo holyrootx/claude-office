@@ -171,6 +171,7 @@ function fit() {
   const s = narrow ? byWidth : Math.min(byWidth, (el.wrap.clientHeight - padY) / H, 1.6);
   // 폰 화면(375px)에서도 옆으로 삐져나가지 않게 아주 작게까지 줄인다
   const scale = Math.max(0.15, s);
+  stageScale = scale;
   el.stage.style.transform = `scale(${scale})`;
   el.box.style.width = W * scale + 'px';
   el.box.style.height = H * scale + 'px';
@@ -180,7 +181,7 @@ function fit() {
   // 처음 화면의 안내 상자도 같은 만큼 키우되 무대 너비(1280) 안에 들어오게
   $('empty').style.setProperty('--k', Math.min(cardK, (W - 40) / 520).toFixed(3));
 }
-let cardK = 1;
+let cardK = 1, stageScale = 1;
 
 let userTimer = 0;
 function userSay(text) {
@@ -667,7 +668,7 @@ $('feedFails').addEventListener('click', () => {
 
 // ───────────────────────── 캐릭터 정보 카드 ─────────────────────────
 // 캐릭터를 누르면 옆에 뜬다. 내용은 js/card.js가 만들고, 여기서는 띄울 자리만 정한다.
-let cardActor = null, cardHtml = '';
+let cardActor = null, cardHtml = '', cardStageH = 340;
 // keep: 이미 열려 있어도 닫지 않는다 (로비·활동 기록에서 열 때)
 // focus: 키보드로 열었으면(로비 줄에서 Enter) 초점을 카드로 옮겨 안의 버튼을 바로 Tab으로 고르게 하고,
 // 닫으면(Esc·✕) 원래 줄로 돌려준다. 마우스로 열 때는 초점을 건드리지 않는다
@@ -714,7 +715,18 @@ function renderCard() {
   const card = $('card');
   if (html !== cardHtml) morph(card, cardHtml = html); // 1초마다 바뀌는 시간 때문에 버튼이 새로 만들어지지 않게
   setHidden(card, false);
-  // 작은 무대에서는 다시 키우되 무대 높이는 넘지 않게
+  // 작은 무대에서는 다시 키우되 무대 높이는 넘지 않게. 그래도 화면에서 글씨가 10px 아래로 작아지면(폰: 무대 높이가 200px 남짓이라
+  // 카드 글씨가 8px쯤이었다) 무대 안이 아니라 화면 아래에 붙은 시트로 제 크기로 띄운다. 카드 높이는 무대 안에 있을 때 잰 값으로
+  // 정한다 (시트는 더 넓어서 낮아지니, 그 높이로 정하면 무대와 시트를 오간다)
+  const inStage = !card.classList.contains('sheet');
+  if (inStage) cardStageH = card.offsetHeight;
+  const sheet = Math.min(cardK, (H - 16) / cardStageH) * stageScale < 0.75;
+  if (sheet !== !inStage) {
+    card.classList.toggle('sheet', sheet);
+    (sheet ? document.body : el.stage).append(card);
+    if (sheet) { card.style.removeProperty('left'); card.style.removeProperty('top'); }
+  }
+  if (sheet) return;
   const k = Math.min(cardK, (H - 16) / card.offsetHeight);
   setStyle(card, '--k', k.toFixed(3));
   const w = card.offsetWidth * k, h = card.offsetHeight * k;

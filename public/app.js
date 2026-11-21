@@ -810,7 +810,10 @@ let startCmd = 'node server.js (받은 폴더에서)';
 function setConn(state, text) {
   serverOff = state === 'off' && /꺼져/.test(text);
   $('conn').dataset.state = state;
-  $('conn').querySelector('span').textContent = text;
+  // ' · ' 뒤는 덧붙인 말(0.25초 간격, 다시 켜면 이어져요)이라 좁은 화면에서는 숨긴다 (style.css .conn-more)
+  const cut = text.indexOf(' · ');
+  $('conn').querySelector('span').textContent = cut < 0 ? text : text.slice(0, cut);
+  $('connMore').textContent = cut < 0 ? '' : text.slice(cut + 1); // '· 0.25초 간격' (앞 빈칸은 칸 사이 간격으로)
   $('conn').title = state === 'off' ? `다시 켜려면: ${startCmd}` : '';
   // 꺼진 게 확실하면(재연결 중이 아니면) 다시 켜는 명령을 복사하는 버튼도: 폰에서는 마우스를 올려 title을 볼 수 없다
   setHidden($('connCopy'), !(state === 'off' && /꺼져/.test(text)));

@@ -714,3 +714,22 @@ test('응답 완료에 이번 차례가 걸린 시간(took)을 붙인다: 시킨
   // 중단하면 그 차례는 셈하지 않는다 (다음 응답 완료가 중단 전 시각부터 세지 않게)
   assert.deepEqual(finals(feed(norm, at(2000, { type: 'user', message: { role: 'user', content: '또 해 줘' } }), at(2010, { type: 'user', message: { role: 'user', content: '[Request interrupted by user]' } }), say(2100, '멈췄어요'))), [undefined]);
 });
+
+test('예약 작업이 도는 간격을 짐작한다: 늦게 돈 때(컴퓨터가 잠듦)는 빼고, 간격이 들쭉날쭉하면 모른다', () => {
+  const { schedulePattern } = require('../lib/normalize');
+  const m = 60000, t0 = Date.parse('2026-11-21T09:28:00+09:00');
+  // :28·:58에 돌다가 한 번은 잠들어서 74분 뒤에, 마지막은 4분 늦게(18:02)
+  const at = [0, 30, 60, 134, 164, 194, 224, 258].map(x => t0 + x * m);
+  const p = schedulePattern(at);
+  assert.equal(p.every, 30 * m);
+  assert.equal(p.anchor, t0 + 224 * m); // 제때 돈 마지막 때 (늦게 돈 258분은 기준이 아니다)
+  assert.equal(p.last, t0 + 258 * m);
+  // 31·32분처럼 조금씩 늦어도 주기는 30분으로
+  assert.equal(schedulePattern([0, 30, 61, 91, 123, 153].map(x => t0 + x * m)).every, 30 * m);
+  assert.equal(schedulePattern([0, 30, 60].map(x => t0 + x * m)), null); // 세 번(간격 둘)으로는 모른다
+  assert.equal(schedulePattern([0, 7, 40, 52, 140, 141].map(x => t0 + x * m)), null); // /loop처럼 들쭉날쭉
+  // 기록을 읽으면 세션에 sched가 생긴다
+  const norm = new Normalizer();
+  for (const x of [0, 60, 120, 180, 240]) norm.line(JSON.stringify({ type: 'user', uuid: 'sch' + x, isMeta: true, turnOrigin: 'scheduled', timestamp: new Date(t0 + x * m).toISOString(), message: { role: 'user', content: '자동 점검' } }));
+  assert.deepEqual(norm.sched, { every: 60 * m, anchor: t0 + 240 * m, last: t0 + 240 * m });
+});

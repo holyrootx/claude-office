@@ -61,3 +61,13 @@ test('화면 읽기 프로그램: 컨텍스트 막대에도 읽을 글을 숨겨
   // 인턴 줄과 컨텍스트를 모르는 세션은 막대가 없다
   assert.doesNotMatch(lobbyHtml([{ key: 'A', sids: new Set(['s']) }], new Map([['s', session(a)]]), 'A'), /class="ctx/);
 });
+
+test('쉬는 동안에는 다음 예약 작업 시각을 이름 옆에 (일하는 중·인턴은 빼고)', () => {
+  const m = 60000, now = Date.parse('2026-11-21T18:20:00+09:00');
+  const sched = { every: 30 * m, anchor: Date.parse('2026-11-21T17:28:00+09:00'), last: Date.parse('2026-11-21T17:58:00+09:00') };
+  const floors = [{ key: 'A', sids: ['a'] }];
+  const html = st => lobbyHtml(floors, new Map([['a', session(person('a', 'A', st), [], { sched })]]), 'A', now);
+  assert.match(html('sleep'), /<small class="q next" title="[^"]*30분 간격[^"]*">⏰18:28<\/small>/);
+  assert.match(html('idle'), /⏰18:28/);
+  assert.doesNotMatch(html('work'), /⏰/);
+});

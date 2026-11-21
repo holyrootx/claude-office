@@ -134,3 +134,12 @@ test("며칠째 이어지는 세션이면 '⏪ 오늘부터' 버튼도 (오늘 �
   assert.doesNotMatch(today, /replay-today/);
   assert.doesNotMatch(cardHtml(main, session({ started: new Date(2026, 9, 24).getTime() }), { live: false, clock }), /replay-today/);
 });
+
+test('예약 작업이 도는 세션이면 카드 숫자 줄에 다음 예약 시각 (닫았으면 빼기)', () => {
+  const m = 60000, clock = Date.parse('2026-11-21T18:20:00+09:00');
+  const sched = { every: 30 * m, anchor: Date.parse('2026-11-21T17:28:00+09:00'), last: Date.parse('2026-11-21T17:58:00+09:00') };
+  const s = session({ sched });
+  assert.match(cardHtml(main, s, { clock }), /<span class="card-next" title="지난 예약 작업\(크론·\/loop\)이 30분 간격으로[^"]*">⏰ 다음 예약 18:28쯤<\/span><\/div>/);
+  assert.doesNotMatch(cardHtml(main, { ...s, main: { ...s.main, ended: clock - 1000 } }, { clock }), /다음 예약/);
+  assert.doesNotMatch(cardHtml(main, session(), { clock }), /다음 예약/);
+});

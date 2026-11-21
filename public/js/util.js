@@ -156,6 +156,26 @@ export const secs = s => {
   if (h < 24) return `${h}시간${m ? ` ${m}분` : ''}째`;
   return `${Math.floor(h / 24)}일${h % 24 ? ` ${h % 24}시간` : ''}째`;
 };
+// 다음 예약 작업(크론·/loop)이 돌 때. sched: 서버가 지난 예약 작업들로 짐작한 { every(간격), anchor(제때 돈 마지막 때), last(마지막으로 돈 때) }.
+// 한동안(간격의 2.5배) 안 돌았으면 멈춘 것으로 보고 0. 예약 시각이 막 지났는데(1분 안) 아직 안 돌았으면 그때를 (곧 돈다),
+// 방금 돌았으면 그다음을
+export function nextScheduled(sched, now = Date.now()) {
+  if (!sched || !(sched.every > 0) || !sched.anchor || !sched.last) return 0;
+  if (now - sched.last > sched.every * 2.5) return 0;
+  let next = sched.anchor + Math.max(1, Math.ceil((now - 60000 - sched.anchor) / sched.every)) * sched.every;
+  while (next <= sched.last + sched.every / 2) next += sched.every;
+  return next;
+}
+// '⏰ 다음 예약 18:28쯤' (오늘이 아니면 '11/22 09:00쯤'), 모르면 ''
+export function schedText(sched, now = Date.now(), short = false) {
+  const t = nextScheduled(sched, now);
+  if (!t) return '';
+  const d = new Date(t), hm = hhmmss(t).slice(0, 5);
+  const at = d.toDateString() === new Date(now).toDateString() ? hm : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+  return short ? `⏰${at}` : `⏰ 다음 예약 ${at}쯤`;
+}
+// 다음 예약 시각에 붙이는 설명 (짐작이라서)
+export const schedTip = sched => `지난 예약 작업(크론·/loop)이 ${Math.round(sched.every / 60000)}분 간격으로 돌아서 그다음 때를 짐작했어요`;
 // 탭 제목. st: 지금 보는 직원의 { icon, title }, off: 사무실 서버가 꺼짐, mode: 보기(replay·demo·…), waiting: 나를 기다리는 수.
 // 꺼졌으면 그것부터 (꺼지기 직전 모습이 남아 있으면 탭만 보고 아직 일하는 줄 안다). 다시 보기·데모 중이면 앞에 그렇다고 붙인다
 // (전에는 지난 기록·연출의 장면이 그대로 떠서, 다른 탭에서 보면 지금 일하는(데모의 🔐면 지금 나를 기다리는) 줄 알았다)

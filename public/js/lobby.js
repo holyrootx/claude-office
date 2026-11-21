@@ -1,6 +1,6 @@
 // 로비 안내판에 들어갈 줄들. 층마다 직원·인턴 한 줄씩, 나를 기다리는 사람이 맨 위.
 // 화면(DOM) 없이 글자만 만들어서 테스트할 수 있다. 초점 지키기 같은 화면 일은 app.js가 한다.
-import { esc, clip, ago, ctxOf } from './util.js';
+import { esc, clip, ago, ctxOf, schedText, schedTip } from './util.js';
 
 // 나를 기다리는 순서 (작을수록 위). 나머지는 모두 같은 순위라 층 순서대로 선다.
 const STATUS_ORDER = { wait: 0, ask: 1 };
@@ -18,7 +18,7 @@ export function lobbyTime(a, st = a.status) {
 }
 
 // floors: [{ key, sids }] (이 순서가 1층, 2층…), sessions: Map(세션 id → 세션), current: 보고 있는 층 key
-export function lobbyHtml(floors, sessions, current) {
+export function lobbyHtml(floors, sessions, current, now = Date.now()) {
   const rows = [];
   floors.forEach((f, i) => {
     for (const sid of f.sids) {
@@ -29,10 +29,13 @@ export function lobbyHtml(floors, sessions, current) {
         const st = a.status;
         const queue = !a.intern && s.info.queue && s.info.queue.length
           ? ` <small class="q" title="Claude가 바쁠 때 들어와서 기다리는 메시지 (내 말·예약 작업·알림)">📨${s.info.queue.length}</small>` : '';
+        // 쉬는 동안에는 다음 예약 작업이 언제 도는지 (크론·/loop로 돌리는 세션)
+        const next = !a.intern && (st === 'idle' || st === 'sleep') && !a.ended && schedText(s.info.sched, now, true);
+        const sched = next ? ` <small class="q next" title="${esc(schedTip(s.info.sched))}">${esc(next)}</small>` : '';
         rows.push({
           rank: STATUS_ORDER[st] ?? 2, floor: i,
           html: `<li class="lb ${st}${a.floor === current ? ' here' : ''}${a.intern ? ' intern' : ''}" data-floor="${esc(f.key)}" data-actor="${esc(a.key)}" tabindex="0" role="button" style="--wc:${esc(s.color)}">`
-            + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${queue}</span>`
+            + `<b>${i + 1}F</b><span class="nm">${a.intern ? '<em>인턴</em>' : ''}${esc(a.name)}${queue}${sched}</span>`
             + `<span class="st">${esc(a.now.icon)} ${esc(clip(a.now.title, 24))}</span><time>${esc(lobbyTime(a, st))}</time>`
             + ctxBar(a.intern ? null : ctxOf(s)) + '</li>',
         });

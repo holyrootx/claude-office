@@ -216,3 +216,18 @@ test('탭 제목: 꺼졌으면 그것부터, 기다리면 몇 명인지, 다시 
   assert.equal(tabTitle(st, { mode: 'demo', waiting: 1 }), '🎬 데모 · 🔐 실행 허락을 기다리고 있어요 · Claude 사무실');
   assert.equal(tabTitle({ icon: '🚶', title: '서버실로 가는 중' }, { mode: 'replay' }), '⏪ 다시 보기 · 🚶 서버실로 가는 중 · Claude 사무실');
 });
+
+test('다음 예약 작업: 제때 돈 때부터 간격대로, 막 지났으면 그때, 방금 돌았으면 그다음, 오래 안 돌았으면 모른다', async () => {
+  const { nextScheduled, schedText } = await import('../public/js/util.js');
+  const m = 60000, at = s => Date.parse(`2026-11-21T${s}+09:00`);
+  const sched = { every: 30 * m, anchor: at('17:28:00'), last: at('18:02:00') };
+  assert.equal(nextScheduled(sched, at('18:20:00')), at('18:28:00'));
+  assert.equal(nextScheduled(sched, at('18:28:30')), at('18:28:00')); // 곧 돈다
+  assert.equal(nextScheduled(sched, at('18:30:00')), at('18:58:00'));
+  assert.equal(nextScheduled({ ...sched, anchor: at('18:28:10'), last: at('18:28:10') }, at('18:28:40')), at('18:58:10'));
+  assert.equal(nextScheduled(sched, at('19:20:00')), 0); // 75분 넘게 안 돌았다
+  assert.equal(nextScheduled(null), 0);
+  assert.equal(schedText(sched, at('18:20:00')), '⏰ 다음 예약 18:28쯤');
+  assert.equal(schedText(sched, at('18:20:00'), true), '⏰18:28');
+  assert.equal(schedText({ every: 1440 * m, anchor: at('09:00:00'), last: at('09:00:00') }, at('10:00:00')), '⏰ 다음 예약 11/22 09:00쯤');
+});

@@ -1,6 +1,6 @@
 // 캐릭터 정보 카드에 들어갈 내용(HTML). 어디에 띄울지는 app.js가 정한다.
 // 화면(DOM) 없이 글자만 만들어서 테스트할 수 있다.
-import { esc, clip, resumeCommand, secs, fmtWorked, modelName } from './util.js';
+import { esc, clip, resumeCommand, secs, fmtWorked, modelName, schedText, schedTip } from './util.js';
 
 // 기본 모드(normal)는 굳이 안 보여 준다
 const MODE_NAMES = { plan: '계획 모드', acceptEdits: '편집 자동 허용', bypassPermissions: '모든 권한 허용', auto: '자동 모드' };
@@ -36,6 +36,12 @@ function internNums(a, now = Date.now()) {
   return `<div class="card-nums">도구 ${a.toolCount || 0}번 · ${time}</div>`;
 }
 
+// 예약 작업이 도는 세션이면 다음에 돌 때 (Claude Code를 닫았으면 예약도 같이 없어져서 빼고)
+function nextRun(s, clock) {
+  const t = !(s.main && s.main.ended) && schedText(s.info.sched, clock);
+  return t ? ` · <span class="card-next" title="${esc(schedTip(s.info.sched))}">${esc(t)}</span>` : '';
+}
+
 export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win, today = 0, clock = Date.now() } = {}) {
   const info = s.info;
   // 지금 하위 폴더에 있으면 그 폴더도 (📂 frontend), 워크트리면 그 이름 (🌿 fix-login)
@@ -61,7 +67,7 @@ export function cardHtml(a, s, { ctx = null, live = false, pinned = false, win, 
   const extraRow = extras.length ? `<div class="card-extra">${extras.join('<i>·</i>')}</div>` : '';
   const q = !a.intern && info.queue && info.queue.length ? info.queue : null;
   const queueRow = q ? `<div class="card-queue"><b>📨 기다리는 메시지 ${q.length}개</b>${q.slice(0, 3).map(t => `<small>${esc(t)}</small>`).join('')}</div>` : '';
-  const nums = a.intern ? internNums(a) : `<div class="card-nums">도구 ${s.stats.tools} · ${s.stats.errors ? `<button type="button" class="card-fails" data-act="fails" title="활동 기록에서 실패만 모아 봐요">실패 ${s.stats.errors}</button>` : '실패 0'} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}${today >= 60000 ? ` · 오늘 ${fmtWorked(today)}` : ''}${info.started ? ` · ${sinceText(info.started, clock)}` : ''}</div>`;
+  const nums = a.intern ? internNums(a) : `<div class="card-nums">도구 ${s.stats.tools} · ${s.stats.errors ? `<button type="button" class="card-fails" data-act="fails" title="활동 기록에서 실패만 모아 봐요">실패 ${s.stats.errors}</button>` : '실패 0'} · 내 메시지 ${s.stats.prompts}${s.interns.size ? ` · 인턴 ${s.interns.size}명` : ''}${today >= 60000 ? ` · 오늘 ${fmtWorked(today)}` : ''}${info.started ? ` · ${sinceText(info.started, clock)}` : ''}${nextRun(s, clock)}</div>`;
   const ctxRow = ctx ? `<div class="card-ctx now-ctx ${ctx.level}" style="--p:${ctx.p}%"><i></i><b>컨텍스트 ${ctx.p}%</b><small>${esc(ctx.text)}</small></div>` : '';
   const multiDay = !a.intern && info.started && info.started < new Date(clock).setHours(0, 0, 0, 0);
   const acts = !a.intern && live
